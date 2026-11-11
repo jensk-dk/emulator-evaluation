@@ -20,6 +20,15 @@ The emulator MUST provide a container-based execution mode for quick development
 - WHEN a CI job runs the emulator
 - THEN the emulator can run in container-based mode
 
+### Requirement: Build the simulated target OS container environment
+
+The project MUST provide a Dockerfile or equivalent container build definition that constructs the simulated target OS environment, including its services, libraries, and other required runtime components.
+
+#### Scenario: Build the container environment
+
+- WHEN the container build definition is used
+- THEN it produces an image containing the simulated target OS environment and its required services, libraries, and runtime components
+
 ### Requirement: VM-based execution
 
 The emulator MUST provide a VM-based execution mode that emulates the target OS kernel and drivers.

@@ -1,0 +1,13 @@
+schema: spec-driven
+created: "2026-11-11"
+goal: Sequence delivery of the emulator evaluation platform across implementation stages.
+affected_areas:
+  - host-platform-support
+  - execution-modes
+  - startup-launcher
+  - evaluation-environment
+  - graphics-support
+  - media-playback
+  - performance-evaluation
+  - performance-reporting
+skip_specs: true

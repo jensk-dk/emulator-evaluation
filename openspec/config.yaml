@@ -13,12 +13,19 @@ context: |
   CI, and a VM-based mode that emulates the target OS kernel and drivers. Both
   modes must support emulated target-OS drivers, mocked drivers, and host-side
   processes that reroute driver functionality to the host OS.
+  Container mode must provide a Dockerfile or equivalent build definition that
+  constructs the simulated target OS environment, including its services,
+  libraries, and other required runtime components.
   The VM-based runtime must support host-native machine-code execution and
   ARM32 and ARM64 guest architectures for target CPU simulation. Host-native
   examples include x86 on Windows/Linux and x86 or ARM on macOS.
   The emulator must support Wayland, Flutter, OpenGL ES, and Vulkan graphics.
   Graphics functionality may be emulated or mapped to host OS graphics
   acceleration; prefer host acceleration when it is available and compatible.
+  The emulator must support 720p, 1080p, and 4K resolutions, run windowed or
+  full screen, and provide a hotkey to switch between those display modes.
+  Windowed mode must support display scaling and include a compact icon toolbar
+  with audio mute and 1:1 pixel-density controls.
   The emulator must support MPEG-2 Transport Stream (MP2TS) and MP4 containers,
   MSE-style fragment injection, MPEG-2/AVC/HEVC video, and MP2/AC-3/AAC/HE-AAC
   audio. It
@@ -30,5 +37,13 @@ context: |
   and audio/video decoding performance. Report the comparison in a Slidev
   presentation with pros, cons, and actual performance results for each
   combination; identify unavailable results without inventing measurements.
+  The project must provide or acquire a Linux client OS image for VM simulation,
+  with sufficient workloads and functionality to run the specified functional
+  and performance evaluations. The client OS must include WPE WebKit and support
+  web performance evaluation, including MSE playback. Record the image identity
+  and source or build revision with evaluation results.
+  A cross-platform startup launcher must run on Linux, macOS, and Windows and
+  accept parameters for emulator mode, options, and the target OS workload,
+  including choices such as a prompt, graphics demo, or benchmarks.
   Keep proposals and evaluation findings distinct from agreed requirements, and
   express requirements as observable behavior.

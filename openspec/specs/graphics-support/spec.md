@@ -43,3 +43,68 @@ The emulator MUST provide graphics functionality through emulation or mapping to
 
 - WHEN compatible host OS graphics acceleration is unavailable
 - THEN the emulator can provide graphics functionality through emulation
+
+### Requirement: Support common display resolutions
+
+The emulator MUST support 720p, 1080p, and 4K display resolutions.
+
+#### Scenario: Display at 720p
+
+- WHEN 720p resolution is selected
+- THEN the emulator renders at 720p
+
+#### Scenario: Display at 1080p
+
+- WHEN 1080p resolution is selected
+- THEN the emulator renders at 1080p
+
+#### Scenario: Display at 4K
+
+- WHEN 4K resolution is selected
+- THEN the emulator renders at 4K
+
+### Requirement: Support windowed and full-screen display modes
+
+The emulator MUST support both windowed and full-screen display modes.
+
+#### Scenario: Run windowed
+
+- WHEN windowed mode is selected
+- THEN the emulator display runs in a window
+
+#### Scenario: Run full screen
+
+- WHEN full-screen mode is selected
+- THEN the emulator display uses the full screen
+
+### Requirement: Toggle display mode with a hotkey
+
+The emulator MUST provide a hotkey that switches between windowed and full-screen modes while it is running.
+
+#### Scenario: Switch display mode with a hotkey
+
+- WHEN the display-mode hotkey is pressed
+- THEN the emulator switches between windowed and full-screen modes
+
+### Requirement: Scale the display in windowed mode
+
+The emulator MUST allow the rendered display to be scaled in windowed mode as the window size changes.
+
+#### Scenario: Resize the window
+
+- WHEN the user resizes the emulator window
+- THEN the rendered display scales within the window
+
+### Requirement: Provide a compact window toolbar
+
+Windowed mode MUST provide a compact toolbar with icon controls for muting audio and restoring 1:1 pixel-density scaling.
+
+#### Scenario: Mute audio from the toolbar
+
+- WHEN the audio mute icon is activated
+- THEN audio output is muted, or unmuted if it was already muted
+
+#### Scenario: Restore 1:1 pixel-density scaling
+
+- WHEN the 1:1 scaling icon is activated
+- THEN the display uses one guest pixel per host display pixel
