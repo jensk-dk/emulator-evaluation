@@ -1,0 +1,34 @@
+schema: spec-driven
+
+context: |
+  This project evaluates technologies for an emulator targeting embedded Linux
+  operating systems and TV/STB middleware, with developer workflows comparable
+  to iOS or Android emulators as the long-term reference.
+
+  Requirements will be added incrementally. Do not assume target hardware,
+  middleware, emulator fidelity, or implementation choices until they are
+  explicitly specified. The emulator must run on Linux, macOS, and Windows as a
+  development/host OS; do not assume specific versions or distributions.
+  The emulator must provide container-based execution for quick development and
+  CI, and a VM-based mode that emulates the target OS kernel and drivers. Both
+  modes must support emulated target-OS drivers, mocked drivers, and host-side
+  processes that reroute driver functionality to the host OS.
+  The VM-based runtime must support host-native machine-code execution and
+  ARM32 and ARM64 guest architectures for target CPU simulation. Host-native
+  examples include x86 on Windows/Linux and x86 or ARM on macOS.
+  The emulator must support Wayland, Flutter, OpenGL ES, and Vulkan graphics.
+  Graphics functionality may be emulated or mapped to host OS graphics
+  acceleration; prefer host acceleration when it is available and compatible.
+  The emulator must support MPEG-2 Transport Stream (MP2TS) and MP4 containers,
+  MSE-style fragment injection, MPEG-2/AVC/HEVC video, and MP2/AC-3/AAC/HE-AAC
+  audio. It
+  must render video through the supported graphics technologies and route audio
+  through the host OS audio path with runtime mute support.
+  Performance evaluation must cover every supported host OS, host CPU
+  architecture, and emulator mode combination, including each VM guest CPU
+  architecture. Measure CPU, memory allocation and bandwidth, I/O, graphics,
+  and audio/video decoding performance. Report the comparison in a Slidev
+  presentation with pros, cons, and actual performance results for each
+  combination; identify unavailable results without inventing measurements.
+  Keep proposals and evaluation findings distinct from agreed requirements, and
+  express requirements as observable behavior.
