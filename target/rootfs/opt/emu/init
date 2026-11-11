@@ -1,0 +1,129 @@
+#!/bin/bash
+# Init for the simulated target OS.
+#
+#   VM mode         PID 1, started by the kernel (init=/opt/emu/init). The
+#                   workload comes from the kernel command line:
+#                   emu.workload=NAME emu.args=BASE64 emu.drivers=F=S,F=S
+#   Container mode  the image entrypoint: init WORKLOAD [ARGS...], with driver
+#                   strategies in $EMU_DRIVERS.
+#
+# It brings up the target OS environment, starts the driver-feature providers,
+# runs one workload on the console and reports its exit status. Lines that
+# start with "EMU-" are the protocol the host launcher reads.
+
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+export HOME=/root LANG=C.UTF-8
+
+cmdline_get() {
+  local tok
+  for tok in $(cat /proc/cmdline); do
+    case "$tok" in "$1"=*) printf '%s' "${tok#*=}"; return 0 ;; esac
+  done
+  return 1
+}
+
+vm_setup() {
+  mountpoint -q /proc || mount -t proc proc /proc
+  mountpoint -q /sys || mount -t sysfs sysfs /sys
+  mountpoint -q /dev || mount -t devtmpfs devtmpfs /dev
+  mountpoint -q /run || mount -t tmpfs -o mode=755,nosuid,nodev tmpfs /run
+  mkdir -p /dev/pts /dev/shm
+  mountpoint -q /dev/pts || mount -t devpts -o gid=5,mode=620 devpts /dev/pts
+  mountpoint -q /dev/shm || mount -t tmpfs -o nosuid,nodev tmpfs /dev/shm
+  mount -t tmpfs -o nosuid,nodev tmpfs /tmp
+  mount -o remount,rw / 2>/dev/null
+  hostname emu-target
+
+  # Load the target kernel's drivers for every device the machine exposes.
+  find /sys/devices -name modalias -exec cat {} + 2>/dev/null | sort -u \
+    | xargs -r modprobe -abq 2>/dev/null
+
+  ip link set lo up
+  if [ -e /sys/class/net/eth0 ]; then
+    # Addresses of QEMU's user-mode network.
+    ip addr add 10.0.2.15/24 dev eth0
+    ip link set eth0 up
+    ip route add default via 10.0.2.2
+    echo "nameserver 10.0.2.3" > /etc/resolv.conf
+  fi
+
+  # /data is the target's writable data partition: a scratch disk the
+  # launcher attaches as the second virtio disk, formatted on every boot.
+  mkdir -p /data
+  local root_dev data_dev=""
+  root_dev=$(findmnt -no SOURCE /)
+  for dev in /dev/vd?; do
+    [ -b "$dev" ] && [ "$dev" != "$root_dev" ] && { data_dev=$dev; break; }
+  done
+  if [ -n "$data_dev" ]; then
+    mke2fs -q -F -t ext4 -L emu-data -E lazy_itable_init=0,lazy_journal_init=0 "$data_dev" \
+      && mount -t ext4 "$data_dev" /data
+  fi
+}
+
+if [ "$$" = 1 ] && [ "${EMU_MODE:-}" != container ]; then
+  export EMU_MODE=vm
+  vm_setup
+  WORKLOAD=$(cmdline_get emu.workload || echo prompt)
+  ARGS=()
+  if encoded=$(cmdline_get emu.args) && [ -n "$encoded" ]; then
+    mapfile -t ARGS < <(printf '%s' "$encoded" | base64 -d)
+  fi
+  EMU_DRIVERS=$(cmdline_get emu.drivers || true)
+  # The last console the kernel lists is the one wired to the launcher.
+  EMU_CONSOLE=/dev/$(awk '{print $NF}' /sys/class/tty/console/active 2>/dev/null)
+  export EMU_CONSOLE
+  # emu.term=NAME:COLUMNSxROWS describes the terminal on the host side.
+  if term=$(cmdline_get emu.term); then
+    export TERM=${term%%:*}
+    size=${term#*:}
+    stty -F "$EMU_CONSOLE" cols "${size%x*}" rows "${size#*x}" 2>/dev/null
+  else
+    export TERM=dumb
+  fi
+else
+  export EMU_MODE=container
+  WORKLOAD=${1:-prompt}
+  [ $# -gt 0 ] && shift
+  ARGS=("$@")
+  mkdir -p /data /run/emu
+fi
+export EMU_DRIVERS
+
+image=$(tr -d '\n' < /etc/emu-image.json 2>/dev/null)
+printf 'EMU-READY: {"mode": "%s", "machine": "%s", "kernel": "%s", "cpus": %s, "image": %s}\n' \
+  "$EMU_MODE" "$(uname -m)" "$(uname -r)" "$(nproc)" "${image:-null}"
+
+finish() {
+  printf 'EMU-EXIT: %s\n' "$1"
+  if [ "$EMU_MODE" = vm ]; then
+    sync
+    umount /data 2>/dev/null
+    mount -o remount,ro / 2>/dev/null
+    busybox poweroff -f
+    sleep 30   # never return: the kernel panics if PID 1 exits
+  fi
+  exit "$1"
+}
+
+# Driver-feature providers: "feature=strategy" pairs separated by commas.
+IFS=, read -r -a driver_specs <<< "${EMU_DRIVERS:-}"
+for spec in "${driver_specs[@]}"; do
+  [ -n "$spec" ] || continue
+  feature=${spec%%=*} strategy=${spec#*=}
+  provider=/opt/emu/drivers/$feature
+  if [ ! -x "$provider" ]; then
+    echo "init: no provider for driver feature '$feature'" >&2
+    finish 64
+  fi
+  "$provider" start "$strategy" || { echo "init: driver feature '$feature' failed to start with strategy '$strategy'" >&2; finish 65; }
+done
+
+workload=/opt/emu/workloads/$WORKLOAD
+if [ ! -x "$workload" ]; then
+  echo "init: unknown workload '$WORKLOAD' (available: $(ls /opt/emu/workloads | tr '\n' ' '))" >&2
+  finish 64
+fi
+
+"$workload" "${ARGS[@]}"
+finish $?

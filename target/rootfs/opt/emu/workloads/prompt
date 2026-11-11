@@ -1,0 +1,14 @@
+#!/bin/bash
+# Workload "prompt": an interactive shell on the target OS.
+cd /root 2>/dev/null || cd /
+if [ "$EMU_MODE" = vm ] && [ -c "${EMU_CONSOLE:-}" ]; then
+  # Give the shell the console as its controlling terminal so job control
+  # and Ctrl-C work.
+  exec setsid -c -w /bin/bash --rcfile /opt/emu/prompt.bashrc -i < "$EMU_CONSOLE" > "$EMU_CONSOLE" 2>&1
+fi
+if [ -t 0 ]; then
+  exec /bin/bash --rcfile /opt/emu/prompt.bashrc -i
+fi
+# No terminal (piped input, as in CI): give the shell a pseudo-terminal of its
+# own so it still prompts, and pass its exit status back.
+exec script -qefc "/bin/bash --rcfile /opt/emu/prompt.bashrc -i" /dev/null

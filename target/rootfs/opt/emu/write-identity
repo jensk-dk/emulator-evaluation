@@ -1,0 +1,9 @@
+#!/bin/sh
+# Records what this image is, so every result can name the image it ran on.
+# Called once at image build time.
+set -eu
+name=$1 version=$2 definition=$3 base=$4 snapshot=$5
+packages_sha256=$(dpkg-query -W -f '${Package} ${Version} ${Architecture}\n' | sort | sha256sum | cut -d' ' -f1)
+cat > /etc/emu-image.json <<JSON
+{"name": "$name", "version": "$version", "definition_sha256": "$definition", "base_image": "$base", "apt_snapshot": "$snapshot", "debian_version": "$(cat /etc/debian_version)", "architecture": "$(dpkg --print-architecture)", "packages_sha256": "$packages_sha256"}
+JSON

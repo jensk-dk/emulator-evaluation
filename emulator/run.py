@@ -1,0 +1,288 @@
+"""Launch one workload on the target OS and collect what it reports."""
+import datetime
+import json
+import os
+import shutil
+import subprocess
+import sys
+import threading
+import time
+
+from . import container, drivers as driver_features, host, image, vm
+from .errors import EmuError
+from .paths import BUILD_DIR
+
+DEFAULT_CPUS = 4
+DEFAULT_MEMORY_MB = 2048
+DEFAULT_DATA_DISK_MB = 1024
+KNOWN_OPTIONS = {
+    "accel": "VM accelerator: hvf, kvm, whpx or tcg (default: the host's hypervisor for native, tcg otherwise)",
+    "cpu": "VM CPU model (default: host for native, cortex-a53 for arm64, cortex-a15 for arm32)",
+    "disk-cache": "QEMU cache mode of the data disk, such as none or writeback (default: QEMU's default)",
+    "data-disk-mb": "size of the VM's /data scratch disk in MiB (default: %d)" % DEFAULT_DATA_DISK_MB,
+    "verbose-boot": "show kernel boot messages in VM mode (yes/no, default: no)",
+    "host-address": "container mode: name or address containers use to reach the host",
+    "host-bind": "container mode: address host-side processes listen on",
+}
+
+
+class RunOptions:
+    def __init__(self, mode, workload="prompt", args=(), arch="native", cpus=DEFAULT_CPUS,
+                 memory_mb=DEFAULT_MEMORY_MB, drivers=None, options=None, extra_args=(), timeout=None,
+                 echo=True, stdin_script=None, quiet_build=False, rebuild=False):
+        self.mode = mode
+        self.workload = workload
+        self.args = list(args)
+        self.arch = arch
+        self.cpus = cpus
+        self.memory_mb = memory_mb
+        self.drivers = driver_features.parse([]) if drivers is None else drivers
+        self.options = dict(options or {})
+        self.extra_args = list(extra_args)      # passed through to qemu or the container runtime
+        self.timeout = timeout
+        self.echo = echo
+        self.stdin_script = stdin_script        # bytes typed into the workload, for automated runs
+        self.quiet_build = quiet_build
+        self.rebuild = rebuild
+
+
+class Outcome:
+    def __init__(self):
+        self.run_id = None
+        self.command = []
+        self.environment = {}
+        self.ready = None               # what the target reported when it came up
+        self.boot_seconds = None
+        self.workload = None            # the workload's own id and version
+        self.drivers = []               # driver providers the target started
+        self.results = []
+        self.exit_code = None           # the workload's exit status inside the target
+        self.process_exit = None        # exit status of the emulator process
+        self.timed_out = False
+        self.protocol_errors = []
+        self.host_traces = {}
+        self.notes = []
+        self.output = []                # captured console lines
+        self.started_at = None
+        self.duration_seconds = None
+        self.attached = False           # ran attached to the terminal, nothing captured
+
+    @property
+    def ok(self):
+        if self.attached:
+            return self.process_exit == 0
+        return self.exit_code == 0 and not self.timed_out
+
+
+def _run_id():
+    stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    return "%s-%s" % (stamp, os.urandom(3).hex())
+
+
+def _flag(options, name):
+    return str(options.get(name, "no")).lower() in ("1", "yes", "true", "on")
+
+
+def _image_identity(manifest, kind):
+    identity = {
+        "name": manifest["name"],
+        "version": manifest["version"],
+        "kind": kind,
+        "arch": manifest["arch"],
+        "source": manifest["source"],
+        "definition_sha256": manifest["definition_sha256"],
+        "build_revision": manifest.get("build_revision"),
+        "built_at": manifest.get("built_at"),
+    }
+    if kind == "vm":
+        identity["kernel_release"] = manifest.get("kernel_release")
+        identity["rootfs_sha256"] = manifest["files"]["rootfs.img"]["sha256"]
+    else:
+        identity["image_id"] = manifest.get("image_id")
+    return identity
+
+
+def launch(opts):
+    """Run a workload; returns an Outcome. Raises EmuError when the emulator
+    cannot be started at all."""
+    for name in opts.options:
+        if name not in KNOWN_OPTIONS:
+            raise EmuError("unknown --option %r (known: %s)" % (name, ", ".join(sorted(KNOWN_OPTIONS))))
+    if opts.workload != "prompt" and opts.stdin_script is not None:
+        raise EmuError("only the prompt workload reads input")
+
+    outcome = Outcome()
+    outcome.run_id = _run_id()
+    run_dir = BUILD_DIR / "run" / outcome.run_id
+    run_dir.mkdir(parents=True)
+    interactive = opts.workload == "prompt"
+    # Attach straight to the terminal for a person; capture everything else.
+    attached = interactive and opts.stdin_script is None and host.stdin_is_tty() and sys.stdout.isatty()
+    plan = None
+    try:
+        if opts.mode == "container":
+            if opts.arch != "native":
+                raise EmuError("container mode runs the host's CPU architecture; --arch applies to VM mode")
+            runtime = container.detect()
+            arch = host.host_arch()
+            manifest = image.ensure("container", lambda: runtime, arch, quiet=opts.quiet_build, rebuild=opts.rebuild)
+            plan = driver_features.plan_container(opts.drivers, runtime, str(run_dir), opts.options)
+            env = dict(plan.container_env)
+            if opts.drivers:
+                env["EMU_DRIVERS"] = ",".join("%s=%s" % item for item in sorted(opts.drivers.items()))
+            command = container.run_command(
+                runtime, manifest["image_tag"], manifest["platform"], opts.workload, opts.args, opts.cpus,
+                opts.memory_mb, env, interactive, attached, opts.extra_args, "emu-" + outcome.run_id.lower())
+            emulator = {"mode": "container", "variant": "container", "guest_arch": arch,
+                        "runtime": runtime.version(), "engine": runtime.engine_info()}
+            if (emulator["engine"].get("cpus") or 0) < opts.cpus:
+                outcome.notes.append("the container engine has %s CPUs, fewer than the %d requested"
+                                     % (emulator["engine"].get("cpus"), opts.cpus))
+            image_identity = _image_identity(manifest, "container")
+        elif opts.mode == "vm":
+            resolved = vm.resolve(opts.arch, opts.options.get("accel"), opts.options.get("cpu"))
+            outcome.notes += resolved["notes"]
+            guest = resolved["guest_arch"]
+            manifest = image.ensure("vm", container.detect, guest, quiet=opts.quiet_build, rebuild=opts.rebuild)
+            data_disk = run_dir / "data.img"
+            with open(data_disk, "wb") as handle:
+                handle.truncate(int(opts.options.get("data-disk-mb", DEFAULT_DATA_DISK_MB)) * 1024 * 1024)
+            plan = driver_features.plan_vm(opts.drivers, str(run_dir))
+            terminal = None
+            if attached:
+                size = shutil.get_terminal_size()
+                name = os.environ.get("TERM", "")
+                terminal = (name if name.replace("-", "").isalnum() else "vt100", size.columns, size.lines)
+            cmdline = vm.kernel_command_line(guest, opts.workload, opts.args, opts.drivers,
+                                             _flag(opts.options, "verbose-boot"), terminal)
+            command, binary = vm.run_command(
+                resolved, image.artifact_dir("vm", guest), data_disk, cmdline, opts.cpus, opts.memory_mb,
+                attached, plan.qemu_args + opts.extra_args, opts.options)
+            emulator = {"mode": "vm", "variant": resolved["variant"], "guest_arch": guest,
+                        "accelerator": resolved["accelerator"], "cpu_model": resolved["cpu_model"],
+                        "machine": resolved["machine"], "runtime": vm.qemu_version(binary)}
+            image_identity = _image_identity(manifest, "vm")
+        else:
+            raise EmuError("unknown mode: %s" % opts.mode)
+
+        emulator.update({"cpus": opts.cpus, "memory_mb": opts.memory_mb, "options": opts.options,
+                         "extra_args": opts.extra_args})
+        outcome.command = command
+        outcome.environment = {"host": host.describe(), "emulator": emulator, "image": image_identity,
+                               "drivers": dict(opts.drivers), "launcher_revision": image.git_revision()}
+        for note in outcome.notes:
+            print("emu: " + note, file=sys.stderr, flush=True)
+
+        if attached:
+            outcome.attached = True
+            outcome.started_at = time.time()
+            outcome.process_exit = subprocess.call(command, env=host.tool_env())
+            outcome.duration_seconds = time.time() - outcome.started_at
+        else:
+            _capture(command, opts, outcome, interactive)
+        for process in plan.host_processes:
+            if process.get("trace") and os.path.exists(process["trace"]):
+                with open(process["trace"]) as handle:
+                    outcome.host_traces[process["feature"]] = handle.read()
+        outcome.environment["host_processes"] = [
+            {key: value for key, value in process.items() if key != "trace"} for process in plan.host_processes]
+        return outcome
+    finally:
+        if plan:
+            plan.stop()
+        shutil.rmtree(run_dir, ignore_errors=True)
+
+
+def _forward_input(process, source, ready, end_with_eot):
+    """Copy input to the emulator once the target is up."""
+    ready.wait(timeout=300)
+    time.sleep(0.5)
+    try:
+        if isinstance(source, bytes):
+            process.stdin.write(source)
+            process.stdin.flush()
+        else:
+            while True:
+                chunk = source.read1(4096) if hasattr(source, "read1") else source.read(4096)
+                if not chunk:
+                    break
+                process.stdin.write(chunk)
+                process.stdin.flush()
+        if end_with_eot:
+            # A serial console has no end-of-file; Ctrl-D tells the shell.
+            process.stdin.write(b"\x04")
+            process.stdin.flush()
+            process.wait()
+        process.stdin.close()
+    except (OSError, ValueError):
+        pass
+
+
+def _capture(command, opts, outcome, interactive):
+    stdin = subprocess.PIPE if interactive else subprocess.DEVNULL
+    outcome.started_at = time.time()
+    process = subprocess.Popen(command, stdin=stdin, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                               env=host.tool_env())
+    ready = threading.Event()
+    if interactive:
+        source = opts.stdin_script if opts.stdin_script is not None else sys.stdin.buffer
+        threading.Thread(target=_forward_input, args=(process, source, ready, opts.mode == "vm"),
+                         daemon=True).start()
+
+    def on_timeout():
+        outcome.timed_out = True
+        process.kill()
+
+    watchdog = threading.Timer(opts.timeout, on_timeout) if opts.timeout else None
+    if watchdog:
+        watchdog.start()
+    try:
+        for raw in iter(process.stdout.readline, b""):
+            line = raw.decode("utf-8", errors="replace").rstrip("\r\n")
+            outcome.output.append(line)
+            if opts.echo:
+                print(line, flush=True)
+            _parse(line, outcome, ready)
+    except KeyboardInterrupt:
+        process.kill()
+        raise
+    finally:
+        outcome.process_exit = process.wait()
+        if watchdog:
+            watchdog.cancel()
+        ready.set()
+        process.stdout.close()
+        outcome.duration_seconds = time.time() - outcome.started_at
+
+
+def _parse(line, outcome, ready):
+    # A console line can carry a prompt or kernel text in front of the marker.
+    start = line.find("EMU-")
+    if start < 0:
+        return
+    marker, separator, payload = line[start:].partition(": ")
+    if not separator:
+        return
+    if marker == "EMU-EXIT":
+        try:
+            outcome.exit_code = int(payload.strip())
+        except ValueError:
+            outcome.protocol_errors.append(line)
+        return
+    if marker not in ("EMU-READY", "EMU-DRIVER", "EMU-WORKLOAD", "EMU-RESULT"):
+        return
+    try:
+        data = json.loads(payload)
+    except ValueError:
+        outcome.protocol_errors.append(line)
+        return
+    if marker == "EMU-READY":
+        outcome.ready = data
+        outcome.boot_seconds = round(time.time() - outcome.started_at, 3)
+        ready.set()
+    elif marker == "EMU-DRIVER":
+        outcome.drivers.append(data)
+    elif marker == "EMU-WORKLOAD":
+        outcome.workload = data
+    else:
+        outcome.results.append(data)

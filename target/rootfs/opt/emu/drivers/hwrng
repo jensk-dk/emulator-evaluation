@@ -1,0 +1,182 @@
+#!/usr/bin/env python3
+"""Target-side provider for the "hwrng" driver feature.
+
+Target software reads hardware entropy from /dev/hwrng. This provider makes
+that interface available using one of the three driver-feature strategies:
+
+  emulated  VM:        the target kernel's virtio-rng driver on a device QEMU
+                       emulates with its built-in entropy source.
+            container: a software model of a hardware RNG served at /dev/hwrng
+                       (a container cannot load target kernel drivers).
+  mocked    a stub at /dev/hwrng that returns a fixed, recognisable pattern.
+  host      VM:        the target kernel's virtio-rng driver on a QEMU device
+                       whose backend is a host-side process.
+            container: a shim at /dev/hwrng that forwards reads to the
+                       host-side process over TCP ($EMU_DRIVER_HWRNG_HOST).
+            Either way the entropy comes from the host OS.
+
+usage: hwrng start {emulated|mocked|host}
+"""
+import hashlib
+import json
+import os
+import socket
+import stat
+import sys
+import time
+
+DEVICE = os.environ.get("EMU_HWRNG_DEV", "/dev/hwrng")
+STATE_DIR = "/run/emu/drivers"
+MOCK_PATTERN = b"MOCKED-HWRNG-V1."      # 16 bytes
+KERNEL_CURRENT = "/sys/class/misc/hw_random/rng_current"
+
+
+class ModelSource:
+    """Software model of a hardware RNG: a hash-based generator seeded once,
+    delivering data at the modelled device's output rate."""
+
+    name = "model:emu-swrng-1 (SHA-256 counter generator, 1 Mbit/s)"
+    RATE = 125000   # bytes per second
+
+    def __init__(self):
+        self.seed = os.urandom(32)
+        self.counter = 0
+
+    def read(self, count):
+        out = b""
+        while len(out) < count:
+            out += hashlib.sha256(self.seed + self.counter.to_bytes(8, "big")).digest()
+            self.counter += 1
+        time.sleep(count / self.RATE)
+        return out[:count]
+
+
+class MockSource:
+    name = "mock:fixed-pattern"
+
+    def read(self, count):
+        return (MOCK_PATTERN * (count // len(MOCK_PATTERN) + 1))[:count]
+
+
+class HostSource:
+    """Client of the host-side provider, which speaks the EGD protocol."""
+
+    def __init__(self, address):
+        host, _, port = address.rpartition(":")
+        self.address = (host, int(port))
+        self.name = "host:%s" % address
+        self.sock = None
+
+    def read(self, count):
+        out = b""
+        while len(out) < count:
+            want = min(255, count - len(out))
+            if self.sock is None:
+                self.sock = socket.create_connection(self.address, timeout=10)
+            self.sock.sendall(bytes([0x02, want]))     # blocking read of `want` bytes
+            while want:
+                chunk = self.sock.recv(want)
+                if not chunk:
+                    raise ConnectionError("host-side provider closed the connection")
+                out += chunk
+                want -= len(chunk)
+        return out
+
+
+def serve_fifo(source):
+    """Feed the FIFO at DEVICE; each reader gets data from a fresh read."""
+    while True:
+        fd = -1
+        try:
+            fd = os.open(DEVICE, os.O_WRONLY)       # blocks until a reader opens it
+            while True:
+                os.write(fd, source.read(4096))
+        except BrokenPipeError:
+            pass                        # the reader closed; wait for the next one
+        except Exception as error:      # keep serving; the next reader retries
+            sys.stderr.write("hwrng: %s\n" % error)
+            sys.stderr.flush()
+            time.sleep(0.2)
+        finally:
+            if fd >= 0:
+                os.close(fd)
+
+
+def daemonize():
+    """Return in a detached child; the caller's process returns False."""
+    pid = os.fork()
+    if pid:
+        os.waitpid(pid, 0)
+        return False
+    os.setsid()
+    if os.fork():
+        os._exit(0)
+    log = os.open(os.path.join(STATE_DIR, "hwrng.log"), os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o644)
+    null = os.open(os.devnull, os.O_RDONLY)
+    os.dup2(null, 0)
+    os.dup2(log, 1)
+    os.dup2(log, 2)
+    return True
+
+
+def start_userspace(source):
+    if os.path.lexists(DEVICE):
+        os.unlink(DEVICE)
+    os.mkfifo(DEVICE, 0o644)
+    if daemonize():
+        serve_fifo(source)
+        os._exit(0)
+    return source.name
+
+
+def start_kernel():
+    os.system("modprobe -q virtio_rng 2>/dev/null")
+    deadline = time.monotonic() + 15
+    current = ""
+    while time.monotonic() < deadline:
+        try:
+            with open(KERNEL_CURRENT) as handle:
+                current = handle.read().strip()
+        except OSError:
+            current = ""
+        if current.startswith("virtio_rng"):
+            break
+        time.sleep(0.1)
+    if not current.startswith("virtio_rng"):
+        raise RuntimeError("the kernel has no virtio-rng device (rng_current=%r)" % current)
+    if not stat.S_ISCHR(os.stat(DEVICE).st_mode):
+        raise RuntimeError("%s is not the kernel's character device" % DEVICE)
+    return "kernel:%s" % current
+
+
+def main():
+    if len(sys.argv) != 3 or sys.argv[1] != "start" or sys.argv[2] not in ("emulated", "mocked", "host"):
+        sys.stderr.write(__doc__)
+        return 64
+    strategy = sys.argv[2]
+    mode = os.environ.get("EMU_MODE", "container")
+    os.makedirs(STATE_DIR, exist_ok=True)
+    try:
+        if strategy == "mocked":
+            provider = start_userspace(MockSource())
+        elif mode == "vm":
+            provider = start_kernel()
+        elif strategy == "emulated":
+            provider = start_userspace(ModelSource())
+        else:
+            address = os.environ.get("EMU_DRIVER_HWRNG_HOST")
+            if not address:
+                raise RuntimeError("EMU_DRIVER_HWRNG_HOST is not set")
+            provider = start_userspace(HostSource(address))
+    except Exception as error:
+        sys.stderr.write("hwrng: %s\n" % error)
+        return 1
+    state = {"feature": "hwrng", "strategy": strategy, "mode": mode, "provider": provider, "device": DEVICE}
+    with open(os.path.join(STATE_DIR, "hwrng.json"), "w") as handle:
+        json.dump(state, handle)
+    print("EMU-DRIVER: " + json.dumps(state), flush=True)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

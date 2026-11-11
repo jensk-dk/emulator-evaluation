@@ -1,0 +1,89 @@
+#!/usr/bin/env python3
+"""Workload "driver-check": exercise a driver feature through its target OS
+interface and report what was observed, so the launcher can tell which
+strategy actually served it.
+
+usage: driver-check [FEATURE]      (default: hwrng)
+"""
+import json
+import os
+import signal
+import sys
+import time
+
+VERSION = "1.0.0"
+DEVICES = {"hwrng": os.environ.get("EMU_HWRNG_DEV", "/dev/hwrng")}
+
+
+def on_alarm(signum, frame):
+    raise TimeoutError("no data from the device within the time limit")
+
+
+def read_exact(fd, count):
+    data = b""
+    while len(data) < count:
+        chunk = os.read(fd, count - len(data))
+        if not chunk:
+            raise EOFError("device closed after %d of %d bytes" % (len(data), count))
+        data += chunk
+    return data
+
+
+def main():
+    feature = sys.argv[1] if len(sys.argv) > 1 else "hwrng"
+    if feature not in DEVICES:
+        print("driver-check: unknown feature %r" % feature, file=sys.stderr)
+        return 64
+    device = DEVICES[feature]
+    state = {}
+    try:
+        with open("/run/emu/drivers/%s.json" % feature) as handle:
+            state = json.load(handle)
+    except (OSError, ValueError):
+        pass
+
+    print('EMU-WORKLOAD: {"id": "driver-check", "version": "%s"}' % VERSION, flush=True)
+    result = {
+        "area": "driver",
+        "feature": feature,
+        "device": device,
+        "mode": os.environ.get("EMU_MODE"),
+        "strategy": state.get("strategy"),
+        "provider": state.get("provider"),
+    }
+    # Blocking I/O with one overall time limit: the kernel's hwrng device and
+    # a provider's FIFO both block until data is available.
+    signal.signal(signal.SIGALRM, on_alarm)
+    signal.alarm(60)
+    try:
+        fd = os.open(device, os.O_RDONLY)
+        try:
+            started = time.monotonic()
+            sample = read_exact(fd, 16)
+            result["first_read_seconds"] = round(time.monotonic() - started, 6)
+            result["sample_hex"] = sample.hex()
+            # Throughput through the feature's interface, to compare strategies.
+            started = time.monotonic()
+            total = 0
+            while total < 4 * 1024 * 1024 and time.monotonic() - started < 0.5:
+                chunk = os.read(fd, 65536)
+                if not chunk:
+                    raise EOFError("device closed during the throughput read")
+                total += len(chunk)
+            elapsed = time.monotonic() - started
+            result["throughput_bytes"] = total
+            result["throughput_bytes_per_second"] = round(total / elapsed, 1)
+        finally:
+            os.close(fd)
+        result["ok"] = True
+    except (OSError, EOFError, TimeoutError) as error:
+        result["ok"] = False
+        result["error"] = "%s: %s" % (type(error).__name__, error)
+    finally:
+        signal.alarm(0)
+    print("EMU-RESULT: " + json.dumps(result), flush=True)
+    return 0 if result["ok"] else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

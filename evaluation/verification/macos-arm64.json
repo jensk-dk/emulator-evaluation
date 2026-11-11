@@ -1,0 +1,202 @@
+{
+  "host": {
+    "id": "macos-arm64",
+    "os": "macos",
+    "os_version": "27.2",
+    "arch": "arm64",
+    "cpu_model": "Apple M6",
+    "cpus": 12,
+    "memory_bytes": 25769803776,
+    "python": "3.9.6"
+  },
+  "checks": {
+    "matrix": {
+      "status": "pass",
+      "task": "1.1",
+      "description": "the host test matrix covers every declared host combination",
+      "details": [
+        "4 hosts x 4 modes = 16 combinations, each measuring 6 performance areas",
+        "every declared host combination has a host entry: linux-x86_64, windows-x86_64, macos-x86_64, macos-arm64"
+      ],
+      "checked_at": "2026-11-11T16:47:58Z",
+      "seconds": 0.0,
+      "revision": "1f0c983a2bc68ea89495a3dea14cc0e220c06bf5-dirty",
+      "image_definition_sha256": "aa1a7242a0658333f9c5e1db763a2c03ba5cd0c199e40f7a9f14f0398105fea9"
+    },
+    "workloads": {
+      "status": "pass",
+      "task": "1.3",
+      "description": "the workloads cover every required performance area",
+      "details": [
+        "cpu: bench 1.0.0 (implemented)",
+        "memory_allocation: bench 1.0.0 (implemented)",
+        "memory_bandwidth: bench 1.0.0 (implemented)",
+        "io: bench 1.0.0 (implemented)",
+        "graphics: graphics-demo 0.1.0 (defined), web-bench 0.1.0 (defined)",
+        "audio_video_decoding: media-decode 0.1.0 (defined), web-bench 0.1.0 (defined)"
+      ],
+      "checked_at": "2026-11-11T16:47:59Z",
+      "seconds": 0.0,
+      "revision": "1f0c983a2bc68ea89495a3dea14cc0e220c06bf5-dirty",
+      "image_definition_sha256": "aa1a7242a0658333f9c5e1db763a2c03ba5cd0c199e40f7a9f14f0398105fea9"
+    },
+    "image": {
+      "status": "pass",
+      "task": "1.2",
+      "description": "the client OS image boots in VM mode and its revision is recorded",
+      "details": [
+        "emu-target-debian 0.1.0 booted in 0.4s, kernel 6.12.115+deb13.1-arm64",
+        "source: Debian 13 (trixie), docker.io/library/debian:trixie-slim@sha256:a72b4433de1c, apt snapshot 20261104T212339Z",
+        "definition aa1a7242a065, build revision 1f0c983a2bc68ea89495a3dea14cc0e220c06bf5-dirty, rootfs sha256 95d323d9c311"
+      ],
+      "checked_at": "2026-11-11T16:47:59Z",
+      "seconds": 1.0,
+      "revision": "1f0c983a2bc68ea89495a3dea14cc0e220c06bf5-dirty",
+      "image_definition_sha256": "aa1a7242a0658333f9c5e1db763a2c03ba5cd0c199e40f7a9f14f0398105fea9"
+    },
+    "prompt-container": {
+      "status": "pass",
+      "task": "2.2, 2.3",
+      "description": "the container image starts the target OS and a prompt",
+      "details": [
+        "target OS environment up in 0.1s; the prompt answered a typed command",
+        "image sha256:9f16238b90bec9d5c277df5bc558d874b9246195f0d8f8d68ba1ce732980af4f"
+      ],
+      "checked_at": "2026-11-11T16:48:00Z",
+      "seconds": 0.9,
+      "revision": "1f0c983a2bc68ea89495a3dea14cc0e220c06bf5-dirty",
+      "image_definition_sha256": "aa1a7242a0658333f9c5e1db763a2c03ba5cd0c199e40f7a9f14f0398105fea9"
+    },
+    "prompt-vm": {
+      "status": "pass",
+      "task": "2.2, 2.4",
+      "description": "the target OS boots in host-native VM mode to a prompt",
+      "details": [
+        "booted on hvf (aarch64, cpu host) in 0.3s; the prompt answered a typed command"
+      ],
+      "checked_at": "2026-11-11T16:48:01Z",
+      "seconds": 0.9,
+      "revision": "1f0c983a2bc68ea89495a3dea14cc0e220c06bf5-dirty",
+      "image_definition_sha256": "aa1a7242a0658333f9c5e1db763a2c03ba5cd0c199e40f7a9f14f0398105fea9"
+    },
+    "bench-container": {
+      "status": "pass",
+      "task": "2.5",
+      "description": "CPU, memory and I/O workloads run in container mode",
+      "details": [
+        "13 measurements across cpu, io, memory_allocation, memory_bandwidth",
+        "record identifies host macos-arm64, mode container, image emu-target-debian 0.1.0, workload bench 1.0.0"
+      ],
+      "checked_at": "2026-11-11T16:48:06Z",
+      "seconds": 5.3,
+      "revision": "1f0c983a2bc68ea89495a3dea14cc0e220c06bf5-dirty",
+      "image_definition_sha256": "aa1a7242a0658333f9c5e1db763a2c03ba5cd0c199e40f7a9f14f0398105fea9"
+    },
+    "bench-vm": {
+      "status": "pass",
+      "task": "2.5",
+      "description": "CPU, memory and I/O workloads run in host-native VM mode",
+      "details": [
+        "13 measurements across cpu, io, memory_allocation, memory_bandwidth",
+        "record identifies host macos-arm64, mode vm-native, image emu-target-debian 0.1.0, workload bench 1.0.0"
+      ],
+      "checked_at": "2026-11-11T16:48:12Z",
+      "seconds": 5.5,
+      "revision": "1f0c983a2bc68ea89495a3dea14cc0e220c06bf5-dirty",
+      "image_definition_sha256": "aa1a7242a0658333f9c5e1db763a2c03ba5cd0c199e40f7a9f14f0398105fea9"
+    },
+    "results": {
+      "status": "pass",
+      "task": "2.5",
+      "description": "recorded results carry their environment identity",
+      "details": [
+        "12 records, all fully identified",
+        "this host has bench results for: container, vm-arm32, vm-arm64, vm-native"
+      ],
+      "checked_at": "2026-11-11T16:48:12Z",
+      "seconds": 0.0,
+      "revision": "1f0c983a2bc68ea89495a3dea14cc0e220c06bf5-dirty",
+      "image_definition_sha256": "aa1a7242a0658333f9c5e1db763a2c03ba5cd0c199e40f7a9f14f0398105fea9"
+    },
+    "vm-arm32": {
+      "status": "pass",
+      "task": "3.1",
+      "description": "ARM32 VM guest mode starts the target OS workload",
+      "details": [
+        "armv7l guest on tcg simulating cortex-a15 (CPU part 0xc0f) booted in 16.2s and ran the prompt workload"
+      ],
+      "checked_at": "2026-11-11T16:48:29Z",
+      "seconds": 16.9,
+      "revision": "1f0c983a2bc68ea89495a3dea14cc0e220c06bf5-dirty",
+      "image_definition_sha256": "aa1a7242a0658333f9c5e1db763a2c03ba5cd0c199e40f7a9f14f0398105fea9"
+    },
+    "vm-arm64": {
+      "status": "pass",
+      "task": "3.1",
+      "description": "ARM64 VM guest mode starts the target OS workload",
+      "details": [
+        "aarch64 guest on tcg simulating cortex-a53 (CPU part 0xd03) booted in 4.6s and ran the prompt workload"
+      ],
+      "checked_at": "2026-11-11T16:48:34Z",
+      "seconds": 5.3,
+      "revision": "1f0c983a2bc68ea89495a3dea14cc0e220c06bf5-dirty",
+      "image_definition_sha256": "aa1a7242a0658333f9c5e1db763a2c03ba5cd0c199e40f7a9f14f0398105fea9"
+    },
+    "drivers-container": {
+      "status": "pass",
+      "task": "3.2",
+      "description": "emulated, mocked and host-routed drivers in container mode",
+      "details": [
+        "emulated: no host-side process ran; provider model:emu-swrng-1; 114449.2 bytes/s",
+        "mocked: sample is the stub's fixed pattern; provider mock:fixed-pattern; 3695083998.9 bytes/s",
+        "host: sample found in the 1728512 bytes served by the host-side process; provider host:host.docker.internal:49822; 3448475.3 bytes/s"
+      ],
+      "checked_at": "2026-11-11T16:48:36Z",
+      "seconds": 2.0,
+      "revision": "1f0c983a2bc68ea89495a3dea14cc0e220c06bf5-dirty",
+      "image_definition_sha256": "aa1a7242a0658333f9c5e1db763a2c03ba5cd0c199e40f7a9f14f0398105fea9"
+    },
+    "drivers-vm": {
+      "status": "pass",
+      "task": "3.2",
+      "description": "emulated, mocked and host-routed drivers in host-native VM mode",
+      "details": [
+        "emulated: no host-side process ran; provider kernel:virtio_rng.0; 4682148.9 bytes/s",
+        "mocked: sample is the stub's fixed pattern; provider mock:fixed-pattern; 4055919816.4 bytes/s",
+        "host: sample found in the 852160 bytes served by the host-side process; provider kernel:virtio_rng.0; 1598798.5 bytes/s"
+      ],
+      "checked_at": "2026-11-11T16:48:39Z",
+      "seconds": 2.4,
+      "revision": "1f0c983a2bc68ea89495a3dea14cc0e220c06bf5-dirty",
+      "image_definition_sha256": "aa1a7242a0658333f9c5e1db763a2c03ba5cd0c199e40f7a9f14f0398105fea9"
+    },
+    "drivers-vm-arm32": {
+      "status": "pass",
+      "task": "3.2",
+      "description": "the three driver strategies in an ARM32 VM",
+      "details": [
+        "emulated: no host-side process ran; provider kernel:virtio_rng.0; 1012017.9 bytes/s",
+        "mocked: sample is the stub's fixed pattern; provider mock:fixed-pattern; 104867861.6 bytes/s",
+        "host: sample found in the 393408 bytes served by the host-side process; provider kernel:virtio_rng.0; 764932.8 bytes/s"
+      ],
+      "checked_at": "2026-11-11T16:49:36Z",
+      "seconds": 57.0,
+      "revision": "1f0c983a2bc68ea89495a3dea14cc0e220c06bf5-dirty",
+      "image_definition_sha256": "aa1a7242a0658333f9c5e1db763a2c03ba5cd0c199e40f7a9f14f0398105fea9"
+    },
+    "drivers-vm-arm64": {
+      "status": "pass",
+      "task": "3.2",
+      "description": "the three driver strategies in an ARM64 VM",
+      "details": [
+        "emulated: no host-side process ran; provider kernel:virtio_rng.0; 2207185.1 bytes/s",
+        "mocked: sample is the stub's fixed pattern; provider mock:fixed-pattern; 132692288.2 bytes/s",
+        "host: sample found in the 590080 bytes served by the host-side process; provider kernel:virtio_rng.0; 1178333.0 bytes/s"
+      ],
+      "checked_at": "2026-11-11T16:49:53Z",
+      "seconds": 16.9,
+      "revision": "1f0c983a2bc68ea89495a3dea14cc0e220c06bf5-dirty",
+      "image_definition_sha256": "aa1a7242a0658333f9c5e1db763a2c03ba5cd0c199e40f7a9f14f0398105fea9"
+    }
+  }
+}

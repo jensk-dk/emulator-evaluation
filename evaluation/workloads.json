@@ -1,0 +1,96 @@
+{
+  "version": "1.0.0",
+  "description": "Versioned evaluation workloads. A workload's version changes whenever its method changes; results are comparable only between runs of the same workload version. status 'implemented' means the workload is in the target image; 'defined' means its measurements are specified here and its implementation is scheduled for the stage named.",
+  "workloads": [
+    {
+      "id": "bench",
+      "version": "1.0.0",
+      "kind": "performance",
+      "status": "implemented",
+      "stage": 1,
+      "launch": "./emu run --mode MODE --workload bench --record",
+      "source": "target/src/emubench.c",
+      "version_source": {"file": "target/src/emubench.c", "pattern": "#define EMUBENCH_VERSION \"([^\"]+)\""},
+      "procedure": "evaluation/procedures.md#resource-benchmarks",
+      "measurements": [
+        {"area": "cpu", "test": "sha256_1t", "unit": "MiB/s", "method": "SHA-256 over a 64 KiB buffer on one thread for a fixed time (integer and bit operations)"},
+        {"area": "cpu", "test": "sha256_mt", "unit": "MiB/s", "method": "the same on one thread per online CPU, summed (multi-core scaling)"},
+        {"area": "cpu", "test": "matmul_f64", "unit": "Mflop/s", "method": "96x96 double-precision matrix multiplication on one thread for a fixed time"},
+        {"area": "memory_allocation", "test": "malloc_churn", "unit": "Mops/s", "method": "random malloc and free of 16 B to 128 KiB blocks across 4096 slots, touching each block"},
+        {"area": "memory_allocation", "test": "page_fault", "unit": "MiB/s", "method": "map 64 MiB of anonymous memory with huge pages disabled, touch every page, unmap; repeated for a fixed time"},
+        {"area": "memory_bandwidth", "test": "memset", "unit": "MiB/s", "method": "fill a 64 MiB buffer; best round"},
+        {"area": "memory_bandwidth", "test": "memcpy", "unit": "MiB/s", "method": "copy a 64 MiB buffer; best round"},
+        {"area": "memory_bandwidth", "test": "stream_triad", "unit": "MiB/s", "method": "a[i] = b[i] + s*c[i] over 64 MiB arrays of doubles, counting three arrays moved; best round"},
+        {"area": "io", "test": "seq_write", "unit": "MiB/s", "method": "write a 256 MiB file to /data in 1 MiB blocks, timed through fsync"},
+        {"area": "io", "test": "seq_read", "unit": "MiB/s", "method": "read the file back in 1 MiB blocks with O_DIRECT"},
+        {"area": "io", "test": "rand_read_4k", "unit": "IOPS", "method": "random 4 KiB O_DIRECT reads for a fixed time"},
+        {"area": "io", "test": "rand_write_4k", "unit": "IOPS", "method": "random 4 KiB O_DIRECT writes for a fixed time, timed through a final fdatasync"},
+        {"area": "io", "test": "sync_write_4k", "unit": "IOPS", "method": "4 KiB append followed by fdatasync, repeated for a fixed time"}
+      ]
+    },
+    {
+      "id": "prompt",
+      "version": "1.0.0",
+      "kind": "functional",
+      "status": "implemented",
+      "stage": 1,
+      "launch": "./emu run --mode MODE --workload prompt",
+      "source": "target/rootfs/opt/emu/workloads/prompt",
+      "procedure": "evaluation/procedures.md#functional-checks",
+      "measurements": []
+    },
+    {
+      "id": "driver-check",
+      "version": "1.0.0",
+      "kind": "functional",
+      "status": "implemented",
+      "stage": 2,
+      "launch": "./emu run --mode MODE --workload driver-check --driver hwrng=STRATEGY",
+      "source": "target/rootfs/opt/emu/workloads/driver-check",
+      "version_source": {"file": "target/rootfs/opt/emu/workloads/driver-check", "pattern": "VERSION = \"([^\"]+)\""},
+      "procedure": "evaluation/procedures.md#driver-strategies",
+      "measurements": [
+        {"area": "driver", "test": "hwrng", "unit": "bytes/s", "method": "read /dev/hwrng through the selected strategy: a 16-byte sample that identifies the provider, then throughput over half a second"}
+      ]
+    },
+    {
+      "id": "graphics-demo",
+      "version": "0.1.0",
+      "kind": "performance",
+      "status": "defined",
+      "stage": 3,
+      "procedure": "evaluation/procedures.md#graphics",
+      "measurements": [
+        {"area": "graphics", "test": "wayland_fps", "unit": "frames/s", "method": "fixed animated scene presented by a Wayland client, at 720p, 1080p and 4K; mean frame rate and 99th-percentile frame time"},
+        {"area": "graphics", "test": "gles_fps", "unit": "frames/s", "method": "fixed OpenGL ES scene at 720p, 1080p and 4K; mean frame rate and 99th-percentile frame time"},
+        {"area": "graphics", "test": "vulkan_fps", "unit": "frames/s", "method": "fixed Vulkan scene at 720p, 1080p and 4K; mean frame rate and 99th-percentile frame time"},
+        {"area": "graphics", "test": "flutter_fps", "unit": "frames/s", "method": "fixed Flutter animation at 720p, 1080p and 4K; mean frame rate and 99th-percentile frame build and raster time"}
+      ]
+    },
+    {
+      "id": "media-decode",
+      "version": "0.1.0",
+      "kind": "performance",
+      "status": "defined",
+      "stage": 4,
+      "procedure": "evaluation/procedures.md#audio-and-video-decoding",
+      "measurements": [
+        {"area": "audio_video_decoding", "test": "video_decode_speed", "unit": "x realtime", "method": "decode a fixed reference stream as fast as possible, per video codec (MPEG-2, AVC, HEVC) and container (MP2TS, MP4, MSE-style fragments)"},
+        {"area": "audio_video_decoding", "test": "audio_decode_speed", "unit": "x realtime", "method": "decode a fixed reference stream as fast as possible, per audio codec (MP2, AC-3, AAC, HE-AAC)"},
+        {"area": "audio_video_decoding", "test": "playback_dropped_frames", "unit": "frames", "method": "frames dropped during real-time playback of each reference stream through each graphics technology"}
+      ]
+    },
+    {
+      "id": "web-bench",
+      "version": "0.1.0",
+      "kind": "performance",
+      "status": "defined",
+      "stage": 5,
+      "procedure": "evaluation/procedures.md#web",
+      "measurements": [
+        {"area": "audio_video_decoding", "test": "mse_playback_dropped_frames", "unit": "frames", "method": "frames dropped while WPE WebKit plays a fixed reference stream appended through MSE"},
+        {"area": "graphics", "test": "web_render_fps", "unit": "frames/s", "method": "fixed animated page rendered by WPE WebKit at 720p, 1080p and 4K"}
+      ]
+    }
+  ]
+}

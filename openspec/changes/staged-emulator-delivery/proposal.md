@@ -22,4 +22,4 @@ None. Existing capability specs remain the product contract; this proposal only 
 
 ## Impact
 
-This plan sequences work across the existing host-platform, execution-mode, launcher, evaluation-environment, graphics, media, performance-evaluation, and performance-reporting specs. It introduces no runtime APIs, dependencies, or implementation choices.
+This plan sequences work across the existing host-platform, host-setup, execution-mode, launcher, evaluation-environment, graphics, media, performance-evaluation, and performance-reporting specs. It introduces no runtime APIs, dependencies, or implementation choices.

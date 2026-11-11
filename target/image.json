@@ -1,0 +1,16 @@
+{
+  "name": "emu-target-debian",
+  "version": "0.1.0",
+  "description": "Linux client OS image that simulates the target OS in container and VM modes.",
+  "source": {
+    "distribution": "Debian 13 (trixie)",
+    "base_image": "docker.io/library/debian:trixie-slim",
+    "base_image_digest": "sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2",
+    "apt_snapshot": "20261104T212339Z"
+  },
+  "architectures": {
+    "x86_64": {"platform": "linux/amd64", "debian_arch": "amd64", "kernel_package": "linux-image-amd64"},
+    "arm64": {"platform": "linux/arm64", "debian_arch": "arm64", "kernel_package": "linux-image-arm64"},
+    "arm32": {"platform": "linux/arm/v7", "debian_arch": "armhf", "kernel_package": "linux-image-armmp-lpae"}
+  }
+}

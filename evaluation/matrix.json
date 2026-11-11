@@ -1,0 +1,27 @@
+{
+  "version": "1.0.0",
+  "description": "Host and emulator-mode combinations the performance evaluation must cover. Every host is evaluated in every mode, and every combination measures every performance area.",
+  "declared_host_combinations": [
+    {"os": "linux", "arch": "x86_64", "declared_by": "openspec/config.yaml: host-native examples include x86 on Windows/Linux"},
+    {"os": "windows", "arch": "x86_64", "declared_by": "openspec/config.yaml: host-native examples include x86 on Windows/Linux"},
+    {"os": "macos", "arch": "x86_64", "declared_by": "openspec/config.yaml: host-native examples include x86 or ARM on macOS"},
+    {"os": "macos", "arch": "arm64", "declared_by": "openspec/config.yaml: host-native examples include x86 or ARM on macOS"}
+  ],
+  "hosts": [
+    {"id": "linux-x86_64", "os": "linux", "arch": "x86_64", "native_accelerator": "kvm"},
+    {"id": "windows-x86_64", "os": "windows", "arch": "x86_64", "native_accelerator": "whpx"},
+    {"id": "macos-x86_64", "os": "macos", "arch": "x86_64", "native_accelerator": "hvf"},
+    {"id": "macos-arm64", "os": "macos", "arch": "arm64", "native_accelerator": "hvf"}
+  ],
+  "modes": [
+    {"id": "container", "mode": "container", "guest_arch": "native", "description": "target OS userland on the container runtime, host CPU architecture"},
+    {"id": "vm-native", "mode": "vm", "guest_arch": "native", "description": "target kernel and userland in a VM running the host CPU architecture on the host hypervisor"},
+    {"id": "vm-arm32", "mode": "vm", "guest_arch": "arm32", "description": "VM simulating a 32-bit ARM target CPU"},
+    {"id": "vm-arm64", "mode": "vm", "guest_arch": "arm64", "description": "VM simulating a 64-bit ARM target CPU"}
+  ],
+  "performance_areas": ["cpu", "memory_allocation", "memory_bandwidth", "io", "graphics", "audio_video_decoding"],
+  "exclusions": [],
+  "open_questions": [
+    "Linux and Windows on ARM64 hosts are not named by the requirements and are not in the matrix. Add them to declared_host_combinations and hosts if they become supported hosts."
+  ]
+}

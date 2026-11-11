@@ -1,0 +1,5 @@
+#!/bin/sh
+# Workload "bench": CPU, memory allocation, memory bandwidth and I/O
+# benchmarks. See evaluation/workloads.json for the definition and
+# target/src/emubench.c for the implementation.
+exec /usr/local/bin/emubench --dir /data "$@"

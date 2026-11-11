@@ -1,0 +1,4 @@
+#!/bin/sh
+# Startup launcher for Linux and macOS. See ./emu --help.
+here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+PYTHONPATH="$here${PYTHONPATH:+:$PYTHONPATH}" PYTHONDONTWRITEBYTECODE=1 exec python3 -m emulator "$@"

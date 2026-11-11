@@ -1,0 +1,6 @@
+# Modules the initramfs needs to find and mount the root filesystem on the
+# QEMU machine types the launcher uses (virtio block device, ext4).
+virtio_pci
+virtio_mmio
+virtio_blk
+ext4
