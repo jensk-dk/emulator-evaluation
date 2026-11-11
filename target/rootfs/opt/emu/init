@@ -4,8 +4,10 @@
 #   VM mode         PID 1, started by the kernel (init=/opt/emu/init). The
 #                   workload comes from the kernel command line:
 #                   emu.workload=NAME emu.args=BASE64 emu.drivers=F=S,F=S
+#                   emu.display=WIDTHxHEIGHT emu.graphics=emulated|host
 #   Container mode  the image entrypoint: init WORKLOAD [ARGS...], with driver
-#                   strategies in $EMU_DRIVERS.
+#                   strategies in $EMU_DRIVERS and the display in
+#                   $EMU_DISPLAY and $EMU_GRAPHICS.
 #
 # It brings up the target OS environment, starts the driver-feature providers,
 # runs one workload on the console and reports its exit status. Lines that
@@ -70,6 +72,12 @@ if [ "$$" = 1 ] && [ "${EMU_MODE:-}" != container ]; then
     mapfile -t ARGS < <(printf '%s' "$encoded" | base64 -d)
   fi
   EMU_DRIVERS=$(cmdline_get emu.drivers || true)
+  # The emulator's display, when it has one (see /opt/emu/display).
+  for setting in display:EMU_DISPLAY graphics:EMU_GRAPHICS screenhold:EMU_SCREEN_HOLD; do
+    if value=$(cmdline_get "emu.${setting%%:*}") && [ -n "$value" ]; then
+      export "${setting#*:}=$value"
+    fi
+  done
   # The last console the kernel lists is the one wired to the launcher.
   EMU_CONSOLE=/dev/$(awk '{print $NF}' /sys/class/tty/console/active 2>/dev/null)
   export EMU_CONSOLE
@@ -89,6 +97,7 @@ else
   mkdir -p /data /run/emu
 fi
 export EMU_DRIVERS
+export XDG_RUNTIME_DIR=/run/emu/xdg
 
 image=$(tr -d '\n' < /etc/emu-image.json 2>/dev/null)
 printf 'EMU-READY: {"mode": "%s", "machine": "%s", "kernel": "%s", "cpus": %s, "image": %s}\n' \

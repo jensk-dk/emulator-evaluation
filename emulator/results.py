@@ -51,6 +51,12 @@ def missing_identity(record):
     for section, field in IDENTITY_FIELDS:
         if not (record.get(section) or {}).get(field):
             missing.append("%s.%s" % (section, field))
+    # A result from a workload that uses the display also depends on the
+    # display's resolution and on how graphics were provided.
+    if (catalog.workload((record.get("workload") or {}).get("id")) or {}).get("display"):
+        for field in ("display", "graphics"):
+            if not (record.get("emulator") or {}).get(field):
+                missing.append("emulator.%s" % field)
     return missing
 
 

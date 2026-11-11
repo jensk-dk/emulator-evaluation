@@ -15,6 +15,10 @@
 #   container runtime         container mode and target image builds
 #   foreign-arch emulation    building ARM32/ARM64/x86-64 target images
 #
+# Optional, installed where the package manager offers it:
+#   QEMU OpenGL modules       VM mode maps graphics to the host GPU; without
+#                             them graphics are emulated
+#
 # Written for bash 3.2 (the version macOS ships).
 
 set -u
@@ -25,7 +29,7 @@ for arg in "$@"; do
   case "$arg" in
     --check) MODE=check ;;
     -y|--yes) ASSUME_YES=1 ;;
-    -h|--help) sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,/^# Written for/p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "setup.sh: unknown argument: $arg" >&2; exit 2 ;;
   esac
 done
@@ -48,10 +52,13 @@ done
 export PATH
 
 MISSING=""          # space-separated dependency keys still missing
+OPTIONAL=""         # optional extras this script could install
 WARNINGS=0
 
 ok()      { printf '  [ ok ]  %s\n' "$*"; }
 missing() { printf '  [MISS]  %s\n' "$2"; MISSING="$MISSING $1"; }
+optional() { printf '  [opt ]  %s\n' "$2"; OPTIONAL="$OPTIONAL $1"; }
+note()    { printf '  [note]  %s\n' "$*"; }
 warn()    { printf '  [warn]  %s\n' "$*"; WARNINGS=$((WARNINGS + 1)); }
 info()    { printf '%s\n' "$*"; }
 have()    { command -v "$1" >/dev/null 2>&1; }
@@ -81,6 +88,33 @@ check_qemu() {
     ok "QEMU: $("$QEMU_NATIVE" --version | head -1) (native, ARM64 and ARM32 system emulators)"
   else
     missing qemu "QEMU system emulators:$absent"
+  fi
+}
+
+# Host graphics acceleration for VM mode needs a QEMU with the GPU-accelerated
+# display device and a display backend that renders without a window.
+qemu_has_gl() {
+  have "$QEMU_NATIVE" || return 1
+  "$QEMU_NATIVE" -device help 2>/dev/null | grep -q 'virtio-gpu-gl-pci' &&
+    "$QEMU_NATIVE" -display help 2>/dev/null | grep -q 'egl-headless'
+}
+
+# Distribution packages that add them to an installed QEMU.
+linux_gl_packages() {
+  if have apt-get; then echo "qemu-system-modules-opengl"
+  elif have dnf; then echo "qemu-device-display-virtio-gpu-gl qemu-ui-egl-headless qemu-ui-opengl"
+  elif have pacman; then echo "qemu-hw-display-virtio-gpu-gl qemu-ui-egl-headless qemu-ui-opengl"
+  fi
+}
+
+check_graphics() {
+  have "$QEMU_NATIVE" || return 0
+  if qemu_has_gl; then
+    ok "host graphics acceleration for VM mode (QEMU with virglrenderer)"
+  elif [ "$OS" = Linux ] && [ -n "$(linux_gl_packages)" ]; then
+    optional qemu-gl "host graphics acceleration for VM mode: QEMU's OpenGL modules are not installed; graphics are emulated without them"
+  else
+    note "host graphics acceleration for VM mode: this QEMU build has none; graphics are emulated"
   fi
 }
 
@@ -168,10 +202,11 @@ check_foreign_arch() {
 }
 
 run_checks() {
-  MISSING=""; WARNINGS=0
+  MISSING=""; OPTIONAL=""; WARNINGS=0
   info "Host: $OS $ARCH"
   check_python
   check_qemu
+  check_graphics
   check_accel
   check_container
   check_foreign_arch
@@ -321,6 +356,20 @@ install_linux() {
     return 1
   fi
 
+  # Optional: QEMU's OpenGL modules. A failure here leaves graphics emulated.
+  if ! qemu_has_gl && [ -n "$(linux_gl_packages)" ]; then
+    local gl_status=0
+    # shellcheck disable=SC2046
+    if have apt-get; then
+      as_root env DEBIAN_FRONTEND=noninteractive apt-get install -y $(linux_gl_packages) || gl_status=1
+    elif have dnf; then
+      as_root dnf install -y $(linux_gl_packages) || gl_status=1
+    elif have pacman; then
+      as_root pacman -S --needed --noconfirm $(linux_gl_packages) || gl_status=1
+    fi
+    [ "$gl_status" = 0 ] || info "  Could not install QEMU's OpenGL modules; VM mode will emulate graphics."
+  fi
+
   if is_missing binfmt && have systemctl; then
     as_root systemctl restart systemd-binfmt.service 2>/dev/null || true
   fi
@@ -341,7 +390,7 @@ install_linux() {
 info "Checking host dependencies"
 run_checks
 
-if [ -z "$MISSING" ]; then
+if [ -z "$MISSING" ] && [ -z "$OPTIONAL" ]; then
   info ""
   info "All host dependencies are present."
   exit 0
@@ -349,19 +398,28 @@ fi
 
 if [ "$MODE" = check ]; then
   info ""
+  if [ -z "$MISSING" ]; then
+    info "All host dependencies are present. Optional extras not installed:$OPTIONAL. Run ./setup.sh to install."
+    exit 0
+  fi
   info "Missing:$MISSING. Run ./setup.sh to install."
   exit 1
 fi
 
 info ""
-info "Missing:$MISSING"
+[ -z "$MISSING" ] || info "Missing:$MISSING"
+[ -z "$OPTIONAL" ] || info "Optional:$OPTIONAL"
 if [ "$OS" = Darwin ]; then
   info "These are installed with Homebrew (installed first if absent); the container"
   info "engine is Colima unless Docker is already installed."
 else
   info "These are installed with the system package manager and need root (sudo)."
 fi
-confirm "Install the missing dependencies?" || exit 1
+if [ -n "$MISSING" ]; then
+  confirm "Install the missing dependencies?" || exit 1
+else
+  confirm "Install the optional extras?" || exit 0
+fi
 
 info ""
 if [ "$OS" = Darwin ]; then install_macos; else install_linux; fi
@@ -373,6 +431,7 @@ run_checks
 info ""
 if [ -z "$MISSING" ]; then
   info "All host dependencies are present."
+  [ -z "$OPTIONAL" ] || info "Optional extras still not installed:$OPTIONAL."
   exit 0
 fi
 info "Still missing:$MISSING"

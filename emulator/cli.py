@@ -3,7 +3,7 @@ import argparse
 import statistics
 import sys
 
-from . import catalog, container, drivers as driver_features, host, image, results, verify, vm
+from . import catalog, container, drivers as driver_features, graphics, host, image, results, verify, vm
 from .errors import EmuError
 from .run import DEFAULT_CPUS, DEFAULT_MEMORY_MB, KNOWN_OPTIONS, RunOptions, launch
 
@@ -14,6 +14,8 @@ examples:
   emu run --mode vm --arch arm32 --workload bench --record
   emu run --mode container --workload driver-check --driver hwrng=host
   emu run --mode vm --option accel=tcg --option cpu=max
+  emu run --mode vm --workload graphics-demo --resolution 4k --record
+  emu run --workload graphics-demo --graphics emulated --screenshot shots -- --tests gles,vulkan
   emu verify                                   run every verification check on this host
 
 In an interactive VM prompt, Ctrl-A X quits the emulator.
@@ -61,7 +63,8 @@ def cmd_run(args):
         opts = RunOptions(
             mode=args.mode, workload=args.workload, args=workload_args, arch=args.arch, cpus=args.cpus,
             memory_mb=args.memory, drivers=driver_features.parse(args.driver), options=_options(args.option),
-            extra_args=args.emulator_arg or [], timeout=args.timeout, rebuild=args.rebuild and index == 0)
+            extra_args=args.emulator_arg or [], timeout=args.timeout, rebuild=args.rebuild and index == 0,
+            resolution=args.resolution, graphics=args.graphics, screenshot_dir=args.screenshot)
         outcome = launch(opts)
         outcomes.append(outcome)
         if outcome.attached:
@@ -73,6 +76,13 @@ def cmd_run(args):
             print("emu: the emulator stopped before the workload reported an exit status (emulator exit %s)"
                   % outcome.process_exit, file=sys.stderr)
             return 70
+        for screen in outcome.screens:
+            if screen.get("file"):
+                print("emu: captured the display (%dx%d) to %s" % (screen["captured_width"],
+                                                                 screen["captured_height"], screen["file"]),
+                      file=sys.stderr)
+            else:
+                print("emu: could not capture the display: %s" % screen.get("error"), file=sys.stderr)
         if args.record:
             if outcome.exit_code != 0:
                 print("emu: not recording a failed run", file=sys.stderr)
@@ -131,6 +141,18 @@ def cmd_doctor(args):
         print("container   MISSING: %s" % error)
         runtime = None
         problems += 1
+    binary = host.find_tool(vm.QEMU_BINARY[native])
+    if binary:
+        probe = graphics.probe_vm(binary)
+        print("graphics    VM mode: %s" % ("host acceleration available: " + probe["reason"] if probe["available"]
+                                           else "emulated only: " + probe["reason"]))
+    if runtime:
+        manifest = image.load_manifest("container", native)
+        if manifest and runtime.image_id(manifest["image_tag"]):
+            probe = graphics.probe_container(runtime, manifest["image_tag"], manifest["platform"])
+            print("graphics    container mode: %s" % (
+                "host acceleration available: " + probe["reason"] if probe["available"]
+                else "emulated only: " + probe["reason"]))
     for kind, archs in (("container", (native,)), ("vm", sorted({native, "arm32", "arm64"}))):
         for arch in archs:
             manifest = image.load_manifest(kind, arch)
@@ -173,15 +195,20 @@ def cmd_workloads(args):
 def cmd_verify(args):
     if args.list:
         for name, (_, task, description) in verify.CHECKS.items():
-            print("%-18s task %-9s %s" % (name, task, description))
+            print("%-26s task %-9s %s" % (name, task, description))
         return 0
     names = args.checks or list(verify.CHECKS)
     for name in names:
         if name not in verify.CHECKS:
             raise EmuError("unknown check %r (see: emu verify --list)" % name)
-    failed = verify.run_checks(names)
-    print("\n%d of %d checks passed on %s" % (len(names) - failed, len(names), host.host_id()))
-    return 1 if failed else 0
+    counts = verify.run_checks(names)
+    summary = "%d of %d checks passed on %s" % (counts["pass"], len(names), host.host_id())
+    if counts["unavailable"]:
+        summary += "; %d could not be run on this host" % counts["unavailable"]
+    if counts["fail"]:
+        summary += "; %d failed" % counts["fail"]
+    print("\n" + summary)
+    return 1 if counts["fail"] else 0
 
 
 def build_parser():
@@ -202,10 +229,20 @@ def build_parser():
     run.add_argument("--arch", choices=("native", "arm32", "arm64", "x86_64"), default="native",
                      help="VM guest CPU architecture (default: native, the host's own)")
     run.add_argument("--workload", default="prompt", metavar="NAME",
-                     help="target OS workload: prompt, bench, driver-check (default: prompt; see: emu workloads)")
+                     help="target OS workload: prompt, bench, driver-check, graphics-demo "
+                          "(default: prompt; see: emu workloads)")
     run.add_argument("--cpus", type=int, default=DEFAULT_CPUS, help="CPUs given to the target (default: %(default)s)")
     run.add_argument("--memory", type=int, default=DEFAULT_MEMORY_MB, metavar="MIB",
                      help="memory given to the target in MiB (default: %(default)s)")
+    run.add_argument("--resolution", choices=tuple(graphics.RESOLUTIONS), metavar="RESOLUTION",
+                     help="display resolution: 720p, 1080p or 4k (default: 1080p). The emulator has a display "
+                          "when the workload uses one or this or --graphics is given")
+    run.add_argument("--graphics", choices=graphics.CHOICES,
+                     help="how graphics are provided: host maps them to the host's graphics acceleration, "
+                          "emulated renders on the target CPU, auto prefers host and falls back to emulated "
+                          "(default: auto)")
+    run.add_argument("--screenshot", metavar="DIR",
+                     help="save a PNG of the display to DIR each time a graphics workload has a finished frame up")
     run.add_argument("--driver", action="append", metavar="FEATURE=STRATEGY",
                      help="how a target driver feature is provided; repeatable")
     run.add_argument("--option", action="append", metavar="KEY=VALUE", help="emulator option; repeatable")

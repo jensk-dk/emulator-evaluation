@@ -87,7 +87,7 @@ def _base_image(spec):
     return source["base_image"]
 
 
-def _build_command(runtime, arch, stage, tag):
+def _build_command(runtime, arch, stage, tag, definition_hash):
     spec = definition()
     info = arch_info(arch)
     args = {
@@ -95,8 +95,10 @@ def _build_command(runtime, arch, stage, tag):
         "APT_SNAPSHOT": spec["source"].get("apt_snapshot", ""),
         "IMAGE_NAME": spec["name"],
         "IMAGE_VERSION": spec["version"],
-        "DEFINITION_SHA256": definition_sha256(),
+        "DEFINITION_SHA256": definition_hash,
         "KERNEL_PACKAGE": info["kernel_package"],
+        "FLUTTER_VERSION": spec["source"]["flutter"]["version"],
+        "FLUTTER_REVISION": spec["source"]["flutter"]["revision"],
     }
     command = [runtime.cli, "build", "--platform", info["platform"], "--target", stage, "--tag", tag,
                "--file", str(TARGET_DIR / "Dockerfile")]
@@ -129,7 +131,7 @@ def _sha256_file(path):
     return digest.hexdigest()
 
 
-def _manifest(kind, arch, runtime):
+def _manifest(kind, arch, runtime, definition_hash):
     spec = definition()
     return {
         "kind": kind,
@@ -138,7 +140,9 @@ def _manifest(kind, arch, runtime):
         "name": spec["name"],
         "version": spec["version"],
         "source": spec["source"],
-        "definition_sha256": definition_sha256(),
+        # The hash the build was started with: the definition may be edited
+        # while a long build runs, and the manifest must describe what was built.
+        "definition_sha256": definition_hash,
         "build_revision": git_revision(),
         "built_at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "built_with": runtime.version(),
@@ -157,8 +161,9 @@ def _write_manifest(kind, arch, manifest):
 def build_container(runtime, arch, quiet=False):
     """Build the container-mode image; returns its manifest."""
     tag = container_tag(arch)
-    _run_build(_build_command(runtime, arch, "target", tag), quiet, arch)
-    manifest = _manifest("container", arch, runtime)
+    definition_hash = definition_sha256()
+    _run_build(_build_command(runtime, arch, "target", tag, definition_hash), quiet, arch)
+    manifest = _manifest("container", arch, runtime, definition_hash)
     manifest["image_tag"] = tag
     manifest["image_id"] = runtime.image_id(tag)
     _write_manifest("container", arch, manifest)
@@ -168,7 +173,8 @@ def build_container(runtime, arch, quiet=False):
 def build_vm(runtime, arch, quiet=False):
     """Build the VM-mode artifacts into build/vm/ARCH; returns their manifest."""
     tag = "%s-vmimage" % container_tag(arch)
-    _run_build(_build_command(runtime, arch, "vmimage", tag), quiet, arch)
+    definition_hash = definition_sha256()
+    _run_build(_build_command(runtime, arch, "vmimage", tag, definition_hash), quiet, arch)
     directory = artifact_dir("vm", arch)
     staging = directory.with_name(arch + ".staging")
     shutil.rmtree(staging, ignore_errors=True)
@@ -189,7 +195,7 @@ def build_vm(runtime, arch, quiet=False):
     finally:
         subprocess.run([runtime.cli, "rm", "-f", container], env=host.tool_env(), capture_output=True)
 
-    manifest = _manifest("vm", arch, runtime)
+    manifest = _manifest("vm", arch, runtime, definition_hash)
     with open(staging / "image.json") as handle:
         manifest["image"] = json.load(handle)
     manifest["kernel_release"] = (staging / "kernel-release").read_text().strip()

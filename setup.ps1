@@ -89,6 +89,21 @@ function Test-QemuDep {
   }
 }
 
+# Host graphics acceleration for VM mode needs a QEMU with the GPU-accelerated
+# display device and a display backend that renders without a window. Without
+# them graphics are emulated, so this is a note, not a missing dependency.
+function Test-GraphicsNote {
+  $native = if ((Get-HostArch) -eq 'arm64') { 'qemu-system-aarch64' } else { 'qemu-system-x86_64' }
+  if (-not (Test-Command $native)) { return }
+  $devices = (& $native -device help 2>&1) -join "`n"
+  $displays = (& $native -display help 2>&1) -join "`n"
+  if ($devices -match 'virtio-gpu-gl-pci' -and $displays -match 'egl-headless') {
+    Write-Ok 'host graphics acceleration for VM mode (QEMU with virglrenderer)'
+  } else {
+    Write-Host '  [note]  host graphics acceleration for VM mode: this QEMU build has none; graphics are emulated'
+  }
+}
+
 function Test-AccelDep {
   # Reading optional-feature state needs elevation; fall back to a plain hint.
   if (Test-Admin) {
@@ -149,6 +164,7 @@ function Invoke-Checks {
   Write-Host "Host: Windows $(Get-HostArch)"
   Test-PythonDep
   Test-QemuDep
+  Test-GraphicsNote
   Test-AccelDep
   Test-ContainerDep
   Test-ForeignArchDep

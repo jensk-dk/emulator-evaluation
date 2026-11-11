@@ -8,7 +8,7 @@ import sys
 import threading
 import time
 
-from . import container, drivers as driver_features, host, image, vm
+from . import catalog, container, drivers as driver_features, graphics, host, image, vm
 from .errors import EmuError
 from .paths import BUILD_DIR
 
@@ -23,13 +23,15 @@ KNOWN_OPTIONS = {
     "verbose-boot": "show kernel boot messages in VM mode (yes/no, default: no)",
     "host-address": "container mode: name or address containers use to reach the host",
     "host-bind": "container mode: address host-side processes listen on",
+    "venus": "VM mode with host graphics: map Vulkan to the host GPU too (yes/no, default: when QEMU offers it on Linux)",
 }
 
 
 class RunOptions:
     def __init__(self, mode, workload="prompt", args=(), arch="native", cpus=DEFAULT_CPUS,
                  memory_mb=DEFAULT_MEMORY_MB, drivers=None, options=None, extra_args=(), timeout=None,
-                 echo=True, stdin_script=None, quiet_build=False, rebuild=False):
+                 echo=True, stdin_script=None, quiet_build=False, rebuild=False, resolution=None, graphics=None,
+                 screenshot_dir=None, screenshot_format="png"):
         self.mode = mode
         self.workload = workload
         self.args = list(args)
@@ -44,6 +46,10 @@ class RunOptions:
         self.stdin_script = stdin_script        # bytes typed into the workload, for automated runs
         self.quiet_build = quiet_build
         self.rebuild = rebuild
+        self.resolution = resolution            # display resolution: 720p, 1080p or 4k
+        self.graphics = graphics                # auto, host or emulated
+        self.screenshot_dir = screenshot_dir    # capture the display here when a workload shows a finished frame
+        self.screenshot_format = screenshot_format
 
 
 class Outcome:
@@ -61,6 +67,7 @@ class Outcome:
         self.timed_out = False
         self.protocol_errors = []
         self.host_traces = {}
+        self.screens = []               # display captures, one per frame a workload announced
         self.notes = []
         self.output = []                # captured console lines
         self.started_at = None
@@ -102,6 +109,26 @@ def _image_identity(manifest, kind):
     return identity
 
 
+def _display_plan(opts, probe):
+    """The display this run gives the target, or None when it has none. A
+    display is attached for workloads that use one, and whenever a resolution
+    or graphics provider is asked for."""
+    declared = catalog.workload(opts.workload) or {}
+    if not (declared.get("display") or opts.resolution or opts.graphics or opts.screenshot_dir):
+        return None
+    width, height = graphics.resolution(opts.resolution)
+    plan = graphics.choose(opts.graphics, probe)
+    plan.update({"width": width, "height": height,
+                 "screen_hold": graphics.SCREEN_HOLD_SECONDS if opts.screenshot_dir else 0})
+    return plan
+
+
+def _display_record(plan, device):
+    return {"display": {"resolution": "%dx%d" % (plan["width"], plan["height"])},
+            "graphics": {"requested": plan["requested"], "provider": plan["provider"], "reason": plan["reason"],
+                         "device": device}}
+
+
 def launch(opts):
     """Run a workload; returns an Outcome. Raises EmuError when the emulator
     cannot be started at all."""
@@ -119,6 +146,9 @@ def launch(opts):
     # Attach straight to the terminal for a person; capture everything else.
     attached = interactive and opts.stdin_script is None and host.stdin_is_tty() and sys.stdout.isatty()
     plan = None
+    screens = None
+    qmp = None
+    qmp_directory = None
     try:
         if opts.mode == "container":
             if opts.arch != "native":
@@ -130,11 +160,27 @@ def launch(opts):
             env = dict(plan.container_env)
             if opts.drivers:
                 env["EMU_DRIVERS"] = ",".join("%s=%s" % item for item in sorted(opts.drivers.items()))
+            name = "emu-" + outcome.run_id.lower()
+            display = _display_plan(opts, lambda: graphics.probe_container(runtime, manifest["image_tag"],
+                                                                           manifest["platform"]))
+            display_args = []
+            if display:
+                env["EMU_DISPLAY"] = "%dx%d" % (display["width"], display["height"])
+                env["EMU_GRAPHICS"] = display["provider"]
+                if display["screen_hold"]:
+                    env["EMU_SCREEN_HOLD"] = str(display["screen_hold"])
+                    screens = graphics.Screens(opts.screenshot_dir, outcome.run_id, "png",
+                                               graphics.container_capture(runtime, name))
+                display_args = graphics.container_arguments(display)
             command = container.run_command(
                 runtime, manifest["image_tag"], manifest["platform"], opts.workload, opts.args, opts.cpus,
-                opts.memory_mb, env, interactive, attached, opts.extra_args, "emu-" + outcome.run_id.lower())
+                opts.memory_mb, env, interactive, attached, display_args + opts.extra_args, name)
             emulator = {"mode": "container", "variant": "container", "guest_arch": arch,
                         "runtime": runtime.version(), "engine": runtime.engine_info()}
+            if display:
+                device = "the engine's GPU render node (/dev/dri)" if display["provider"] == "host" else \
+                         "headless compositor output, rendering by the target CPU"
+                emulator.update(_display_record(display, device))
             if (emulator["engine"].get("cpus") or 0) < opts.cpus:
                 outcome.notes.append("the container engine has %s CPUs, fewer than the %d requested"
                                      % (emulator["engine"].get("cpus"), opts.cpus))
@@ -153,14 +199,28 @@ def launch(opts):
                 size = shutil.get_terminal_size()
                 name = os.environ.get("TERM", "")
                 terminal = (name if name.replace("-", "").isalnum() else "vt100", size.columns, size.lines)
+            qemu = host.require_tool(vm.QEMU_BINARY[guest], "VM mode with a %s guest" % guest)
+            display = _display_plan(opts, lambda: graphics.probe_vm(qemu))
+            display_args, display_backend, display_device = [], "none", None
+            if display:
+                display_args, display_backend, display_device = graphics.vm_arguments(
+                    display, display["width"], display["height"], opts.memory_mb, opts.options)
+                if display["screen_hold"]:
+                    qmp_args, qmp_address, qmp_directory = graphics.qmp_endpoint()
+                    display_args += qmp_args
+                    qmp = graphics.Qmp(qmp_address)
+                    screens = graphics.Screens(opts.screenshot_dir, outcome.run_id, opts.screenshot_format,
+                                               graphics.vm_capture(qmp, opts.screenshot_format))
             cmdline = vm.kernel_command_line(guest, opts.workload, opts.args, opts.drivers,
-                                             _flag(opts.options, "verbose-boot"), terminal)
+                                             _flag(opts.options, "verbose-boot"), terminal, display)
             command, binary = vm.run_command(
                 resolved, image.artifact_dir("vm", guest), data_disk, cmdline, opts.cpus, opts.memory_mb,
-                attached, plan.qemu_args + opts.extra_args, opts.options)
+                attached, display_args + plan.qemu_args + opts.extra_args, opts.options, display_backend)
             emulator = {"mode": "vm", "variant": resolved["variant"], "guest_arch": guest,
                         "accelerator": resolved["accelerator"], "cpu_model": resolved["cpu_model"],
                         "machine": resolved["machine"], "runtime": vm.qemu_version(binary)}
+            if display:
+                emulator.update(_display_record(display, display_device))
             image_identity = _image_identity(manifest, "vm")
         else:
             raise EmuError("unknown mode: %s" % opts.mode)
@@ -170,8 +230,12 @@ def launch(opts):
         outcome.command = command
         outcome.environment = {"host": host.describe(), "emulator": emulator, "image": image_identity,
                                "drivers": dict(opts.drivers), "launcher_revision": image.git_revision()}
-        for note in outcome.notes:
-            print("emu: " + note, file=sys.stderr, flush=True)
+        if emulator.get("graphics"):
+            outcome.notes.append("display %s, graphics %s (%s)" % (
+                emulator["display"]["resolution"], emulator["graphics"]["provider"], emulator["graphics"]["reason"]))
+        if opts.echo:
+            for note in outcome.notes:
+                print("emu: " + note, file=sys.stderr, flush=True)
 
         if attached:
             outcome.attached = True
@@ -179,7 +243,9 @@ def launch(opts):
             outcome.process_exit = subprocess.call(command, env=host.tool_env())
             outcome.duration_seconds = time.time() - outcome.started_at
         else:
-            _capture(command, opts, outcome, interactive)
+            _capture(command, opts, outcome, interactive, None if attached else screens)
+        if screens:
+            outcome.screens = screens.captures
         for process in plan.host_processes:
             if process.get("trace") and os.path.exists(process["trace"]):
                 with open(process["trace"]) as handle:
@@ -190,6 +256,9 @@ def launch(opts):
     finally:
         if plan:
             plan.stop()
+        if qmp:
+            qmp.close()
+        graphics.remove_directory(qmp_directory)
         shutil.rmtree(run_dir, ignore_errors=True)
 
 
@@ -218,7 +287,7 @@ def _forward_input(process, source, ready, end_with_eot):
         pass
 
 
-def _capture(command, opts, outcome, interactive):
+def _capture(command, opts, outcome, interactive, screens=None):
     stdin = subprocess.PIPE if interactive else subprocess.DEVNULL
     outcome.started_at = time.time()
     process = subprocess.Popen(command, stdin=stdin, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -242,7 +311,7 @@ def _capture(command, opts, outcome, interactive):
             outcome.output.append(line)
             if opts.echo:
                 print(line, flush=True)
-            _parse(line, outcome, ready)
+            _parse(line, outcome, ready, screens)
     except KeyboardInterrupt:
         process.kill()
         raise
@@ -255,7 +324,7 @@ def _capture(command, opts, outcome, interactive):
         outcome.duration_seconds = time.time() - outcome.started_at
 
 
-def _parse(line, outcome, ready):
+def _parse(line, outcome, ready, screens=None):
     # A console line can carry a prompt or kernel text in front of the marker.
     start = line.find("EMU-")
     if start < 0:
@@ -269,7 +338,7 @@ def _parse(line, outcome, ready):
         except ValueError:
             outcome.protocol_errors.append(line)
         return
-    if marker not in ("EMU-READY", "EMU-DRIVER", "EMU-WORKLOAD", "EMU-RESULT"):
+    if marker not in ("EMU-READY", "EMU-DRIVER", "EMU-WORKLOAD", "EMU-RESULT", "EMU-SCREEN"):
         return
     try:
         data = json.loads(payload)
@@ -284,5 +353,9 @@ def _parse(line, outcome, ready):
         outcome.drivers.append(data)
     elif marker == "EMU-WORKLOAD":
         outcome.workload = data
+    elif marker == "EMU-SCREEN":
+        # The workload holds this frame on the display while it is captured.
+        if screens:
+            screens.on_marker(data)
     else:
         outcome.results.append(data)

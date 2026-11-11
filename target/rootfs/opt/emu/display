@@ -1,0 +1,144 @@
+#!/bin/bash
+# The target's display service: a Wayland compositor on the emulator's display.
+#
+#   display start        start the compositor (does nothing when it is running)
+#   display stop
+#   display env          shell settings for clients: eval "$(/opt/emu/display env)"
+#   display screenshot   write a PNG of what the display shows to stdout
+#
+# The launcher tells the target what display it has:
+#   EMU_DISPLAY=WIDTHxHEIGHT     the display resolution
+#   EMU_GRAPHICS=emulated|host   graphics rendered by the target's CPU, or
+#                                mapped to the host's graphics acceleration
+#
+# VM mode: the display is the emulator's display device, driven through the
+# target kernel's DRM/KMS driver. Container mode: there is no display device,
+# so the compositor renders to a headless output of the same size.
+
+state=/run/emu/display
+export XDG_RUNTIME_DIR=/run/emu/xdg
+export WAYLAND_DISPLAY=wayland-0
+resolution=${EMU_DISPLAY:-1920x1080}
+graphics=${EMU_GRAPHICS:-emulated}
+width=${resolution%x*}
+height=${resolution#*x}
+
+running() {
+  [ -f "$state/weston.pid" ] && kill -0 "$(cat "$state/weston.pid")" 2>/dev/null
+}
+
+start() {
+  running && return 0
+  mkdir -p /run/emu/xdg "$state"
+  chmod 700 /run/emu/xdg
+  rm -f /run/emu/xdg/wayland-0 /run/emu/xdg/wayland-0.lock
+
+  # With host acceleration the compositor composes on the GPU, and clients
+  # hand it GPU buffers. Otherwise it composes on the CPU.
+  local renderer=pixman
+  [ "$graphics" = host ] && renderer=gl
+  local options=(--config="$state/weston.ini" --shell=kiosk --renderer="$renderer" --socket="$WAYLAND_DISPLAY"
+                 --idle-time=0 --log="$state/weston.log" --debug)
+  {
+    echo "[core]"
+    echo "idle-time=0"
+    echo "require-input=false"
+    if [ "$EMU_MODE" = vm ]; then
+      echo "[output]"
+      echo "name=Virtual-1"
+      echo "mode=${width}x${height}"
+    else
+      # A headless output has no refresh signal; this makes it pace itself
+      # to its nominal 60 Hz rather than to about half of that.
+      echo "repaint-window=16"
+    fi
+  } > "$state/weston.ini"
+
+  if [ "$EMU_MODE" = vm ]; then
+    if ! ls /dev/dri/card* > /dev/null 2>&1; then
+      echo "display: the emulator has no display device (launch with --resolution, or a workload that uses the display)" >&2
+      return 1
+    fi
+    if [ ! -S /run/seatd.sock ]; then
+      seatd -g root > "$state/seatd.log" 2>&1 &
+      echo $! > "$state/seatd.pid"
+      for _ in $(seq 100); do
+        [ -S /run/seatd.sock ] && break
+        sleep 0.1
+      done
+    fi
+    LIBSEAT_BACKEND=seatd weston --backend=drm --continue-without-input "${options[@]}" \
+      > "$state/weston.out" 2>&1 &
+  else
+    weston --backend=headless --width="$width" --height="$height" "${options[@]}" \
+      > "$state/weston.out" 2>&1 &
+  fi
+  local pid=$!
+  echo "$pid" > "$state/weston.pid"
+  # Generous: under CPU emulation the compositor takes a while to come up.
+  for _ in $(seq 1800); do
+    [ -S /run/emu/xdg/wayland-0 ] && return 0
+    kill -0 "$pid" 2>/dev/null || break
+    sleep 0.1
+  done
+  echo "display: the compositor did not start" >&2
+  tail -n 20 "$state/weston.log" "$state/weston.out" >&2 2>/dev/null
+  stop
+  return 1
+}
+
+stop() {
+  local name pid
+  for name in weston seatd; do
+    [ -f "$state/$name.pid" ] || continue
+    pid=$(cat "$state/$name.pid")
+    kill "$pid" 2>/dev/null
+    for _ in $(seq 50); do
+      kill -0 "$pid" 2>/dev/null || break
+      sleep 0.1
+    done
+    kill -9 "$pid" 2>/dev/null
+    rm -f "$state/$name.pid"
+  done
+  return 0
+}
+
+client_env() {
+  echo "export XDG_RUNTIME_DIR=/run/emu/xdg"
+  echo "export WAYLAND_DISPLAY=$WAYLAND_DISPLAY"
+  echo "export GDK_BACKEND=wayland NO_AT_BRIDGE=1 GSETTINGS_BACKEND=memory"
+  if [ "$graphics" != host ]; then
+    # Emulated graphics: OpenGL ES and Vulkan are rendered by the CPU even
+    # if a GPU happens to be visible.
+    echo "export LIBGL_ALWAYS_SOFTWARE=1"
+    local icd
+    icd=$(ls /usr/share/vulkan/icd.d/lvp_icd*.json 2>/dev/null | head -n 1)
+    [ -n "$icd" ] && echo "export VK_DRIVER_FILES=$icd VK_ICD_FILENAMES=$icd"
+  fi
+  return 0
+}
+
+screenshot() {
+  if ! running; then
+    echo "display: not running" >&2
+    return 1
+  fi
+  local dir status
+  dir=$(mktemp -d /tmp/emu-screenshot.XXXXXX) || return 1
+  (cd "$dir" && weston-screenshooter > /dev/null 2>&1 && cat wayland-screenshot-*.png)
+  status=$?
+  rm -f "$dir"/wayland-screenshot-*.png
+  rmdir "$dir" 2>/dev/null
+  return $status
+}
+
+case "${1:-}" in
+  start) start ;;
+  stop) stop ;;
+  env) client_env ;;
+  screenshot) screenshot ;;
+  *)
+    echo "usage: display start|stop|env|screenshot" >&2
+    exit 64
+    ;;
+esac

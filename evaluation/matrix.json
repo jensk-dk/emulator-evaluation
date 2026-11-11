@@ -22,6 +22,7 @@
   "performance_areas": ["cpu", "memory_allocation", "memory_bandwidth", "io", "graphics", "audio_video_decoding"],
   "exclusions": [],
   "open_questions": [
-    "Linux and Windows on ARM64 hosts are not named by the requirements and are not in the matrix. Add them to declared_host_combinations and hosts if they become supported hosts."
+    "Linux and Windows on ARM64 hosts are not named by the requirements and are not in the matrix. Add them to declared_host_combinations and hosts if they become supported hosts.",
+    "Flutter and CPU-rendered Vulkan do not run in ARM32 VM mode (tasks 4.1): the Flutter SDK has no 32-bit ARM Linux target, and Mesa's CPU Vulkan driver crashes on 32-bit ARM. Decide whether ARM32 mode needs them; until then their graphics results for vm-arm32 are recorded as unavailable."
   ]
 }

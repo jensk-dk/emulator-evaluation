@@ -30,11 +30,45 @@ ENV DEBIAN_FRONTEND=noninteractive
 # -------------------------------------------------------------- tools ---
 # Compiles the native workload binaries for the target architecture.
 FROM base AS tools
-RUN apt-get update && apt-get install -y --no-install-recommends gcc libc6-dev \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      gcc libc6-dev pkgconf \
+      glslang-tools libegl-dev libgles-dev libvulkan-dev libwayland-dev wayland-protocols \
     && rm -rf /var/lib/apt/lists/*
-COPY src/ /src/
+COPY src/emubench.c src/emugfx.c src/build-emugfx.sh /src/
+COPY src/shaders/ /src/shaders/
 RUN mkdir -p /out \
-    && gcc -O2 -Wall -Wextra -pthread -o /out/emubench /src/emubench.c -lm
+    && gcc -O2 -Wall -Wextra -pthread -o /out/emubench /src/emubench.c -lm \
+    && /src/build-emugfx.sh /src /out/emugfx
+
+# ------------------------------------------------------------ flutter ---
+# Builds the Flutter workload with a pinned Flutter SDK. The SDK builds Linux
+# applications for x86-64 and ARM64 only; for any other architecture this
+# stage records why the image has no Flutter workload.
+FROM base AS flutter
+ARG FLUTTER_VERSION
+ARG FLUTTER_REVISION
+RUN set -eu; \
+    mkdir -p /out/flutter; \
+    arch=$(dpkg --print-architecture); \
+    case "$arch" in \
+      amd64|arm64) ;; \
+      *) echo "the Flutter SDK ($FLUTTER_VERSION) builds Linux applications for x86-64 and ARM64 only, not for $arch" \
+           > /out/flutter/UNAVAILABLE; exit 0 ;; \
+    esac; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+      ca-certificates clang cmake curl git libgtk-3-dev liblzma-dev libstdc++-14-dev ninja-build pkg-config \
+      unzip xz-utils; \
+    rm -rf /var/lib/apt/lists/*; \
+    git clone --quiet --depth 1 --branch "$FLUTTER_VERSION" https://github.com/flutter/flutter.git /opt/flutter; \
+    test "$(git -C /opt/flutter rev-parse HEAD)" = "$FLUTTER_REVISION"; \
+    export PATH=/opt/flutter/bin:$PATH; \
+    flutter --disable-analytics; \
+    flutter config --no-cli-animations --enable-linux-desktop; \
+    flutter precache --linux
+COPY src/flutter_demo/ /src/flutter_demo/
+COPY src/build-flutter-demo.sh /src/
+RUN [ -e /out/flutter/UNAVAILABLE ] || /src/build-flutter-demo.sh /src/flutter_demo /out/flutter
 
 # ----------------------------------------------------------------- os ---
 # Target OS userland shared by both execution modes.
@@ -42,12 +76,23 @@ FROM base AS os
 RUN apt-get update && apt-get install -y --no-install-recommends \
       bash busybox e2fsprogs iproute2 kmod procps python3 util-linux \
     && rm -rf /var/lib/apt/lists/*
+# Graphics: a Wayland compositor (Weston) with its seat service, Mesa's
+# OpenGL ES and Vulkan drivers (CPU rasterisers and the virtio GPU drivers),
+# and GTK, which the Flutter Linux embedder is built on.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      weston seatd \
+      libegl1 libgles2 libgl1-mesa-dri libvulkan1 mesa-vulkan-drivers \
+      libgtk-3-0t64 fonts-dejavu-core \
+      mesa-utils-bin vulkan-tools \
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -s /opt/emu/display /usr/local/bin/emu-display
 
 # ------------------------------------------------------------- target ---
 # Container-mode image.
 FROM os AS target
 COPY rootfs/ /
-COPY --from=tools /out/emubench /usr/local/bin/emubench
+COPY --from=tools /out/emubench /out/emugfx /usr/local/bin/
+COPY --from=flutter /out/flutter/ /opt/emu/flutter/
 ARG IMAGE_NAME=emu-target
 ARG IMAGE_VERSION=0.0.0
 ARG DEFINITION_SHA256=unknown
@@ -78,7 +123,8 @@ RUN set -eu; \
 # VM-mode root filesystem: the same files as the container image, plus kernel.
 FROM vmos AS vmroot
 COPY rootfs/ /
-COPY --from=tools /out/emubench /usr/local/bin/emubench
+COPY --from=tools /out/emubench /out/emugfx /usr/local/bin/
+COPY --from=flutter /out/flutter/ /opt/emu/flutter/
 ARG IMAGE_NAME=emu-target
 ARG IMAGE_VERSION=0.0.0
 ARG DEFINITION_SHA256=unknown

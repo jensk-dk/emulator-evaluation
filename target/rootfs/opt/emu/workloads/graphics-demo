@@ -1,0 +1,126 @@
+#!/bin/bash
+# Workload "graphics-demo": a fixed animated scene presented through each
+# supported graphics technology, full screen on the target's display.
+#
+#   graphics-demo [--tests wayland,gles,vulkan,flutter] [--seconds S]
+#
+#   wayland   a Wayland client that draws with the CPU into shared memory
+#   gles      OpenGL ES 2.0                  (target/src/emugfx.c)
+#   vulkan    Vulkan                         (target/src/emugfx.c)
+#   flutter   a Flutter application          (target/src/flutter_demo)
+#
+# Each test runs for a fixed time at the display's resolution and reports one
+# EMU-RESULT line. The display resolution, and whether graphics are emulated
+# or mapped to the host, are the launcher's choice (--resolution, --graphics).
+# See evaluation/workloads.json and evaluation/procedures.md#graphics.
+VERSION="1.0.0"
+
+tests=wayland,gles,vulkan,flutter
+seconds=5
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --tests)
+      tests=$2
+      shift 2
+      ;;
+    --seconds)
+      seconds=$2
+      shift 2
+      ;;
+    *)
+      echo "graphics-demo: unknown argument: $1" >&2
+      exit 64
+      ;;
+  esac
+done
+for test in ${tests//,/ }; do
+  case "$test" in
+    wayland | gles | vulkan | flutter) ;;
+    *)
+      echo "graphics-demo: unknown test: $test (known: wayland, gles, vulkan, flutter)" >&2
+      exit 64
+      ;;
+  esac
+done
+
+hold=${EMU_SCREEN_HOLD:-0}
+# A test that produces nothing in this long has hung. The allowance is large
+# because one 4K frame can take seconds under CPU emulation.
+limit=$(python3 -c 'import sys; print(int(float(sys.argv[1]) * 20 + float(sys.argv[2]) + 900))' "$seconds" "$hold")
+work=$(mktemp -d /tmp/emu-graphics.XXXXXX)
+
+unavailable() {
+  python3 - "$1" "$2" << 'PY'
+import json, sys
+print("EMU-RESULT: " + json.dumps({"area": "graphics", "test": sys.argv[1] + "_fps", "technology": sys.argv[1],
+                                   "unit": "frames/s", "value": None, "unavailable": sys.argv[2]}))
+PY
+}
+
+announce() {
+  python3 - "$VERSION" "$seconds" "$tests" "${EMU_DISPLAY:-1920x1080}" "${EMU_GRAPHICS:-emulated}" "$1" << 'PY'
+import json, sys
+try:
+    display = json.loads(sys.argv[6])
+except ValueError:
+    display = None
+print("EMU-WORKLOAD: " + json.dumps({"id": "graphics-demo", "version": sys.argv[1],
+                                     "seconds_per_test": float(sys.argv[2]), "tests": sys.argv[3].split(","),
+                                     "resolution": sys.argv[4], "graphics": sys.argv[5], "display": display}))
+PY
+}
+
+if ! /opt/emu/display start; then
+  announce ""
+  for test in ${tests//,/ }; do
+    unavailable "$test" "the display service did not start"
+  done
+  exit 1
+fi
+eval "$(/opt/emu/display env)"
+info=$(timeout 900 emugfx info 2> "$work/info.err")
+announce "$info"
+
+for test in ${tests//,/ }; do
+  out=$work/$test.out
+  err=$work/$test.err
+  if [ "$test" = flutter ]; then
+    if [ -f /opt/emu/flutter/UNAVAILABLE ]; then
+      unavailable flutter "$(cat /opt/emu/flutter/UNAVAILABLE)"
+      continue
+    fi
+    # The Flutter embedder draws with OpenGL ES; name the renderer it gets.
+    eval "$(
+      python3 - "$info" << 'PY'
+import json, shlex, sys
+try:
+    gles = (json.loads(sys.argv[1]) or {}).get("gles") or {}
+except ValueError:
+    gles = {}
+try:
+    version = json.load(open("/opt/emu/flutter/flutter-version.json")).get("frameworkVersion", "")
+except (OSError, ValueError):
+    version = ""
+print("renderer=%s" % shlex.quote(gles.get("renderer") or ""))
+print("accelerated=%s" % ("true" if gles.get("accelerated") else "false"))
+print("flutter_version=%s" % shlex.quote(version))
+PY
+    )"
+    EMU_GFX_SECONDS=$seconds EMU_GFX_HOLD=$hold EMU_GFX_RENDERER=$renderer EMU_GFX_ACCELERATED=$accelerated \
+      EMU_FLUTTER_VERSION=$flutter_version \
+      timeout "$limit" /opt/emu/flutter/emu_flutter_demo 2> "$err" | tee "$out"
+    status=${PIPESTATUS[0]}
+  else
+    timeout "$limit" emugfx "$test" --seconds "$seconds" --hold "$hold" 2> "$err" | tee "$out"
+    status=${PIPESTATUS[0]}
+  fi
+  # A test reports its own result unless it died first.
+  if ! grep -q '^EMU-RESULT: ' "$out"; then
+    unavailable "$test" "the $test test ended with status $status: $(tail -n 3 "$err" | tr '\n' ' ' | cut -c1-300)"
+  fi
+done
+
+/opt/emu/display stop
+rm -f "$work"/*.out "$work"/*.err
+rmdir "$work" 2> /dev/null
+exit 0

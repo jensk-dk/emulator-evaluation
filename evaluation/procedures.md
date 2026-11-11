@@ -37,7 +37,7 @@ Every record in `evaluation/results/` carries:
 | Field | Identifies |
 |---|---|
 | `host` | host OS and version, CPU architecture, CPU model, CPU count, memory |
-| `emulator` | mode and variant, guest architecture, accelerator, CPU model, runtime and its version, CPUs, memory, options |
+| `emulator` | mode and variant, guest architecture, accelerator, CPU model, runtime and its version, CPUs, memory, options; for runs with a display, its resolution and whether graphics were emulated or mapped to the host, with the reason |
 | `image` | client OS image name and version, its source (Debian release, base image digest, apt snapshot), the SHA-256 of its build definition, the repository revision it was built from, and the SHA-256 of the root filesystem or the container image ID; plus what the running target reported about itself |
 | `workload` | workload id, version and arguments |
 | `boot_seconds` | time from starting the emulator until the target OS reported ready |
@@ -84,9 +84,47 @@ drivers-vm`). For `hwrng` the check proves which strategy served the read:
 
 ## Graphics
 
-Defined for stage 3. Each graphics technology (Wayland, OpenGL ES, Vulkan,
-Flutter) renders a fixed scene at 720p, 1080p and 4K for a fixed time. Each
-result records whether graphics were mapped to host acceleration or emulated.
+Workload `graphics-demo`. One run measures one display resolution; run each
+combination at all three.
+
+    ./emu run --mode container --workload graphics-demo --resolution 720p --record --repeat 3
+    ./emu run --mode container --workload graphics-demo --resolution 1080p --record --repeat 3
+    ./emu run --mode container --workload graphics-demo --resolution 4k --record --repeat 3
+
+and the same for `--mode vm --arch native`, `--arch arm64` and `--arch arm32`.
+
+- Four tests, one per graphics technology: `wayland_fps` (a Wayland client
+  drawing with the CPU into shared memory), `gles_fps` (OpenGL ES 2.0),
+  `vulkan_fps` and `flutter_fps`. Each shows a fixed animated scene full
+  screen for a fixed time (5 seconds by default, `--seconds`; `--tests`
+  selects tests).
+- The animation advances by frame number, so every run draws the same frames
+  in the same order however fast it goes.
+- The Wayland, OpenGL ES and Vulkan tests finish each frame and submit it
+  without waiting for the display. Their `value` is frames rendered per
+  second; `displayed_fps` is how many of those the compositor reported as
+  shown. The Flutter test follows the display instead, as Flutter applications
+  do: it draws at most one frame each time the compositor shows one, and
+  reports how long building and rasterising each frame took.
+- The display paces differently in the two modes, which bounds
+  `displayed_fps` and the Flutter frame rate. Container mode has no display
+  device; its headless compositor output simulates a 60 Hz display. VM mode's
+  emulated display device has no refresh signal, so the compositor updates it
+  as often as it can compose a frame.
+- Each result names what rendered it (`renderer`) and whether that was host
+  graphics acceleration (`accelerated`); the record's `emulator.graphics` says
+  which provider the launcher selected and why. With `--graphics auto` (the
+  default) the launcher uses host acceleration when the host has a compatible
+  one and falls back to emulation otherwise. A comparison must only put
+  results with the same provider side by side.
+- A technology that the target image cannot run on an architecture reports
+  `"value": null` with the reason.
+
+`./emu verify` checks the display itself, not only what the target reports:
+at the end of each test the launcher captures the emulator's display (through
+QEMU in VM mode, from the compositor in container mode) and checks its size
+and the marker blocks that test draws. `--screenshot DIR` saves the same
+captures as PNG files.
 
 ## Audio and video decoding
 

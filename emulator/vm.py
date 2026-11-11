@@ -74,7 +74,7 @@ def _escape(path):
     return str(path).replace(",", ",,")
 
 
-def kernel_command_line(guest, workload, args, drivers, verbose, terminal=None):
+def kernel_command_line(guest, workload, args, drivers, verbose, terminal=None, display=None):
     parts = ["console=" + CONSOLE[guest], "root=/dev/vda", "rootfstype=ext4", "rw", "init=/opt/emu/init",
              "net.ifnames=0", "panic=-1"]
     if terminal:
@@ -90,16 +90,22 @@ def kernel_command_line(guest, workload, args, drivers, verbose, terminal=None):
         parts.append("emu.args=" + base64.b64encode("\n".join(args).encode()).decode())
     if drivers:
         parts.append("emu.drivers=" + ",".join("%s=%s" % item for item in sorted(drivers.items())))
+    if display:
+        # The display the emulator gives the target (emulator/graphics.py).
+        parts += ["emu.display=%dx%d" % (display["width"], display["height"]), "emu.graphics=" + display["provider"]]
+        if display.get("screen_hold"):
+            parts.append("emu.screenhold=%d" % display["screen_hold"])
     return " ".join(parts)
 
 
-def run_command(resolved, artifacts, data_disk, cmdline, cpus, memory_mb, console_on_tty, extra_args, options):
+def run_command(resolved, artifacts, data_disk, cmdline, cpus, memory_mb, console_on_tty, extra_args, options,
+                display_backend="none"):
     guest = resolved["guest_arch"]
     binary = host.require_tool(QEMU_BINARY[guest], "VM mode with a %s guest" % guest)
     disk_cache = options.get("disk-cache")
     cache = ",cache=%s" % disk_cache if disk_cache else ""
     command = [
-        binary, "-name", "emu-target", "-nodefaults", "-display", "none", "-no-reboot",
+        binary, "-name", "emu-target", "-nodefaults", "-display", display_backend, "-no-reboot",
         "-machine", resolved["machine"], "-accel", resolved["accelerator"], "-cpu", resolved["cpu_model"],
         "-smp", str(cpus), "-m", str(memory_mb),
         "-kernel", str(artifacts / "vmlinuz"), "-initrd", str(artifacts / "initrd.img"), "-append", cmdline,

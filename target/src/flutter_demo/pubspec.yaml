@@ -1,0 +1,14 @@
+name: emu_flutter_demo
+description: Flutter graphics workload for the emulator evaluation.
+publish_to: none
+version: 1.0.0
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+flutter:
+  uses-material-design: false

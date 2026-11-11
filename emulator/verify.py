@@ -7,9 +7,11 @@ which host.
 """
 import datetime
 import json
+import tempfile
 import time
 
-from . import catalog, drivers as driver_features, host, image, results, vm
+from . import catalog, container, drivers as driver_features, graphics, host, image, results, vm
+from .errors import EmuError
 from .paths import VERIFICATION_DIR
 from .run import RunOptions, launch
 
@@ -21,6 +23,11 @@ QUICK_BENCH = ["--seconds", "0.5", "--io-mb", "32", "--mem-mb", "16"]
 
 class CheckFailed(Exception):
     pass
+
+
+class CheckUnavailable(Exception):
+    """The check needs something this host does not have. That is recorded as
+    its own outcome, with the reason: neither a pass nor a failure."""
 
 
 def _require(condition, message):
@@ -229,6 +236,184 @@ def check_drivers_vm_arm64():
     return _drivers("vm", "arm64")
 
 
+# ------------------------------------------------------------ graphics ---
+
+NATIVE_TECHNOLOGIES = ("wayland", "gles", "vulkan")
+TECHNOLOGY_NAMES = {"wayland": "Wayland", "gles": "OpenGL ES", "vulkan": "Vulkan", "flutter": "Flutter"}
+_demo_runs = {}
+
+
+def _demo(mode, arch, resolution, provider=None):
+    """Run the graphics demo once per configuration and evaluate every test:
+    it produced a frame rate at the selected resolution, and a capture of the
+    emulator's display shows the frame it drew. Returns (emulator record,
+    {technology: (problem or None, summary line, result)})."""
+    key = (mode, arch, resolution, provider)
+    if key in _demo_runs:
+        return _demo_runs[key]
+    width, height = graphics.resolution(resolution)
+    technologies = NATIVE_TECHNOLOGIES + ("flutter",)
+    with tempfile.TemporaryDirectory(prefix="emu-verify-") as shots:
+        opts, outcome = _run(mode=mode, arch=arch, workload="graphics-demo", args=["--seconds", "1"],
+                             resolution=resolution, graphics=provider, screenshot_dir=shots,
+                             screenshot_format="ppm", timeout=3600)
+        evaluation = {}
+        for technology in technologies:
+            result = next((r for r in outcome.results if r.get("technology") == technology), None)
+            screen = next((c for c in outcome.screens if c.get("technology") == technology), None)
+            problem = None
+            if result is None:
+                problem = "the %s test reported nothing" % technology
+            elif result.get("value") is None:
+                problem = "%s is unavailable: %s" % (TECHNOLOGY_NAMES[technology], result.get("unavailable"))
+            elif result.get("resolution") != "%dx%d" % (width, height):
+                problem = "%s rendered at %s, not %dx%d" % (technology, result.get("resolution"), width, height)
+            elif screen is None:
+                problem = "the frame of the %s test was not captured from the display" % technology
+            else:
+                found = graphics.capture_problems(screen, width, height)
+                if found:
+                    problem = "%s at %dx%d: %s" % (technology, width, height, "; ".join(found))
+            line = None
+            if not problem:
+                line = "%s at %dx%d: %.1f frames/s on %s; the display capture is %dx%d and shows its frame" % (
+                    TECHNOLOGY_NAMES[technology], width, height, result["value"], result.get("renderer"),
+                    screen["captured_width"], screen["captured_height"])
+            evaluation[technology] = (problem, line, result)
+    _demo_runs[key] = (outcome.environment["emulator"], evaluation)
+    return _demo_runs[key]
+
+
+def _technologies(mode, arch, resolution, technologies, provider=None):
+    emulator, evaluation = _demo(mode, arch, resolution, provider)
+    lines = []
+    for technology in technologies:
+        problem, line, _ = evaluation[technology]
+        _require(not problem, problem)
+        lines.append(line)
+    return emulator, evaluation, lines
+
+
+def _guest_arch(mode, arch):
+    return host.host_arch() if mode == "container" or arch == "native" else arch
+
+
+def _technology(technology, mode, arch="native"):
+    """One graphics technology renders and reaches the display, at 720p."""
+    if technology == "flutter":
+        flutter = image.definition()["source"]["flutter"]
+        guest = _guest_arch(mode, arch)
+        _require(guest in flutter["architectures"],
+                 "the %s target image has no Flutter workload: the Flutter SDK (%s) builds Linux applications for "
+                 "%s only" % (guest, flutter["version"], " and ".join(flutter["architectures"])))
+    emulator, evaluation, lines = _technologies(mode, arch, "720p", (technology,))
+    result = evaluation[technology][2]
+    if technology == "flutter":
+        lines.append("%s; frame build p99 %.1f ms, raster p99 %.1f ms" % (
+            result.get("api"), result["build_time_ms"]["p99"], result["raster_time_ms"]["p99"]))
+    else:
+        lines.append("%s; frame time p99 %.1f ms" % (result.get("api"), result["frame_time_ms"]["p99"]))
+    return lines + ["graphics provider: %s" % emulator["graphics"]["provider"]]
+
+
+def _resolutions(mode, arch="native"):
+    """Every supported resolution is rendered and shown, with each graphics
+    technology that works in this mode at all. A technology that does not is
+    reported by its own check, and named here as not covered."""
+    _, evaluation = _demo(mode, arch, "720p")
+    working = tuple(t for t in NATIVE_TECHNOLOGIES + ("flutter",) if not evaluation[t][0])
+    _require("wayland" in working, evaluation["wayland"][0])
+    lines = []
+    for name in graphics.RESOLUTIONS:
+        lines += _technologies(mode, arch, name, working)[2]
+    missing = [TECHNOLOGY_NAMES[t] for t in NATIVE_TECHNOLOGIES + ("flutter",) if t not in working]
+    if missing:
+        lines.append("not covered, because unavailable in this mode: %s" % ", ".join(missing))
+    return lines
+
+
+def _probe(mode):
+    """Whether this host has host graphics acceleration for the mode."""
+    if mode == "vm":
+        return graphics.probe_vm(host.require_tool(vm.QEMU_BINARY[host.host_arch()], "VM mode"))
+    runtime = container.detect()
+    manifest = image.ensure("container", lambda: runtime, host.host_arch(), quiet=True)
+    return graphics.probe_container(runtime, manifest["image_tag"], manifest["platform"])
+
+
+def _software(result):
+    return result.get("accelerated") is False
+
+
+def _graphics_emulated(mode):
+    """Emulation is available: when asked for, and as the fallback of auto."""
+    emulator, evaluation, lines = _technologies(mode, "native", "720p", ("gles", "vulkan"), provider="emulated")
+    _require(emulator["graphics"]["provider"] == "emulated", "emulation was requested but not selected")
+    for technology in ("gles", "vulkan"):
+        _require(_software(evaluation[technology][2]),
+                 "%s was not rendered by the target CPU: %s" % (technology, evaluation[technology][2].get("renderer")))
+    lines = ["requested emulation: " + line for line in lines]
+    probe = _probe(mode)
+    auto, auto_evaluation, _ = _technologies(mode, "native", "720p", ("gles", "vulkan"))
+    if probe["available"]:
+        lines.append("auto did not need the fallback here: host acceleration is available")
+    else:
+        _require(auto["graphics"]["provider"] == "emulated", "auto selected %r although host acceleration is "
+                 "unavailable" % auto["graphics"]["provider"])
+        for technology in ("gles", "vulkan"):
+            _require(_software(auto_evaluation[technology][2]), "auto fell back but %s was not rendered by the "
+                     "target CPU" % technology)
+        lines.append("auto fell back to emulation: " + auto["graphics"]["reason"])
+    return lines
+
+
+def _graphics_host(mode):
+    """Graphics are mapped to host acceleration, and auto prefers it."""
+    probe = _probe(mode)
+    if not probe["available"]:
+        # Asking for host acceleration must be refused, not silently emulated.
+        try:
+            launch(RunOptions(mode=mode, workload="graphics-demo", graphics="host", echo=False, quiet_build=True))
+        except EmuError as error:
+            raise CheckUnavailable("%s. Asking for it is refused: %s" % (probe["reason"], error))
+        raise CheckFailed("--graphics host was accepted although this host has no host graphics acceleration")
+    emulator, evaluation, lines = _technologies(mode, "native", "720p", ("gles",), provider="host")
+    _require(emulator["graphics"]["provider"] == "host", "host acceleration was requested but not selected")
+    _require(evaluation["gles"][2].get("accelerated") is True,
+             "OpenGL ES was not rendered by the host GPU: %s" % evaluation["gles"][2].get("renderer"))
+    auto, auto_evaluation, _ = _technologies(mode, "native", "720p", ("gles",))
+    _require(auto["graphics"]["provider"] == "host", "auto did not prefer the available host acceleration")
+    _require(auto_evaluation["gles"][2].get("accelerated") is True, "auto chose host acceleration but OpenGL ES "
+             "was rendered by %s" % auto_evaluation["gles"][2].get("renderer"))
+    vulkan = evaluation.get("vulkan", (None, None, {}))[2] or {}
+    lines.append("Vulkan: %s" % ("on the host GPU (%s)" % vulkan.get("renderer") if vulkan.get("accelerated")
+                                 else "rendered by the target CPU (%s)" % vulkan.get("renderer")))
+    return ["requested host acceleration: " + line for line in lines] + ["auto preferred host acceleration: "
+                                                                        + auto["graphics"]["reason"]]
+
+
+def _graphics_checks():
+    variants = (("container", "container", "native", "container mode"),
+                ("vm", "vm", "native", "a host-native VM"),
+                ("vm-arm64", "vm", "arm64", "an ARM64 VM"),
+                ("vm-arm32", "vm", "arm32", "an ARM32 VM"))
+    checks = {}
+    for technology in NATIVE_TECHNOLOGIES + ("flutter",):
+        for suffix, mode, arch, where in variants:
+            checks["%s-%s" % (technology, suffix)] = (
+                lambda t=technology, m=mode, a=arch: _technology(t, m, a), "4.1",
+                "a %s workload renders in %s" % (TECHNOLOGY_NAMES[technology], where))
+    for mode, where in (("container", "container mode"), ("vm", "VM mode")):
+        checks["graphics-emulated-" + mode] = (lambda m=mode: _graphics_emulated(m), "4.2",
+                                               "graphics are emulated on request and as the fallback, in " + where)
+        checks["graphics-host-" + mode] = (lambda m=mode: _graphics_host(m), "4.2",
+                                           "graphics are mapped to host acceleration and preferred, in " + where)
+    for suffix, mode, arch, where in variants:
+        checks["resolution-" + suffix] = (lambda m=mode, a=arch: _resolutions(m, a), "4.3",
+                                          "720p, 1080p and 4K are rendered and displayed in " + where)
+    return checks
+
+
 # name -> (function, the task in openspec/changes/staged-emulator-delivery/tasks.md it supports, description)
 CHECKS = {
     "matrix": (check_matrix, "1.1", "the host test matrix covers every declared host combination"),
@@ -246,6 +431,7 @@ CHECKS = {
     "drivers-vm-arm32": (check_drivers_vm_arm32, "3.2", "the three driver strategies in an ARM32 VM"),
     "drivers-vm-arm64": (check_drivers_vm_arm64, "3.2", "the three driver strategies in an ARM64 VM"),
 }
+CHECKS.update(_graphics_checks())
 
 
 def _report_path():
@@ -261,21 +447,26 @@ def load_report():
 
 
 def run_checks(names):
-    """Run the named checks; returns the number that failed."""
+    """Run the named checks; returns how many ended in each status."""
     report = load_report()
     report["host"] = host.describe()
-    failed = 0
+    # Outcomes of checks that no longer exist say nothing about this revision.
+    report["checks"] = {name: entry for name, entry in report["checks"].items() if name in CHECKS}
+    counts = {"pass": 0, "fail": 0, "unavailable": 0}
     for name in names:
         function, task, description = CHECKS[name]
-        print("%-18s %s" % (name, description), flush=True)
+        print("%-26s %s" % (name, description), flush=True)
         started = time.time()
         try:
             details = function()
             status = "pass"
-        except CheckFailed as error:
+        except CheckUnavailable as error:
+            details = str(error).splitlines()
+            status = "unavailable"
+        except (CheckFailed, EmuError) as error:
             details = str(error).splitlines()
             status = "fail"
-            failed += 1
+        counts[status] += 1
         print("  %s (%.1fs)" % (status.upper(), time.time() - started))
         for line in details:
             print("    " + line)
@@ -293,4 +484,4 @@ def run_checks(names):
         with open(_report_path(), "w") as handle:
             json.dump(report, handle, indent=2)
             handle.write("\n")
-    return failed
+    return counts

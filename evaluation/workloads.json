@@ -55,16 +55,20 @@
     },
     {
       "id": "graphics-demo",
-      "version": "0.1.0",
+      "version": "1.0.0",
       "kind": "performance",
-      "status": "defined",
+      "status": "implemented",
       "stage": 3,
+      "display": true,
+      "launch": "./emu run --mode MODE --workload graphics-demo --resolution 720p|1080p|4k --record",
+      "source": "target/rootfs/opt/emu/workloads/graphics-demo, target/src/emugfx.c, target/src/flutter_demo",
+      "version_source": {"file": "target/rootfs/opt/emu/workloads/graphics-demo", "pattern": "VERSION=\"([^\"]+)\""},
       "procedure": "evaluation/procedures.md#graphics",
       "measurements": [
-        {"area": "graphics", "test": "wayland_fps", "unit": "frames/s", "method": "fixed animated scene presented by a Wayland client, at 720p, 1080p and 4K; mean frame rate and 99th-percentile frame time"},
-        {"area": "graphics", "test": "gles_fps", "unit": "frames/s", "method": "fixed OpenGL ES scene at 720p, 1080p and 4K; mean frame rate and 99th-percentile frame time"},
-        {"area": "graphics", "test": "vulkan_fps", "unit": "frames/s", "method": "fixed Vulkan scene at 720p, 1080p and 4K; mean frame rate and 99th-percentile frame time"},
-        {"area": "graphics", "test": "flutter_fps", "unit": "frames/s", "method": "fixed Flutter animation at 720p, 1080p and 4K; mean frame rate and 99th-percentile frame build and raster time"}
+        {"area": "graphics", "test": "wayland_fps", "unit": "frames/s", "method": "a Wayland client draws a fixed animated scene with the CPU into shared-memory buffers and submits frames as fast as it can for a fixed time, full screen at the display resolution; frame rate, frame-time percentiles, and the rate at which frames reached the display"},
+        {"area": "graphics", "test": "gles_fps", "unit": "frames/s", "method": "a fixed animated OpenGL ES 2.0 scene (a full-screen procedural shader and 64 blended quads), each frame finished before it is submitted, as fast as possible for a fixed time; frame rate, frame-time percentiles, displayed rate, and the renderer used"},
+        {"area": "graphics", "test": "vulkan_fps", "unit": "frames/s", "method": "the same scene drawn with Vulkan, each frame finished before it is presented, as fast as possible for a fixed time; frame rate, frame-time percentiles, displayed rate, and the device used"},
+        {"area": "graphics", "test": "flutter_fps", "unit": "frames/s", "method": "a Flutter application animates a painted background with 64 shapes under a grid of 24 text widgets for a fixed time; Flutter draws one frame per display refresh, so the frame rate is bounded by the 60 Hz display; frame rate and percentiles of frame build and raster time"}
       ]
     },
     {

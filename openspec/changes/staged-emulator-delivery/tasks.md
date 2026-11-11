@@ -20,8 +20,15 @@
 
 ## 4. Stage 3: Graphics support
 - [ ] 4.1 Support Wayland, Flutter, OpenGL ES, and Vulkan workloads and verify each with a graphics workload.
+  - Implemented as the `graphics-demo` workload. Verified on macOS (ARM64): Wayland and OpenGL ES in container, host-native VM, ARM64 VM and ARM32 VM modes; Vulkan and Flutter in container, host-native VM and ARM64 VM modes.
+  - Open: Vulkan in ARM32 VM mode. With emulated graphics Vulkan is rendered by Mesa's CPU driver, which crashes on 32-bit ARM. With Debian 13's Mesa 25.0, which the image uses, Debian's own `vkcube` demo crashes too. With Mesa 26.1 from Debian backports `vkcube` runs, but this project's test still crashes inside the driver, although the Khronos validation layers find no fault in it.
+  - Open: Flutter in ARM32 VM mode. The Flutter SDK builds Linux applications for x86-64 and ARM64 only, so the ARM32 image has no Flutter workload.
 - [ ] 4.2 Prefer compatible host graphics acceleration and retain emulation fallback; verify both paths.
-- [ ] 4.3 Support 720p, 1080p, and 4K rendering and verify each selected resolution.
+  - Implemented: `--graphics auto|host|emulated`. `auto` uses host acceleration when the host has a compatible one (QEMU's virtio-gpu with virglrenderer in VM mode, the container engine's GPU render node in container mode) and otherwise emulates.
+  - Verified on macOS (ARM64): emulation on request, and as the fallback of `auto`, in container and VM modes.
+  - Open: the host-acceleration path has never been run. macOS (ARM64) has none with the installed tools: Homebrew's QEMU is built without the GPU-accelerated display device, and the container engine's virtual machine has no GPU. It needs a host that has one, such as Linux with QEMU's OpenGL modules.
+- [x] 4.3 Support 720p, 1080p, and 4K rendering and verify each selected resolution.
+  - Verified with emulated graphics in all four modes, by capturing the emulator's display at each resolution. ARM32 VM mode is covered with Wayland and OpenGL ES only (see 4.1).
 
 ## 5. Stage 4: Media playback
 - [ ] 5.1 Accept MP2TS, MP4, and MSE-style fragment input and verify each media input path.
@@ -42,4 +49,4 @@
 
 ## Verification status
 
-Checked tasks were verified with `./emu verify` on one host so far: macOS on ARM64. `evaluation/verification/` records each check per host. Run `./setup.sh` (or `setup.ps1`) and `./emu verify` on Linux, Windows, and an x86-64 Mac to extend the coverage; tasks 2.1 and 2.2 stay open until then.
+Checked tasks were verified with `./emu verify` on one host so far: macOS on ARM64. `evaluation/verification/` records each check per host, as passed, failed, or unavailable on that host. Run `./setup.sh` (or `setup.ps1`) and `./emu verify` on Linux, Windows, and an x86-64 Mac to extend the coverage; tasks 2.1 and 2.2 stay open until then, and task 4.2 until a host with graphics acceleration has run it.
