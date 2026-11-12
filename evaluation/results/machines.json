@@ -1,0 +1,16 @@
+{
+  "description": "What is known about the machines behind the host ids, stated by the person who ran the evaluation. The result records describe each host themselves; this file adds what records made before the launcher recorded GPUs do not contain. It is not a result record.",
+  "hosts": {
+    "linux-x86_64": {
+      "machine": "The same PC as windows-x86_64, dual boot"
+    },
+    "windows-x86_64": {
+      "machine": "The same PC as linux-x86_64, dual boot",
+      "gpus": [{"model": "NVIDIA GeForce RTX 4070"}]
+    },
+    "macos-arm64": {
+      "machine": "Mac mini, Apple M6, 24 GB",
+      "gpus": [{"model": "Apple M6 (integrated GPU)"}]
+    }
+  }
+}

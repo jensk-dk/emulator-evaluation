@@ -36,7 +36,7 @@ Every record in `evaluation/results/` carries:
 
 | Field | Identifies |
 |---|---|
-| `host` | host OS and version, CPU architecture, CPU model, CPU count, memory |
+| `host` | host OS and version, CPU architecture, CPU model, CPU count, memory, GPUs with their drivers (`gpus`; absent in records made before it was added) |
 | `emulator` | mode and variant, guest architecture, accelerator, CPU model, runtime and its version, CPUs, memory, options; for runs with a display, its resolution and whether graphics were emulated or mapped to the host, with the reason |
 | `image` | client OS image name and version, its source (Debian release, base image digest, apt snapshot), the SHA-256 of its build definition, the repository revision it was built from, and the SHA-256 of the root filesystem or the container image ID; plus what the running target reported about itself |
 | `workload` | workload id, version and arguments |

@@ -1,6 +1,8 @@
 """Facts about the development host, and where to find its tools."""
+import json
 import os
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -120,6 +122,76 @@ def _os_version():
     return platform.version()
 
 
+_gpus = None
+
+
+def gpus():
+    """The host's graphics adapters: [{"model", "driver", "driver_version"}],
+    with only the entries the host could tell. Empty when it cannot be found
+    out; a result must never fail for it."""
+    global _gpus
+    if _gpus is None:
+        try:
+            _gpus = {"linux": _gpus_linux, "macos": _gpus_macos, "windows": _gpus_windows}[host_os()]()
+        except (OSError, ValueError, KeyError, TypeError, AttributeError, subprocess.SubprocessError):
+            _gpus = []
+    return _gpus
+
+
+def _gpu(model, driver=None, driver_version=None):
+    found = {"model": " ".join(str(model).split())}
+    if driver:
+        found["driver"] = driver
+    if driver_version:
+        found["driver_version"] = str(driver_version).strip()
+    return found
+
+
+def _gpus_linux():
+    """PCI display adapters, each with the kernel driver bound to it. Without
+    a driver the adapter is there but the host does not render with it."""
+    found = []
+    lspci = find_tool("lspci")
+    listing = _output([lspci, "-D", "-mm"]) if lspci else ""
+    for line in listing.splitlines():
+        fields = re.findall(r'"([^"]*)"', line)
+        if len(fields) < 3 or not re.match(r"(VGA|3D|Display)", fields[0]):
+            continue
+        slot = line.split()[0]
+        # "AD104 [GeForce RTX 4070]": the name in brackets is the product.
+        product = re.search(r"\[([^\]]+)\]\s*$", fields[2])
+        model = "%s %s" % (fields[1].replace(" Corporation", ""), product.group(1) if product else fields[2])
+        driver = version = None
+        try:
+            driver = os.path.basename(os.readlink("/sys/bus/pci/devices/%s/driver" % slot))
+            with open("/sys/module/%s/version" % driver) as handle:      # out-of-tree drivers have one
+                version = handle.read().strip()
+        except OSError:
+            pass
+        found.append(_gpu(model, driver, version))
+    return found
+
+
+def _gpus_macos():
+    data = json.loads(_output(["system_profiler", "SPDisplaysDataType", "-json"]) or "{}")
+    return [_gpu(item.get("sppci_model") or item.get("_name")) for item in data.get("SPDisplaysDataType", [])
+            if item.get("sppci_model") or item.get("_name")]
+
+
+def _gpus_windows():
+    text = _output(["powershell", "-NoProfile", "-Command",
+                    "Get-CimInstance Win32_VideoController | Select-Object Name, DriverVersion | ConvertTo-Json"])
+    data = json.loads(text or "[]")
+    return [_gpu(item["Name"], driver_version=item.get("DriverVersion"))
+            for item in (data if isinstance(data, list) else [data]) if item.get("Name")]
+
+
+def gpu_text(found):
+    return "%s%s" % (found["model"], " (%s)" % " ".join(
+        part for part in (found.get("driver"), found.get("driver_version")) if part)
+        if found.get("driver") or found.get("driver_version") else "")
+
+
 def describe():
     """Host identity recorded with every result."""
     return {
@@ -130,6 +202,7 @@ def describe():
         "cpu_model": _cpu_model(),
         "cpus": os.cpu_count(),
         "memory_bytes": _memory_bytes(),
+        "gpus": gpus(),
         "python": platform.python_version(),
     }
 

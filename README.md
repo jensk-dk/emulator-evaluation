@@ -121,7 +121,7 @@ them, including the media and web workloads that are defined for later
 stages.
 
 Other commands: `./emu build`, `./emu doctor`, `./emu matrix`,
-`./emu workloads`, `./emu verify`. Each has `--help`.
+`./emu workloads`, `./emu verify`, `./emu report`. Each has `--help`.
 
 ## Target OS image
 
@@ -246,5 +246,50 @@ programs from the prompt.
 - [evaluation/matrix.json](evaluation/matrix.json): the hosts and modes to cover.
 - [evaluation/workloads.json](evaluation/workloads.json): the versioned workloads.
 - [evaluation/procedures.md](evaluation/procedures.md): how measurements are made.
-- `evaluation/results/`: recorded results (`./emu run ... --record`).
+- `evaluation/results/`: recorded results (`./emu run ... --record`), and a
+  page that shows them as charts (see below).
 - `evaluation/verification/`: what `./emu verify` has confirmed, per host.
+
+### Results page
+
+    ./emu report [--port N] [--no-browser]
+
+starts a small web server for `evaluation/results/` on this machine only
+(`http://127.0.0.1:8765/` unless `--port` says otherwise) and opens
+[index.html](evaluation/results/index.html) in the default browser. It runs
+until Ctrl-C. `--no-browser` only serves the page.
+
+The page reads the JSON records itself each time it loads, so new runs appear
+after a reload and nothing has to be regenerated. That is also why it needs
+this server: a browser cannot list a directory, and an ordinary web server
+does not list one that holds an `index.html`, so the launcher's server gives
+the page the list of records. Opened another way (from disk, or from another
+web server) the page asks for the results folder, or for its JSON files to be
+dropped on it.
+
+The page starts with the hosts the results were measured on: CPU, memory,
+GPU with its driver, operating system and emulator software, as the records
+describe them. (Records made before the launcher recorded the GPU name it only
+where a test rendered on it.) [machines.json](evaluation/results/machines.json)
+adds what was stated about each host's machine, such as its GPU where the
+records do not have it; the page marks that as stated. Each test has a card with one row per host and emulator mode. A bar is the
+median of that configuration's runs and the dots are the single runs. The
+hosts can be filtered, values can be shown relative to the container on the
+same host, and pointing at a row shows the details of its runs.
+
+### Results as PDF
+
+[emulator-results.pdf](evaluation/results/emulator-results.pdf) is a snapshot
+of the charts; unlike the page it does not follow new runs. To make it again,
+start `./emu report` and either print the page from the browser (Save as PDF;
+the page has its own print layout, A4 landscape, charts only), or let Chrome
+do it without a window:
+
+    ./emu report --no-browser &
+    google-chrome --headless=new --no-pdf-header-footer --virtual-time-budget=8000 \
+        --print-to-pdf=evaluation/results/emulator-results.pdf http://127.0.0.1:8765/
+
+`--virtual-time-budget` gives the page time to read the records before it is
+printed. The PDF shows all hosts with measured values, the page's defaults.
+This was run with Chrome on Linux; on macOS and Windows the browser's own
+print dialog does the same.

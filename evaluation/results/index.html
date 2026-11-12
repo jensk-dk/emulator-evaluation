@@ -1,0 +1,605 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Emulator evaluation results</title>
+<!--
+  Visualizes the result records in this directory (emu run ... --record).
+
+  The page reads the JSON files itself, so it never goes stale. A browser
+  cannot list a directory, so the launcher serves the page and the list:
+
+      ./emu report
+
+  Opened any other way (from disk, or from a plain web server) it asks for the
+  results folder instead.
+-->
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f4f3f0;
+    --surface: #fcfcfb;
+    --text: #0b0b0b;
+    --text-2: #52514e;
+    --muted: #898781;
+    --grid: #e1e0d9;
+    --border: rgba(11, 11, 11, 0.10);
+    --track: #efeee9;
+    --host-1: #2a78d6;
+    --host-2: #eb6834;
+    --host-3: #1baf7a;
+    --host-4: #eda100;
+    --host-5: #e87ba4;
+    --host-6: #008300;
+    --host-7: #6250d6;
+    --host-8: #e34948;
+    --other: #898781;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --page: #111110;
+      --surface: #1a1a19;
+      --text: #f0efec;
+      --text-2: #c3c2b7;
+      --muted: #898781;
+      --grid: #2c2c2a;
+      --border: rgba(255, 255, 255, 0.10);
+      --track: #242422;
+      --host-1: #3987e5;
+      --host-2: #d95926;
+      --host-3: #199e70;
+      --host-4: #c98500;
+      --host-5: #d55181;
+      --host-6: #008300;
+      --host-7: #9085e9;
+      --host-8: #e66767;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--page); color: var(--text);
+    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 1280px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 17px; margin: 36px 0 2px; }
+  p { margin: 0; }
+  .sub { color: var(--text-2); }
+  .small { font-size: 12px; color: var(--muted); }
+  code { font: 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 20px 0 0; }
+  .tile, .card, .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+  .tile { padding: 12px 14px; }
+  .tile b { display: block; font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .tile span { color: var(--text-2); font-size: 12px; }
+
+  .controls {
+    display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center;
+    margin: 20px 0 0; padding: 10px 14px; position: sticky; top: 0; z-index: 5;
+  }
+  @media (max-width: 700px) { .controls { position: static; } }
+  .controls .group { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .controls .name { color: var(--text-2); font-size: 12px; margin-right: 2px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px;
+    border: 1px solid var(--border); background: transparent; color: var(--text); font: inherit; font-size: 13px;
+    cursor: pointer;
+  }
+  .chip[aria-pressed="false"] { color: var(--muted); }
+  .chip[aria-pressed="false"] .swatch { background: transparent !important; box-shadow: inset 0 0 0 1.5px var(--muted); }
+  .chip[aria-pressed="true"].plain { background: var(--track); }
+  .chip:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--host-1); outline-offset: 2px; }
+  .swatch { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+  .spacer { flex: 1; }
+  button.action {
+    font: inherit; font-size: 13px; padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text); cursor: pointer;
+  }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 12px; margin-top: 12px; }
+  .card { padding: 14px 14px 10px; min-width: 0; }
+  .card h3 { font-size: 14px; margin: 0; font-weight: 600; }
+  .card .unit { color: var(--text-2); font-size: 12px; margin-bottom: 8px; }
+  .hostcard h3 { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .hostcard dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; margin: 0; font-size: 12px; }
+  .hostcard dt { color: var(--text-2); }
+  .hostcard dd { margin: 0; overflow-wrap: anywhere; }
+  .hostcard dd.missing { color: var(--muted); }
+  .mode { font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin: 10px 0 2px; }
+  .row {
+    display: grid; grid-template-columns: minmax(120px, 40%) 1fr 56px; gap: 8px; align-items: center;
+    padding: 3px 4px; margin: 0 -4px; border-radius: 4px; cursor: default;
+  }
+  .row:hover, .row:focus { background: var(--track); outline: none; }
+  .row .label { display: flex; align-items: center; gap: 6px; min-width: 0; color: var(--text-2); font-size: 12px; }
+  .row .label span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row .value { text-align: right; font-variant-numeric: tabular-nums; font-size: 12px; }
+  .row .value.na { color: var(--muted); }
+  .plot { position: relative; height: 14px; border-left: 1px solid var(--grid); }
+  .bar { position: absolute; left: 0; top: 3px; height: 8px; min-width: 2px; border-radius: 0 4px 4px 0; }
+  .range { position: absolute; top: 6.5px; height: 1px; background: var(--text); opacity: .55; }
+  .dot {
+    position: absolute; top: 5px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%;
+    background: var(--text); box-shadow: 0 0 0 1px var(--surface);
+  }
+  .tag { font-size: 10px; padding: 0 5px; border-radius: 3px; border: 1px solid var(--border); color: var(--text-2); flex: none; }
+
+  #tooltip {
+    position: fixed; z-index: 20; pointer-events: none; max-width: 340px; padding: 10px 12px; font-size: 12px;
+    background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 8px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, .18); display: none;
+  }
+  #tooltip b { font-size: 13px; }
+  #tooltip dl { display: grid; grid-template-columns: auto 1fr; gap: 1px 10px; margin: 6px 0 0; }
+  #tooltip dt { color: var(--text-2); }
+  #tooltip dd { margin: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+
+  .panel { padding: 20px; margin-top: 20px; }
+  .panel p + p { margin-top: 8px; }
+  .panel .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  details { margin-top: 36px; }
+  summary { cursor: pointer; font-size: 17px; font-weight: 600; }
+  .tablewrap { overflow-x: auto; margin-top: 12px; }
+  table { border-collapse: collapse; width: 100%; font-size: 12px; background: var(--surface); }
+  th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+  th { color: var(--text-2); font-weight: 500; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  a { color: inherit; }
+
+  /* Printing, or saving as PDF: the charts only, on a white page. */
+  @page { size: A4 landscape; margin: 10mm; }
+  @media print {
+    :root {
+      color-scheme: light;
+      --page: #fff; --surface: #fff; --text: #0b0b0b; --text-2: #52514e; --grid: #e1e0d9;
+      --border: rgba(11, 11, 11, 0.18); --track: #efeee9;
+      --host-1: #2a78d6; --host-2: #eb6834; --host-3: #1baf7a; --host-4: #eda100;
+      --host-5: #e87ba4; --host-6: #008300; --host-7: #6250d6; --host-8: #e34948;
+    }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    main { max-width: none; padding: 0; zoom: 0.66; }
+    .row { grid-template-columns: minmax(150px, 42%) 1fr 56px; }
+    #loader, #records, #tooltip, .controls .spacer, .controls .action { display: none !important; }
+    .controls { position: static; border: 0; padding: 0; margin-top: 12px; }
+    .chip[aria-pressed="false"] { display: none; }
+    .cards { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .card, .tile { break-inside: avoid; }
+    .hostcard dl { font-size: 13px; }
+    h2 { break-after: avoid; margin-top: 18px; }
+    h2 + .sub { break-after: avoid; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Emulator evaluation results</h1>
+  <p class="sub" id="status">Loading the result records…</p>
+
+  <div id="loader" class="panel" hidden>
+    <p><b>The result files could not be listed from here.</b></p>
+    <p class="sub">A browser cannot list a directory by itself. Let the launcher serve this page, and it reads every record on each load:</p>
+    <p><code>./emu report</code></p>
+    <p class="sub">Or pick the <code>evaluation/results</code> folder (or drop its JSON files on this page). Nothing is uploaded; the files are read in the browser.</p>
+    <div class="actions">
+      <button class="action" id="pick">Choose the results folder…</button>
+      <input type="file" id="folder" webkitdirectory multiple hidden>
+      <input type="file" id="files" accept=".json,application/json" multiple hidden>
+      <button class="action" id="pickfiles">Choose JSON files…</button>
+    </div>
+  </div>
+
+  <div id="report" hidden>
+    <div class="tiles" id="tiles"></div>
+    <div class="controls panel" id="controls"></div>
+    <div id="sections"></div>
+    <details id="records">
+      <summary>All records</summary>
+      <div class="tablewrap"><table id="table"></table></div>
+    </details>
+  </div>
+</main>
+<div id="tooltip" role="tooltip"></div>
+
+<script>
+"use strict";
+
+// ---------------------------------------------------------------- naming ---
+
+const AREAS = [
+  ["cpu", "CPU"],
+  ["memory_allocation", "Memory allocation"],
+  ["memory_bandwidth", "Memory bandwidth"],
+  ["io", "I/O"],
+  ["graphics", "Graphics"],
+  ["audio_video_decoding", "Audio and video decoding"],
+];
+const TESTS = {
+  sha256_1t: "SHA-256, one thread", sha256_mt: "SHA-256, all threads", matmul_f64: "Matrix multiply (double)",
+  malloc_churn: "malloc/free churn", page_fault: "First touch of new pages",
+  memcpy: "memcpy", memset: "memset", stream_triad: "STREAM triad",
+  seq_read: "Sequential read", seq_write: "Sequential write", rand_read_4k: "Random read, 4 KiB",
+  rand_write_4k: "Random write, 4 KiB", sync_write_4k: "Synchronous write, 4 KiB",
+  wayland_fps: "Wayland (CPU-drawn buffers)", gles_fps: "OpenGL ES", vulkan_fps: "Vulkan", flutter_fps: "Flutter",
+};
+const MODES = { "container": "Container", "vm-native": "VM, host-native", "vm-arm64": "VM, ARM64 target",
+                "vm-arm32": "VM, ARM32 target", "vm-x86_64": "VM, x86-64 target" };
+const MODE_ORDER = ["container", "vm-native", "vm-arm64", "vm-arm32", "vm-x86_64"];
+// A host keeps its color whatever else is loaded or filtered.
+const HOST_ORDER = ["linux-x86_64", "windows-x86_64", "macos-arm64", "macos-x86_64"];
+const HOST_NAMES = { "linux-x86_64": "Linux x86-64", "windows-x86_64": "Windows x86-64",
+                     "macos-arm64": "macOS ARM64", "macos-x86_64": "macOS x86-64" };
+
+const state = { records: [], machines: {}, hosts: new Set(), relative: false, source: "" };
+// Stated facts about the hosts' machines, beside the records.
+const MACHINES_FILE = "machines.json";
+const $ = (id) => document.getElementById(id);
+
+function el(tag, attrs, ...children) {
+  const node = document.createElement(tag);
+  for (const [key, value] of Object.entries(attrs || {})) {
+    if (key === "class") node.className = value;
+    else if (key === "style") node.style.cssText = value;
+    else if (key.startsWith("on")) node.addEventListener(key.slice(2), value);
+    else if (value !== null && value !== undefined && value !== false) node.setAttribute(key, value);
+  }
+  for (const child of children.flat(Infinity)) {
+    if (child !== null && child !== undefined && child !== false) node.append(child);
+  }
+  return node;
+}
+
+function hostColor(id) {
+  let index = HOST_ORDER.indexOf(id);
+  if (index < 0) { HOST_ORDER.push(id); index = HOST_ORDER.length - 1; }
+  return index < 8 ? "var(--host-" + (index + 1) + ")" : "var(--other)";
+}
+const hostName = (id) => HOST_NAMES[id] || id;
+const modeName = (id) => MODES[id] || id;
+const order = (list, id) => { const i = list.indexOf(id); return i < 0 ? list.length : i; };
+
+function format(value) {
+  if (value === null || value === undefined || Number.isNaN(value)) return "n/a";
+  const abs = Math.abs(value);
+  if (abs >= 1e6) return (value / 1e6).toFixed(abs >= 1e7 ? 0 : 1) + "M";
+  if (abs >= 1e4) return Math.round(value / 1e3) + "k";
+  if (abs >= 100) return Math.round(value).toLocaleString("en-US");
+  if (abs >= 10) return value.toFixed(1);
+  return value.toFixed(2);
+}
+function median(values) {
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = sorted.length >> 1;
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+// --------------------------------------------------------------- loading ---
+
+function isRecord(data) {
+  return data && typeof data === "object" && Array.isArray(data.results) && data.host && data.emulator && data.workload;
+}
+
+// Served by `emu report`: ask it which records exist, then read each one.
+async function loadFromServer() {
+  const response = await fetch("records.list", { cache: "no-store" });
+  if (!response.ok) throw new Error("no list of records");
+  const base = new URL("./", location.href);
+  const urls = (await response.json()).map((name) => new URL(encodeURIComponent(name), base).href);
+  if (!urls.length) throw new Error("the list names no records");
+  try {
+    state.machines = (await (await fetch(MACHINES_FILE, { cache: "no-store" })).json()).hosts || {};
+  } catch (error) { state.machines = {}; }
+  const loaded = await Promise.all(urls.map(async (url) => {
+    try {
+      const data = await (await fetch(url, { cache: "no-store" })).json();
+      return isRecord(data) ? Object.assign(data, { _file: decodeURIComponent(url.split("/").pop()), _url: url }) : null;
+    } catch (error) { return null; }
+  }));
+  return loaded.filter(Boolean);
+}
+
+async function loadFromFiles(fileList) {
+  const files = [...fileList].filter((file) => /\.json$/i.test(file.name));
+  const machines = files.find((file) => file.name === MACHINES_FILE);
+  try { state.machines = machines ? JSON.parse(await machines.text()).hosts || {} : {}; } catch (error) { state.machines = {}; }
+  const loaded = await Promise.all(files.map(async (file) => {
+    try {
+      const data = JSON.parse(await file.text());
+      return isRecord(data) ? Object.assign(data, { _file: file.name }) : null;
+    } catch (error) { return null; }
+  }));
+  return loaded.filter(Boolean);
+}
+
+function show(records, source) {
+  state.records = records.sort((a, b) => String(a.recorded_at).localeCompare(String(b.recorded_at)));
+  state.source = source;
+  state.hosts = new Set(records.map((r) => r.host.id));
+  $("loader").hidden = records.length > 0;
+  $("report").hidden = records.length === 0;
+  if (!records.length) { $("status").textContent = "No result records were found."; return; }
+  render();
+}
+
+async function start() {
+  try {
+    show(await loadFromServer(), "read from this directory");
+  } catch (error) {
+    $("status").textContent = "No result records are loaded.";
+    $("loader").hidden = false;
+  }
+}
+
+$("pick").onclick = () => $("folder").click();
+$("pickfiles").onclick = () => $("files").click();
+for (const id of ["folder", "files"]) {
+  $(id).onchange = async (event) => show(await loadFromFiles(event.target.files), "read from the chosen files");
+}
+addEventListener("dragover", (event) => event.preventDefault());
+addEventListener("drop", async (event) => {
+  event.preventDefault();
+  show(await loadFromFiles(event.dataTransfer.files), "read from the dropped files");
+});
+
+// ----------------------------------------------------------- aggregation ---
+
+// One series is one host in one emulator mode; graphics results are further
+// split by how graphics were provided and by display resolution.
+function collect() {
+  const charts = new Map();
+  for (const record of state.records) {
+    const graphics = record.emulator.graphics || null;
+    for (const result of record.results) {
+      // A test that could not run does not name a resolution; the display does.
+      const resolution = result.resolution
+        || (result.area === "graphics" && record.emulator.display ? record.emulator.display.resolution : "");
+      const chartKey = [result.area, result.test, resolution].join("|");
+      if (!charts.has(chartKey)) {
+        charts.set(chartKey, { area: result.area, test: result.test, unit: result.unit, resolution, series: new Map() });
+      }
+      const provider = result.area === "graphics" && graphics ? graphics.provider : "";
+      const seriesKey = [record.emulator.variant, record.host.id, provider].join("|");
+      const chart = charts.get(chartKey);
+      if (!chart.series.has(seriesKey)) {
+        chart.series.set(seriesKey, { mode: record.emulator.variant, host: record.host.id, provider, values: [],
+                                     runs: [], unavailable: null });
+      }
+      const series = chart.series.get(seriesKey);
+      series.runs.push({ record, result });
+      if (typeof result.value === "number") series.values.push(result.value);
+      else series.unavailable = result.unavailable || "unavailable";
+    }
+  }
+  for (const chart of charts.values()) {
+    for (const series of chart.series.values()) {
+      series.median = series.values.length ? median(series.values) : null;
+    }
+    // The reference for relative values: the container on the same host.
+    for (const series of chart.series.values()) {
+      const base = chart.series.get(["container", series.host, series.provider === "host" ? "emulated" : series.provider].join("|"))
+                || chart.series.get(["container", series.host, ""].join("|"));
+      series.base = base && base.median ? base.median : null;
+    }
+  }
+  return [...charts.values()];
+}
+
+// ------------------------------------------------------------- rendering ---
+
+function render() {
+  const records = state.records;
+  const hosts = [...new Set(records.map((r) => r.host.id))].sort((a, b) => order(HOST_ORDER, a) - order(HOST_ORDER, b));
+  hosts.forEach(hostColor);
+  const modes = new Set(records.map((r) => r.emulator.variant));
+  const last = records[records.length - 1].recorded_at;
+  $("status").textContent = records.length + " records, " + state.source + ". Bars show the median of the runs of a "
+    + "configuration; dots show each run. Higher is better throughout.";
+
+  $("tiles").replaceChildren(
+    el("div", { class: "tile" }, el("b", {}, String(records.length)), el("span", {}, "result records")),
+    el("div", { class: "tile" }, el("b", {}, String(hosts.length)), el("span", {}, "hosts: " + hosts.map(hostName).join(", "))),
+    el("div", { class: "tile" }, el("b", {}, String(modes.size)), el("span", {}, "emulator modes")),
+    el("div", { class: "tile" }, el("b", {}, String(last).slice(0, 10)), el("span", {}, "latest record (UTC)")),
+  );
+
+  $("controls").replaceChildren(
+    el("div", { class: "group" }, el("span", { class: "name" }, "Hosts"),
+      hosts.map((id) => el("button", {
+        class: "chip", "aria-pressed": String(state.hosts.has(id)),
+        onclick: () => { state.hosts.has(id) ? state.hosts.delete(id) : state.hosts.add(id); render(); },
+      }, el("span", { class: "swatch", style: "background:" + hostColor(id) }), hostName(id)))),
+    el("div", { class: "group" }, el("span", { class: "name" }, "Values"),
+      [[false, "Measured"], [true, "Relative to container"]].map(([value, label]) => el("button", {
+        class: "chip plain", "aria-pressed": String(state.relative === value),
+        onclick: () => { state.relative = value; render(); },
+      }, label))),
+    el("span", { class: "spacer" }),
+    state.source.includes("directory") && el("button", { class: "action", onclick: start }, "Reload"),
+  );
+
+  const charts = collect();
+  const sections = [el("h2", {}, "Hosts"),
+                    el("p", { class: "sub" }, "The machines the results were measured on, as the records describe them."),
+                    el("div", { class: "cards" }, hosts.filter((id) => state.hosts.has(id)).map(hostCard))];
+  const areas = [...AREAS, ...[...new Set(charts.map((c) => c.area))].filter((a) => !AREAS.some(([id]) => id === a)).map((a) => [a, a])];
+  for (const [area, title] of areas) {
+    const mine = charts.filter((chart) => chart.area === area)
+      .sort((a, b) => order(Object.keys(TESTS), a.test) - order(Object.keys(TESTS), b.test)
+                      || a.resolution.localeCompare(b.resolution, "en", { numeric: true }));
+    const cards = mine.map(card).filter(Boolean);
+    if (!cards.length) continue;
+    sections.push(el("h2", {}, title));
+    if (area === "graphics") {
+      sections.push(el("p", { class: "sub" }, "“GPU” rows had graphics mapped to the host's GPU; “CPU” rows had them emulated: "
+        + "rendered by the target's CPU. Relative values compare with the emulated container on the same host."));
+    }
+    sections.push(el("div", { class: "cards" }, cards));
+  }
+  $("sections").replaceChildren(...sections);
+  renderTable();
+}
+
+const gib = (bytes) => (bytes / 2 ** 30).toFixed(bytes >= 10 * 2 ** 30 ? 0 : 1) + " GiB";
+const distinct = (values) => [...new Set(values.filter((v) => v !== null && v !== undefined && v !== ""))];
+
+// What the records say about one host. The newest record speaks for the
+// machine; software that changed between runs is listed with every version.
+function hostCard(id) {
+  const mine = state.records.filter((r) => r.host.id === id);
+  const host = mine[mine.length - 1].host;
+  // Newer records name the host's GPUs and their drivers. For a host with
+  // only older records the GPU is known where a test rendered on it, from the
+  // renderer the target reported.
+  const described = [...mine].reverse().find((r) => Array.isArray(r.host.gpus) && r.host.gpus.length);
+  const gpuText = (g) => g.model + (g.driver || g.driver_version
+    ? " (" + [g.driver && "driver " + g.driver, g.driver_version].filter(Boolean).join(" ") + ")" : "");
+  // What the person who ran the evaluation stated about this host's machine.
+  const stated = state.machines[id] || {};
+  const gpus = described ? described.host.gpus.map(gpuText)
+    : Array.isArray(stated.gpus) && stated.gpus.length ? stated.gpus.map((g) => gpuText(g) + " \u2013 stated, not in the records")
+    : distinct(mine.flatMap((r) => r.results.filter((x) => x.accelerated === true)
+        .map((x) => String(x.renderer || "").replace(/^virgl \((.*)\)$/, "$1"))));
+  const runtimes = (mode) => distinct(mine.filter((r) => r.emulator.mode === mode).map((r) => r.emulator.runtime))
+    .map((text) => text.replace(/^QEMU emulator version /, "QEMU "));
+  const engines = distinct(mine.map((r) => r.emulator.engine).filter((e) => e && e.cpus)
+    .map((e) => e.cpus + " CPUs, " + gib(e.memory_bytes) + (e.os ? " (" + e.os + ")" : "")));
+  const rows = [
+    ["Machine", [stated.machine]],
+    ["CPU", [host.cpu_model]],
+    ["Logical CPUs", [host.cpus]],
+    ["Memory", [host.memory_bytes ? gib(host.memory_bytes) : ""]],
+    ["GPU", gpus, "not recorded: these records predate the GPU entry, and no test here rendered on the host GPU"],
+    ["Operating system", distinct(mine.map((r) => r.host.os_version))],
+    ["VM runtime", runtimes("vm")],
+    ["Container runtime", runtimes("container")],
+    ["Container engine", engines.slice(-1)],
+    ["Records", [mine.length + ", " + String(mine[0].recorded_at).slice(0, 10)
+                 + (String(mine[mine.length - 1].recorded_at).slice(0, 10) !== String(mine[0].recorded_at).slice(0, 10)
+                    ? " to " + String(mine[mine.length - 1].recorded_at).slice(0, 10) : "")]],
+  ];
+  return el("div", { class: "card hostcard" },
+    el("h3", {}, el("span", { class: "swatch", style: "background:" + hostColor(id) }), hostName(id)),
+    el("dl", {}, rows.map(([name, values, missing]) => {
+      const found = distinct(values);
+      if (!found.length && !missing) return null;
+      return [el("dt", {}, name), el("dd", { class: found.length ? "" : "missing" }, found.length ? found.join("; ") : missing)];
+    })));
+}
+
+function card(chart) {
+  const all = [...chart.series.values()].filter((s) => state.hosts.has(s.host));
+  if (!all.length) return null;
+  const valueOf = (s) => {
+    if (s.median === null) return null;
+    if (!state.relative) return s.median;
+    return s.base ? 100 * s.median / s.base : null;
+  };
+  const scale = (v, s) => state.relative ? (s.base ? 100 * v / s.base : null) : v;
+  const max = Math.max(0, ...all.map((s) => Math.max(...s.values.map((v) => scale(v, s) || 0), 0)));
+  all.sort((a, b) => order(MODE_ORDER, a.mode) - order(MODE_ORDER, b.mode)
+                     || order(HOST_ORDER, a.host) - order(HOST_ORDER, b.host)
+                     || (a.provider === "host" ? 0 : 1) - (b.provider === "host" ? 0 : 1));
+  const body = [];
+  let mode = null;
+  for (const series of all) {
+    if (series.mode !== mode) { mode = series.mode; body.push(el("div", { class: "mode" }, modeName(mode))); }
+    const value = valueOf(series);
+    const points = series.values.map((v) => scale(v, series)).filter((v) => v !== null);
+    const pct = (v) => (max ? 100 * v / max : 0).toFixed(2) + "%";
+    const plot = el("div", { class: "plot" });
+    if (value !== null) {
+      plot.append(el("div", { class: "bar", style: "width:" + pct(value) + ";background:" + hostColor(series.host) }));
+      if (points.length > 1) {
+        const low = Math.min(...points), high = Math.max(...points);
+        plot.append(el("div", { class: "range", style: "left:" + pct(low) + ";width:" + pct(high - low) }));
+        for (const point of points) plot.append(el("div", { class: "dot", style: "left:" + pct(point) }));
+      }
+    }
+    const text = value === null ? "n/a" : format(value) + (state.relative ? "%" : "");
+    const row = el("div", { class: "row", tabindex: "0" },
+      el("div", { class: "label" },
+        el("span", { class: "swatch", style: "background:" + hostColor(series.host) }),
+        series.provider && el("span", { class: "tag" }, series.provider === "host" ? "GPU" : "CPU"),
+        el("span", {}, hostName(series.host))),
+      plot,
+      el("div", { class: "value" + (value === null ? " na" : "") }, text));
+    attachTooltip(row, () => tooltip(chart, series));
+    body.push(row);
+  }
+  const title = (TESTS[chart.test] || chart.test) + (chart.resolution ? " · " + chart.resolution : "");
+  return el("div", { class: "card" },
+    el("h3", {}, title),
+    el("div", { class: "unit" }, state.relative ? "% of the container on the same host" : chart.unit),
+    body);
+}
+
+function tooltip(chart, series) {
+  const latest = series.runs[series.runs.length - 1];
+  const emulator = latest.record.emulator, host = latest.record.host;
+  const rows = [];
+  const add = (name, value) => { if (value !== null && value !== undefined && value !== "") rows.push([name, String(value)]); };
+  if (series.values.length) {
+    add("Median", format(series.median) + " " + chart.unit);
+    if (series.values.length > 1) {
+      add("Range", format(Math.min(...series.values)) + " – " + format(Math.max(...series.values)));
+    }
+    if (series.base) add("Of container", format(100 * series.median / series.base) + "%");
+  } else {
+    add("Unavailable", series.unavailable);
+  }
+  add("Runs", series.runs.length);
+  add("Target", [emulator.cpus + " CPUs", emulator.memory_mb + " MiB",
+                 emulator.accelerator && emulator.accelerator + " / " + emulator.cpu_model].filter(Boolean).join(", "));
+  add("Renderer", latest.result.renderer);
+  add("Runtime", emulator.runtime);
+  add("Host", [host.cpu_model, host.cpus && host.cpus + " CPUs", host.memory_bytes && gib(host.memory_bytes),
+               host.os_version].filter(Boolean).join("; "));
+  add("Latest run", latest.record.recorded_at);
+  return el("div", {},
+    el("b", {}, hostName(series.host) + " · " + modeName(series.mode)
+       + (series.provider ? " · " + (series.provider === "host" ? "host GPU" : "emulated graphics") : "")),
+    el("dl", {}, rows.map(([name, value]) => [el("dt", {}, name), el("dd", {}, value)])));
+}
+
+function attachTooltip(node, content) {
+  const tip = $("tooltip");
+  const place = (x, y) => {
+    const box = tip.getBoundingClientRect();
+    tip.style.left = Math.max(8, Math.min(x + 14, innerWidth - box.width - 8)) + "px";
+    tip.style.top = Math.max(8, y + 16 + box.height > innerHeight ? y - box.height - 12 : y + 16) + "px";
+  };
+  node.addEventListener("pointerenter", (event) => { tip.replaceChildren(content()); tip.style.display = "block"; place(event.clientX, event.clientY); });
+  node.addEventListener("pointermove", (event) => place(event.clientX, event.clientY));
+  node.addEventListener("pointerleave", () => { tip.style.display = "none"; });
+  node.addEventListener("focus", () => {
+    const box = node.getBoundingClientRect();
+    tip.replaceChildren(content()); tip.style.display = "block"; place(box.left + 40, box.bottom - 12);
+  });
+  node.addEventListener("blur", () => { tip.style.display = "none"; });
+}
+
+function renderTable() {
+  const head = ["Recorded (UTC)", "Host", "Mode", "Workload", "Graphics", "Resolution", "Accelerator", "Boot s", "File"];
+  const rows = [...state.records].reverse().filter((r) => state.hosts.has(r.host.id)).map((r) => {
+    const e = r.emulator;
+    const file = r._url ? el("a", { href: r._url }, r._file) : r._file;
+    return el("tr", {},
+      el("td", {}, String(r.recorded_at).replace("T", " ").replace("Z", "")),
+      el("td", {}, hostName(r.host.id)),
+      el("td", {}, modeName(e.variant)),
+      el("td", {}, r.workload.id + " " + (r.workload.version || "")),
+      el("td", {}, e.graphics ? (e.graphics.provider === "host" ? "host GPU" : "emulated") : ""),
+      el("td", {}, e.display ? e.display.resolution : ""),
+      el("td", {}, e.accelerator || ""),
+      el("td", { class: "num" }, typeof r.boot_seconds === "number" ? r.boot_seconds.toFixed(1) : ""),
+      el("td", {}, file));
+  });
+  $("table").replaceChildren(el("thead", {}, el("tr", {}, head.map((h) => el("th", {}, h)))), el("tbody", {}, rows));
+}
+
+start();
+</script>
+</body>
+</html>

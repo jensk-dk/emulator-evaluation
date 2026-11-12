@@ -3,7 +3,7 @@ import argparse
 import statistics
 import sys
 
-from . import catalog, container, drivers as driver_features, graphics, host, image, results, verify, vm
+from . import catalog, container, drivers as driver_features, graphics, host, image, report, results, verify, vm
 from .errors import EmuError
 from .run import DEFAULT_CPUS, DEFAULT_MEMORY_MB, KNOWN_OPTIONS, RunOptions, launch
 
@@ -113,6 +113,10 @@ def cmd_run(args):
     return 0
 
 
+def cmd_report(args):
+    return report.serve(args.port, not args.no_browser)
+
+
 def cmd_build(args):
     modes = ("container", "vm") if args.mode == "all" else (args.mode,)
     native = host.host_arch()
@@ -134,6 +138,8 @@ def cmd_doctor(args):
     print("host        %s %s, %s, %s CPUs, %s" % (
         info["os"], info["os_version"], info["cpu_model"] or info["arch"], info["cpus"],
         "%.0f GiB" % (info["memory_bytes"] / 2**30) if info["memory_bytes"] else "unknown memory"))
+    for found in info["gpus"]:
+        print("gpu         %s" % host.gpu_text(found))
     problems = 0
     native = host.host_arch()
     for arch in sorted({native, "arm64", "arm32"}):
@@ -305,6 +311,11 @@ def build_parser():
     check.add_argument("checks", nargs="*", metavar="CHECK", help="checks to run (default: all)")
     check.add_argument("--list", action="store_true", help="list the checks")
     check.set_defaults(function=cmd_verify)
+
+    shown = commands.add_parser("report", help="show the recorded results as charts in a browser")
+    shown.add_argument("--port", type=int, default=8765, help="port to serve the page on (default: 8765)")
+    shown.add_argument("--no-browser", action="store_true", help="serve the page without opening a browser")
+    shown.set_defaults(function=cmd_report)
     return parser
 
 

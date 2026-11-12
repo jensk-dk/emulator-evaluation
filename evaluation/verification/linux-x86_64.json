@@ -7,6 +7,13 @@
     "cpu_model": "Intel(R) Core(TM) i7-10700K CPU @ 3.80GHz",
     "cpus": 16,
     "memory_bytes": 33543806976,
+    "gpus": [
+      {
+        "model": "NVIDIA GeForce RTX 4070",
+        "driver": "nvidia",
+        "driver_version": "595.99.02"
+      }
+    ],
     "python": "3.12.3"
   },
   "checks": {
@@ -229,12 +236,12 @@
       "task": "2.5",
       "description": "recorded results carry their environment identity",
       "details": [
-        "59 records, all fully identified",
+        "60 records, all fully identified",
         "this host has bench results for: container, vm-arm32, vm-arm64, vm-native"
       ],
-      "checked_at": "2026-11-12T17:19:19Z",
+      "checked_at": "2026-11-12T17:58:25Z",
       "seconds": 0.0,
-      "revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+      "revision": "b91dc9abe42f366580957b8d765633a4f7c9c217-dirty",
       "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
     },
     "vm-arm32": {

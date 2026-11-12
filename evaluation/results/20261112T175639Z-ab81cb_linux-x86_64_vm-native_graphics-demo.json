@@ -1,0 +1,223 @@
+{
+  "schema_version": 1,
+  "run_id": "20261112T175639Z-ab81cb",
+  "recorded_at": "2026-11-12T17:57:02Z",
+  "host": {
+    "id": "linux-x86_64",
+    "os": "linux",
+    "os_version": "Ubuntu 24.04.5 LTS (kernel 6.8.0-149-generic)",
+    "arch": "x86_64",
+    "cpu_model": "Intel(R) Core(TM) i7-10700K CPU @ 3.80GHz",
+    "cpus": 16,
+    "memory_bytes": 33543806976,
+    "gpus": [
+      {
+        "model": "NVIDIA GeForce RTX 4070",
+        "driver": "nvidia",
+        "driver_version": "595.99.02"
+      }
+    ],
+    "python": "3.12.3"
+  },
+  "emulator": {
+    "mode": "vm",
+    "variant": "vm-native",
+    "guest_arch": "x86_64",
+    "accelerator": "kvm",
+    "cpu_model": "host",
+    "machine": "q35",
+    "runtime": "QEMU emulator version 8.2.2 (Debian 1:8.2.2+ds-0ubuntu1.18)",
+    "display": {
+      "resolution": "1920x1080"
+    },
+    "graphics": {
+      "requested": "auto",
+      "provider": "host",
+      "reason": "QEMU maps the target's OpenGL ES to the host GPU (virtio-gpu with virglrenderer)",
+      "device": "virtio-gpu with virglrenderer (OpenGL ES on the host GPU)"
+    },
+    "cpus": 4,
+    "memory_mb": 2048,
+    "options": {},
+    "extra_args": []
+  },
+  "image": {
+    "name": "emu-target-debian",
+    "version": "0.2.0",
+    "kind": "vm",
+    "arch": "x86_64",
+    "source": {
+      "distribution": "Debian 13 (trixie)",
+      "base_image": "docker.io/library/debian:trixie-slim",
+      "base_image_digest": "sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2",
+      "apt_snapshot": "20261104T212339Z",
+      "flutter": {
+        "version": "3.47.9",
+        "revision": "c197ca5199e9ee5661e865596c9c07294dfab51c",
+        "repository": "https://github.com/flutter/flutter.git",
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ]
+      }
+    },
+    "definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b",
+    "build_revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+    "built_at": "2026-11-12T15:52:01Z",
+    "kernel_release": "6.12.115+deb13.1-amd64",
+    "rootfs_sha256": "ec4f0f0f8c050bdae321e3062b84edeca2d8ca037aec4e7e2532b5a5590843e7",
+    "reported_by_target": {
+      "name": "emu-target-debian",
+      "version": "0.2.0",
+      "definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b",
+      "base_image": "docker.io/library/debian:trixie-slim@sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2",
+      "apt_snapshot": "20261104T212339Z",
+      "debian_version": "13.7",
+      "architecture": "amd64",
+      "packages_sha256": "314f56871879532b123c9104afb8779a269572f6b51fffd5b2474c51f761c28d"
+    }
+  },
+  "target": {
+    "mode": "vm",
+    "machine": "x86_64",
+    "kernel": "6.12.115+deb13.1-amd64",
+    "cpus": 4
+  },
+  "workload": {
+    "id": "graphics-demo",
+    "version": "1.0.0",
+    "seconds_per_test": 5.0,
+    "tests": [
+      "wayland",
+      "gles",
+      "vulkan",
+      "flutter"
+    ],
+    "resolution": "1920x1080",
+    "graphics": "host",
+    "display": {
+      "width": 1920,
+      "height": 1080,
+      "presentation_feedback": true,
+      "gles": {
+        "renderer": "virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2)",
+        "version": "OpenGL ES 3.2 Mesa 25.0.7-2+deb13u1",
+        "accelerated": true
+      },
+      "vulkan": [
+        {
+          "name": "llvmpipe (LLVM 19.1.7, 256 bits)",
+          "type": "CPU",
+          "accelerated": false
+        }
+      ]
+    },
+    "arguments": []
+  },
+  "drivers": {
+    "hwrng": "emulated"
+  },
+  "launcher_revision": "b91dc9abe42f366580957b8d765633a4f7c9c217-dirty",
+  "boot_seconds": 2.066,
+  "duration_seconds": 23.349,
+  "exit_code": 0,
+  "results": [
+    {
+      "area": "graphics",
+      "test": "wayland_fps",
+      "technology": "wayland",
+      "unit": "frames/s",
+      "value": 653.57,
+      "resolution": "1920x1080",
+      "frames": 3269,
+      "seconds": 5.002,
+      "frame_time_ms": {
+        "mean": 1.53,
+        "p50": 1.303,
+        "p99": 2.706,
+        "max": 8.694
+      },
+      "first_frame_seconds": 0.004,
+      "displayed_fps": 43.18,
+      "renderer": "cpu",
+      "api": "wl_shm XRGB8888",
+      "accelerated": false
+    },
+    {
+      "area": "graphics",
+      "test": "gles_fps",
+      "technology": "gles",
+      "unit": "frames/s",
+      "value": 199.85,
+      "resolution": "1920x1080",
+      "frames": 1000,
+      "seconds": 5.004,
+      "frame_time_ms": {
+        "mean": 5.004,
+        "p50": 4.716,
+        "p99": 12.297,
+        "max": 12.472
+      },
+      "first_frame_seconds": 0.046,
+      "displayed_fps": 116.91,
+      "renderer": "virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2)",
+      "api": "OpenGL ES 3.2 Mesa 25.0.7-2+deb13u1",
+      "accelerated": true
+    },
+    {
+      "area": "graphics",
+      "test": "vulkan_fps",
+      "technology": "vulkan",
+      "unit": "frames/s",
+      "value": 152.96,
+      "resolution": "1920x1080",
+      "frames": 765,
+      "seconds": 5.001,
+      "frame_time_ms": {
+        "mean": 6.538,
+        "p50": 6.242,
+        "p99": 9.15,
+        "max": 11.679
+      },
+      "first_frame_seconds": 0.144,
+      "displayed_fps": 44.39,
+      "renderer": "llvmpipe (LLVM 19.1.7, 256 bits) (CPU)",
+      "api": "Vulkan 1.4.305",
+      "accelerated": false,
+      "present_mode": "mailbox"
+    },
+    {
+      "area": "graphics",
+      "test": "flutter_fps",
+      "technology": "flutter",
+      "unit": "frames/s",
+      "value": 59.41,
+      "resolution": "1920x1080",
+      "frames": 301,
+      "seconds": 5.066,
+      "frame_time_ms": {
+        "mean": 16.832,
+        "p50": 16.575,
+        "p99": 26.029,
+        "max": 44.978
+      },
+      "build_time_ms": {
+        "mean": 1.667,
+        "p50": 1.521,
+        "p99": 2.586,
+        "max": 8.587
+      },
+      "raster_time_ms": {
+        "mean": 0.952,
+        "p50": 0.859,
+        "p99": 2.595,
+        "max": 4.76
+      },
+      "first_frame_seconds": 0.05,
+      "paced_by_display": true,
+      "renderer": "virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2)",
+      "api": "Flutter 3.47.9, Dart 3.13.7",
+      "accelerated": true
+    }
+  ]
+}
