@@ -94,6 +94,10 @@ def cmd_run(args):
                 print("emu: captured the display (%dx%d) to %s" % (screen["captured_width"],
                                                                  screen["captured_height"], screen["file"]),
                       file=sys.stderr)
+                if graphics.capture_is_cut(screen, screen.get("width"), screen.get("height")):
+                    print("emu: that is the top left part of the %dx%d display: QEMU's VNC server, which the "
+                          "capture of a display rendered on the host GPU is read from, shows no more"
+                          % (screen["width"], screen["height"]), file=sys.stderr)
             else:
                 print("emu: could not capture the display: %s" % screen.get("error"), file=sys.stderr)
         if args.record:

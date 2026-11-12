@@ -1,0 +1,216 @@
+{
+  "schema_version": 1,
+  "run_id": "20261112T171028Z-04e3aa",
+  "recorded_at": "2026-11-12T17:10:51Z",
+  "host": {
+    "id": "linux-x86_64",
+    "os": "linux",
+    "os_version": "Ubuntu 24.04.5 LTS (kernel 6.8.0-149-generic)",
+    "arch": "x86_64",
+    "cpu_model": "Intel(R) Core(TM) i7-10700K CPU @ 3.80GHz",
+    "cpus": 16,
+    "memory_bytes": 33543806976,
+    "python": "3.12.3"
+  },
+  "emulator": {
+    "mode": "vm",
+    "variant": "vm-native",
+    "guest_arch": "x86_64",
+    "accelerator": "kvm",
+    "cpu_model": "host",
+    "machine": "q35",
+    "runtime": "QEMU emulator version 8.2.2 (Debian 1:8.2.2+ds-0ubuntu1.18)",
+    "display": {
+      "resolution": "1920x1080"
+    },
+    "graphics": {
+      "requested": "auto",
+      "provider": "host",
+      "reason": "QEMU maps the target's OpenGL ES to the host GPU (virtio-gpu with virglrenderer)",
+      "device": "virtio-gpu with virglrenderer (OpenGL ES on the host GPU)"
+    },
+    "cpus": 4,
+    "memory_mb": 2048,
+    "options": {},
+    "extra_args": []
+  },
+  "image": {
+    "name": "emu-target-debian",
+    "version": "0.2.0",
+    "kind": "vm",
+    "arch": "x86_64",
+    "source": {
+      "distribution": "Debian 13 (trixie)",
+      "base_image": "docker.io/library/debian:trixie-slim",
+      "base_image_digest": "sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2",
+      "apt_snapshot": "20261104T212339Z",
+      "flutter": {
+        "version": "3.47.9",
+        "revision": "c197ca5199e9ee5661e865596c9c07294dfab51c",
+        "repository": "https://github.com/flutter/flutter.git",
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ]
+      }
+    },
+    "definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b",
+    "build_revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+    "built_at": "2026-11-12T15:52:01Z",
+    "kernel_release": "6.12.115+deb13.1-amd64",
+    "rootfs_sha256": "ec4f0f0f8c050bdae321e3062b84edeca2d8ca037aec4e7e2532b5a5590843e7",
+    "reported_by_target": {
+      "name": "emu-target-debian",
+      "version": "0.2.0",
+      "definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b",
+      "base_image": "docker.io/library/debian:trixie-slim@sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2",
+      "apt_snapshot": "20261104T212339Z",
+      "debian_version": "13.7",
+      "architecture": "amd64",
+      "packages_sha256": "314f56871879532b123c9104afb8779a269572f6b51fffd5b2474c51f761c28d"
+    }
+  },
+  "target": {
+    "mode": "vm",
+    "machine": "x86_64",
+    "kernel": "6.12.115+deb13.1-amd64",
+    "cpus": 4
+  },
+  "workload": {
+    "id": "graphics-demo",
+    "version": "1.0.0",
+    "seconds_per_test": 5.0,
+    "tests": [
+      "wayland",
+      "gles",
+      "vulkan",
+      "flutter"
+    ],
+    "resolution": "1920x1080",
+    "graphics": "host",
+    "display": {
+      "width": 1920,
+      "height": 1080,
+      "presentation_feedback": true,
+      "gles": {
+        "renderer": "virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2)",
+        "version": "OpenGL ES 3.2 Mesa 25.0.7-2+deb13u1",
+        "accelerated": true
+      },
+      "vulkan": [
+        {
+          "name": "llvmpipe (LLVM 19.1.7, 256 bits)",
+          "type": "CPU",
+          "accelerated": false
+        }
+      ]
+    },
+    "arguments": []
+  },
+  "drivers": {
+    "hwrng": "emulated"
+  },
+  "launcher_revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+  "boot_seconds": 1.988,
+  "duration_seconds": 23.246,
+  "exit_code": 0,
+  "results": [
+    {
+      "area": "graphics",
+      "test": "wayland_fps",
+      "technology": "wayland",
+      "unit": "frames/s",
+      "value": 710.72,
+      "resolution": "1920x1080",
+      "frames": 3554,
+      "seconds": 5.001,
+      "frame_time_ms": {
+        "mean": 1.407,
+        "p50": 1.316,
+        "p99": 2.049,
+        "max": 9.753
+      },
+      "first_frame_seconds": 0.004,
+      "displayed_fps": 46.99,
+      "renderer": "cpu",
+      "api": "wl_shm XRGB8888",
+      "accelerated": false
+    },
+    {
+      "area": "graphics",
+      "test": "gles_fps",
+      "technology": "gles",
+      "unit": "frames/s",
+      "value": 245.78,
+      "resolution": "1920x1080",
+      "frames": 1230,
+      "seconds": 5.005,
+      "frame_time_ms": {
+        "mean": 4.069,
+        "p50": 4.559,
+        "p99": 10.413,
+        "max": 12.032
+      },
+      "first_frame_seconds": 0.043,
+      "displayed_fps": 130.28,
+      "renderer": "virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2)",
+      "api": "OpenGL ES 3.2 Mesa 25.0.7-2+deb13u1",
+      "accelerated": true
+    },
+    {
+      "area": "graphics",
+      "test": "vulkan_fps",
+      "technology": "vulkan",
+      "unit": "frames/s",
+      "value": 157.79,
+      "resolution": "1920x1080",
+      "frames": 789,
+      "seconds": 5.0,
+      "frame_time_ms": {
+        "mean": 6.337,
+        "p50": 6.146,
+        "p99": 8.311,
+        "max": 12.714
+      },
+      "first_frame_seconds": 0.139,
+      "displayed_fps": 44.4,
+      "renderer": "llvmpipe (LLVM 19.1.7, 256 bits) (CPU)",
+      "api": "Vulkan 1.4.305",
+      "accelerated": false,
+      "present_mode": "mailbox"
+    },
+    {
+      "area": "graphics",
+      "test": "flutter_fps",
+      "technology": "flutter",
+      "unit": "frames/s",
+      "value": 59.84,
+      "resolution": "1920x1080",
+      "frames": 303,
+      "seconds": 5.064,
+      "frame_time_ms": {
+        "mean": 16.712,
+        "p50": 16.5,
+        "p99": 23.239,
+        "max": 32.541
+      },
+      "build_time_ms": {
+        "mean": 1.521,
+        "p50": 1.427,
+        "p99": 2.847,
+        "max": 6.633
+      },
+      "raster_time_ms": {
+        "mean": 1.054,
+        "p50": 0.847,
+        "p99": 3.923,
+        "max": 4.964
+      },
+      "first_frame_seconds": 0.05,
+      "paced_by_display": true,
+      "renderer": "virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2)",
+      "api": "Flutter 3.47.9, Dart 3.13.7",
+      "accelerated": true
+    }
+  ]
+}

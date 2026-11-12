@@ -241,6 +241,7 @@ def check_drivers_vm_arm64():
 NATIVE_TECHNOLOGIES = ("wayland", "gles", "vulkan")
 TECHNOLOGY_NAMES = {"wayland": "Wayland", "gles": "OpenGL ES", "vulkan": "Vulkan", "flutter": "Flutter"}
 _demo_runs = {}
+cut_runs = set()        # runs whose display capture showed only part of the display
 
 
 def _demo(mode, arch, resolution, provider=None):
@@ -271,14 +272,22 @@ def _demo(mode, arch, resolution, provider=None):
             elif screen is None:
                 problem = "the frame of the %s test was not captured from the display" % technology
             else:
-                found = graphics.capture_problems(screen, width, height)
+                # Only the capture of a display rendered on the host GPU may be
+                # cut off; _resolutions then confirms the whole frame otherwise.
+                host_rendered = outcome.environment["emulator"]["graphics"]["provider"] == "host"
+                cut = host_rendered and graphics.capture_is_cut(screen, width, height)
+                found = graphics.capture_problems(screen, width, height, allow_cut=host_rendered)
                 if found:
                     problem = "%s at %dx%d: %s" % (technology, width, height, "; ".join(found))
             line = None
             if not problem:
-                line = "%s at %dx%d: %.1f frames/s on %s; the display capture is %dx%d and shows its frame" % (
+                line = "%s at %dx%d: %.1f frames/s on %s; the display capture is %dx%d and shows %s" % (
                     TECHNOLOGY_NAMES[technology], width, height, result["value"], result.get("renderer"),
-                    screen["captured_width"], screen["captured_height"])
+                    screen["captured_width"], screen["captured_height"],
+                    "the top left part of its frame (QEMU's capture of a display rendered on the host GPU "
+                    "reaches no further)" if cut else "its frame")
+                if cut:
+                    cut_runs.add(key)
             evaluation[technology] = (problem, line, result)
     _demo_runs[key] = (outcome.environment["emulator"], evaluation)
     return _demo_runs[key]
@@ -326,6 +335,11 @@ def _resolutions(mode, arch="native"):
     lines = []
     for name in graphics.RESOLUTIONS:
         lines += _technologies(mode, arch, name, working)[2]
+        if (mode, arch, name, None) in cut_runs:
+            # The whole frame is confirmed where the capture reaches all of
+            # it: with the display rendered by the target CPU.
+            lines += ["with emulated graphics, for the whole frame: " + line
+                      for line in _technologies(mode, arch, name, working, provider="emulated")[2]]
     missing = [TECHNOLOGY_NAMES[t] for t in NATIVE_TECHNOLOGIES + ("flutter",) if t not in working]
     if missing:
         lines.append("not covered, because unavailable in this mode: %s" % ", ".join(missing))

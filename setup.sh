@@ -109,7 +109,10 @@ linux_gl_packages() {
 
 check_graphics() {
   have "$QEMU_NATIVE" || return 0
-  if qemu_has_gl; then
+  if qemu_has_gl && [ "$OS" = Linux ] && ! ls /dev/dri/renderD* >/dev/null 2>&1; then
+    # Nothing this script installs: which GPU driver fits is the host's matter.
+    note "host graphics acceleration for VM mode: QEMU supports it, but the host has no GPU render node (/dev/dri/renderD*), so no GPU driver is loaded; graphics are emulated"
+  elif qemu_has_gl; then
     ok "host graphics acceleration for VM mode (QEMU with virglrenderer)"
   elif [ "$OS" = Linux ] && [ -n "$(linux_gl_packages)" ]; then
     optional qemu-gl "host graphics acceleration for VM mode: QEMU's OpenGL modules are not installed; graphics are emulated without them"

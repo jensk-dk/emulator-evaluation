@@ -136,13 +136,17 @@ def _run_build(command, quiet, arch):
     hint = None
     if arch != host.host_arch():
         hint = "if the build could not run %s programs, %s" % (arch, host.SETUP_HINT)
+    # Docker engines before version 23 build with their old builder unless
+    # told otherwise, and that one cannot build for another architecture: it
+    # reuses a stage it built for the host's. Later engines ignore the setting.
+    env = host.tool_env({"DOCKER_BUILDKIT": "1"})
     if quiet:
-        done = subprocess.run(command, env=host.tool_env(), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        done = subprocess.run(command, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         if done.returncode != 0:
             raise EmuError("image build failed:\n" + done.stdout[-4000:], hint=hint)
     else:
         print("+ " + " ".join(command), flush=True)
-        if subprocess.run(command, env=host.tool_env()).returncode != 0:
+        if subprocess.run(command, env=env).returncode != 0:
             raise EmuError("image build failed", hint=hint)
 
 

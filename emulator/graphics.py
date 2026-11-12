@@ -12,6 +12,7 @@ falls back to emulation; the reason for the choice is recorded with the run.
 What the target actually rendered with is reported by the workload, so a
 result never depends on this module's expectation alone.
 """
+import glob
 import json
 import os
 import shutil
@@ -38,6 +39,9 @@ OPENGL_WINDOWS = ("sdl", "gtk")
 # corners, in the order top left, top right, bottom left, bottom right.
 CORNER_COLORS = ((255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 255))
 COLOR_TOLERANCE = 12
+
+# Kernel GPU drivers that Mesa, the target's graphics stack, has no driver for.
+PROPRIETARY_DRIVERS = ("nvidia",)
 
 _probes = {}
 
@@ -66,6 +70,16 @@ def window_backend(binary):
     raise EmuError("this QEMU build has no display that opens a window (%s)" % ", ".join(WINDOWS))
 
 
+def _render_node():
+    """A DRM render node this user can open: the sign, on Linux, that a GPU
+    driver is loaded. Without one the host's own OpenGL is rendered by its
+    CPU, and QEMU's display without a window has no device to render on."""
+    for path in sorted(glob.glob("/dev/dri/renderD*")):
+        if os.access(path, os.R_OK | os.W_OK):
+            return path
+    return None
+
+
 def probe_vm(binary, window=None):
     """Whether this QEMU can map the guest's graphics to the host's GPU.
 
@@ -87,6 +101,12 @@ def probe_vm(binary, window=None):
         probe = {"available": False,
                  "reason": "this QEMU build has no GPU-accelerated display device (virtio-gpu-gl); "
                            "it was built without virglrenderer"}
+    elif host.host_os() == "linux" and not _render_node():
+        found = glob.glob("/dev/dri/renderD*")
+        probe = {"available": False,
+                 "reason": ("this user cannot open the host's GPU render node (%s)" % found[0]) if found else
+                           "the host has no GPU render node (/dev/dri/renderD*): no GPU driver is loaded, and "
+                           "the host renders its own graphics on the CPU"}
     elif window in OPENGL_WINDOWS:
         probe = {"available": True, "venus": venus, "reason": mapped + " and shows it in an OpenGL window"}
     elif window:
@@ -116,12 +136,20 @@ def probe_container(runtime, tag, platform):
     if key in _probes:
         return _probes[key]
     try:
+        # The node, and the kernel driver behind it.
+        script = ("node=$(ls /dev/dri/renderD* 2>/dev/null | head -n 1); [ -n \"$node\" ] || exit 0; "
+                  "echo $node $(basename \"$(readlink /sys/class/drm/${node##*/}/device/driver)\")")
         done = runtime.run("run", "--rm", "--platform", platform, "--device", "/dev/dri", "--entrypoint", "/bin/sh",
-                           tag, "-c", "ls /dev/dri/renderD* 2>/dev/null | head -n 1", timeout=120)
-        node = done.stdout.strip() if done.returncode == 0 else ""
+                           tag, "-c", script, timeout=120)
+        node, _, driver = (done.stdout.strip() if done.returncode == 0 else "").partition(" ")
     except subprocess.TimeoutExpired:
-        node = ""
-    if node:
+        node, driver = "", ""
+    if node and driver in PROPRIETARY_DRIVERS:
+        probe = {"available": False,
+                 "reason": "the container engine's GPU render node (%s) belongs to the %s kernel driver, which the "
+                           "target's graphics stack (Mesa) cannot render with; it works only with that vendor's own "
+                           "libraries" % (node, driver)}
+    elif node:
         probe = {"available": True, "reason": "the container engine has a GPU render node (%s)" % node}
     else:
         where = "; the engine runs in a virtual machine that offers none" if host.host_os() != "linux" else ""
@@ -397,13 +425,23 @@ def _close(found, expected):
     return all(abs(a - b) <= COLOR_TOLERANCE for a, b in zip(found, expected))
 
 
-def capture_problems(entry, width, height):
+def capture_is_cut(entry, width, height):
+    """Whether a capture is the top left part of a larger display. QEMU's VNC
+    server, which the capture of a display rendered on the host GPU is read
+    from, shows no more than a fixed size (2560x2048 in QEMU 8.2)."""
+    found = (entry.get("captured_width"), entry.get("captured_height"))
+    return None not in found and found != (width, height) and found[0] <= width and found[1] <= height
+
+
+def capture_problems(entry, width, height, allow_cut=False):
     """Compare a captured display image with what the workload said it drew:
     the display size, the corner blocks and the technology's marker block.
-    Returns a list of problems, empty when the capture shows that frame."""
+    Returns a list of problems, empty when the capture shows that frame. With
+    `allow_cut`, a capture that is cut off is compared as far as it reaches."""
     if entry.get("error"):
         return ["the display could not be captured: %s" % entry["error"]]
-    if (entry["captured_width"], entry["captured_height"]) != (width, height):
+    cut = allow_cut and capture_is_cut(entry, width, height)
+    if (entry["captured_width"], entry["captured_height"]) != (width, height) and not cut:
         return ["the display capture is %dx%d, not %dx%d" % (entry["captured_width"], entry["captured_height"],
                                                              width, height)]
     image = imagefile.load(entry["file"])
@@ -416,6 +454,8 @@ def capture_problems(entry, width, height):
               ("technology marker", width // 2, half, tuple(entry.get("marker") or ()))]
     problems = []
     for name, x, y, expected in points:
+        if x >= entry["captured_width"] or y >= entry["captured_height"]:
+            continue        # beyond what a cut capture shows
         found = image.pixel(x, y)
         if len(expected) != 3 or not _close(found, expected):
             problems.append("%s is %s, expected %s" % (name, found, expected))

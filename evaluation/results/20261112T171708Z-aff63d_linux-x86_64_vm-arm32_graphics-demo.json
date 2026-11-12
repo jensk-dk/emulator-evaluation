@@ -1,0 +1,177 @@
+{
+  "schema_version": 1,
+  "run_id": "20261112T171708Z-aff63d",
+  "recorded_at": "2026-11-12T17:18:16Z",
+  "host": {
+    "id": "linux-x86_64",
+    "os": "linux",
+    "os_version": "Ubuntu 24.04.5 LTS (kernel 6.8.0-149-generic)",
+    "arch": "x86_64",
+    "cpu_model": "Intel(R) Core(TM) i7-10700K CPU @ 3.80GHz",
+    "cpus": 16,
+    "memory_bytes": 33543806976,
+    "python": "3.12.3"
+  },
+  "emulator": {
+    "mode": "vm",
+    "variant": "vm-arm32",
+    "guest_arch": "arm32",
+    "accelerator": "tcg",
+    "cpu_model": "cortex-a15",
+    "machine": "virt",
+    "runtime": "QEMU emulator version 8.2.2 (Debian 1:8.2.2+ds-0ubuntu1.18)",
+    "display": {
+      "resolution": "1920x1080"
+    },
+    "graphics": {
+      "requested": "auto",
+      "provider": "host",
+      "reason": "QEMU maps the target's OpenGL ES to the host GPU (virtio-gpu with virglrenderer)",
+      "device": "virtio-gpu with virglrenderer (OpenGL ES on the host GPU)"
+    },
+    "cpus": 4,
+    "memory_mb": 2048,
+    "options": {},
+    "extra_args": []
+  },
+  "image": {
+    "name": "emu-target-debian",
+    "version": "0.2.0",
+    "kind": "vm",
+    "arch": "arm32",
+    "source": {
+      "distribution": "Debian 13 (trixie)",
+      "base_image": "docker.io/library/debian:trixie-slim",
+      "base_image_digest": "sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2",
+      "apt_snapshot": "20261104T212339Z",
+      "flutter": {
+        "version": "3.47.9",
+        "revision": "c197ca5199e9ee5661e865596c9c07294dfab51c",
+        "repository": "https://github.com/flutter/flutter.git",
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ]
+      }
+    },
+    "definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b",
+    "build_revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+    "built_at": "2026-11-12T15:22:42Z",
+    "kernel_release": "6.12.115+deb13.1-armmp-lpae",
+    "rootfs_sha256": "26bfbed5faed608c7ddd0ad94e5a1c35a79747e1a6c1fe7a6c0983793517e42b",
+    "reported_by_target": {
+      "name": "emu-target-debian",
+      "version": "0.2.0",
+      "definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b",
+      "base_image": "docker.io/library/debian:trixie-slim@sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2",
+      "apt_snapshot": "20261104T212339Z",
+      "debian_version": "13.7",
+      "architecture": "armhf",
+      "packages_sha256": "27bd4159b9e17aea2d0ff881c68e61cc90ba6821b36c70a1c10ef6523ad7fb10"
+    }
+  },
+  "target": {
+    "mode": "vm",
+    "machine": "armv7l",
+    "kernel": "6.12.115+deb13.1-armmp-lpae",
+    "cpus": 4
+  },
+  "workload": {
+    "id": "graphics-demo",
+    "version": "1.0.0",
+    "seconds_per_test": 5.0,
+    "tests": [
+      "wayland",
+      "gles",
+      "vulkan",
+      "flutter"
+    ],
+    "resolution": "1920x1080",
+    "graphics": "host",
+    "display": {
+      "width": 1920,
+      "height": 1080,
+      "presentation_feedback": true,
+      "gles": {
+        "renderer": "virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2)",
+        "version": "OpenGL ES 3.2 Mesa 25.0.7-2+deb13u1",
+        "accelerated": true
+      },
+      "vulkan": [
+        {
+          "name": "llvmpipe (LLVM 19.1.7, 128 bits)",
+          "type": "CPU",
+          "accelerated": false
+        }
+      ]
+    },
+    "arguments": []
+  },
+  "drivers": {
+    "hwrng": "emulated"
+  },
+  "launcher_revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+  "boot_seconds": 41.548,
+  "duration_seconds": 67.917,
+  "exit_code": 0,
+  "results": [
+    {
+      "area": "graphics",
+      "test": "wayland_fps",
+      "technology": "wayland",
+      "unit": "frames/s",
+      "value": 85.32,
+      "resolution": "1920x1080",
+      "frames": 427,
+      "seconds": 5.005,
+      "frame_time_ms": {
+        "mean": 11.72,
+        "p50": 9.882,
+        "p99": 19.881,
+        "max": 260.416
+      },
+      "first_frame_seconds": 0.26,
+      "displayed_fps": 30.97,
+      "renderer": "cpu",
+      "api": "wl_shm XRGB8888",
+      "accelerated": false
+    },
+    {
+      "area": "graphics",
+      "test": "gles_fps",
+      "technology": "gles",
+      "unit": "frames/s",
+      "value": 87.18,
+      "resolution": "1920x1080",
+      "frames": 436,
+      "seconds": 5.001,
+      "frame_time_ms": {
+        "mean": 11.47,
+        "p50": 10.41,
+        "p99": 81.763,
+        "max": 91.357
+      },
+      "first_frame_seconds": 1.754,
+      "displayed_fps": 75.98,
+      "renderer": "virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2)",
+      "api": "OpenGL ES 3.2 Mesa 25.0.7-2+deb13u1",
+      "accelerated": true
+    },
+    {
+      "area": "graphics",
+      "test": "vulkan_fps",
+      "technology": "vulkan",
+      "unit": "frames/s",
+      "value": null,
+      "unavailable": "the vulkan test ended with status 134: malloc(): invalid size (unsorted) "
+    },
+    {
+      "area": "graphics",
+      "test": "flutter_fps",
+      "technology": "flutter",
+      "unit": "frames/s",
+      "value": null,
+      "unavailable": "the Flutter SDK (3.47.9) builds Linux applications for x86-64 and ARM64 only, not for armhf"
+    }
+  ]
+}

@@ -18,8 +18,8 @@ The requirements live in the [openspec](openspec) folder. Delivery is staged
 ([tasks](openspec/changes/staged-emulator-delivery/tasks.md)); this repo
 holds the code for stages 0 to 3: the evaluation foundation, a cross-platform
 runnable baseline, VM CPU and driver fidelity, and graphics. So far they are
-verified on two hosts: macOS on ARM64, and Windows on x86-64 with Podman as
-the container runtime. Linux hosts have not been run yet. The task list and
+verified on three hosts: macOS on ARM64, Windows on x86-64 with Podman as
+the container runtime, and Linux on x86-64 (Kubuntu 24.04) with Docker. The task list and
 `evaluation/verification/` show what has been verified, and on which hosts.
 
 ## Quick start
@@ -59,6 +59,22 @@ launcher and `setup.ps1` read it.
 The launcher starts a stopped container engine itself. On macOS, restarting
 Colima drops the ARM32 build emulation; `./setup.sh` restores it, and it is
 only needed to rebuild the ARM32 image.
+
+### Linux
+
+`setup.sh` installs with the distribution's package manager (apt, dnf, pacman
+or zypper) and asks for root through `sudo`. It has been run on Kubuntu 24.04
+only.
+
+- An installed Docker is used as it is, also an old one: the launcher builds
+  with BuildKit, which Docker engines before version 23 do not do by default
+  and which building the ARM images needs. Run with Docker 20.10.
+- Host graphics acceleration needs a loaded GPU driver, which shows as a
+  render node (`/dev/dri/renderD*`). Without one the host renders its own
+  graphics on the CPU, and the launcher emulates graphics rather than hand
+  them to that. `setup.sh` reports this and does not install GPU drivers.
+  (After a kernel update, check that the driver's kernel module was updated
+  with it: `./emu doctor` shows whether host acceleration is available.)
 
 ### Windows
 
@@ -174,14 +190,30 @@ why. `--graphics host` fails rather than silently emulating.
 Without `--window` a VM's display is not shown anywhere; `--screenshot`
 captures it. `--window` shows it in QEMU's SDL window, or in QEMU's Cocoa or
 GTK window where the build has no SDL. Closing the window ends the emulator.
-Only the SDL window on Windows has been run. The windowed display of the later
+The SDL window has been run on Windows and on Linux (X11). The windowed display of the later
 stage (full screen, scaling, toolbar) is not part of this.
-
+sudo apt update && sudo apt install claude-desktop
 What the verified hosts offer; `./emu doctor` shows it for any host:
 
 - macOS on ARM64: no host acceleration. Homebrew's QEMU is built without the
   GPU-accelerated display device, and the container engine's virtual machine
-  has no GPU.
+  has no GPU.sudo apt update && sudo apt install claude-desktop
+- Linux on x86-64 (Kubuntu 24.04, QEMU 8.2.2, NVIDIA GPU with NVIDIA's own
+  driver), VM mode: host acceleration, with and without a window. QEMU maps
+  OpenGL ES to the host GPU; `./emu verify` covers this path here, by a capture
+  of the display. Without a window at 1080p the OpenGL ES test ran at 183
+  frames/s and the Flutter test at 60, against 51 and 9 emulated. Simulated ARM
+  targets get it as well: OpenGL ES at 118 frames/s on ARM64 and 84 on ARM32,
+  against about 1 emulated. Vulkan stays on the
+  target CPU: this QEMU does not map it. QEMU ends cleanly. Two limits:
+  - Without a window, a capture of a 4K display shows only its top left
+    2560x2048 pixels: QEMU's VNC server shows no more. The target renders all
+    of it; the launcher says so when it saves such a capture.
+  - With a window the display cannot be captured, as on Windows.
+- Linux on x86-64, container mode: emulated. The engine has the GPU's render
+  node, but it belongs to NVIDIA's driver, which the target's graphics stack
+  (Mesa) cannot render with. A GPU with a Mesa driver (Intel, AMD) is still to
+  be run.
 - Windows on x86-64, VM mode with `--window`: host acceleration. QEMU 11.1.0
   maps OpenGL ES to the host GPU and shows it in its window. On an NVIDIA GPU
   the OpenGL ES test ran at 175 frames/s and the Flutter test at 59, against
@@ -200,9 +232,8 @@ What the verified hosts offer; `./emu doctor` shows it for any host:
 
 The launcher captures a VM's display through QEMU's machine protocol. QEMU
 refuses that while the display is a texture on the host GPU. Without a window
-the capture is then read from QEMU's VNC server; that path has only been run
-on Windows, where it returns the black display described above, and is still
-to be run on a host where that display works.
+the capture is then read from QEMU's VNC server. That works on Linux, up to
+2560x2048 pixels; on Windows it returns the black display described above.
 
 `graphics-demo` runs a Wayland, an OpenGL ES, a Vulkan and a Flutter test.
 `--screenshot DIR` saves a PNG of the emulator's display at the end of each

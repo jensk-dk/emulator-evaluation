@@ -1,0 +1,573 @@
+{
+  "host": {
+    "id": "linux-x86_64",
+    "os": "linux",
+    "os_version": "Ubuntu 24.04.5 LTS (kernel 6.8.0-149-generic)",
+    "arch": "x86_64",
+    "cpu_model": "Intel(R) Core(TM) i7-10700K CPU @ 3.80GHz",
+    "cpus": 16,
+    "memory_bytes": 33543806976,
+    "python": "3.12.3"
+  },
+  "checks": {
+    "matrix": {
+      "status": "pass",
+      "task": "1.1",
+      "description": "the host test matrix covers every declared host combination",
+      "details": [
+        "4 hosts x 4 modes = 16 combinations, each measuring 6 performance areas",
+        "every declared host combination has a host entry: linux-x86_64, windows-x86_64, macos-x86_64, macos-arm64"
+      ],
+      "checked_at": "2026-11-12T15:52:12Z",
+      "seconds": 0.0,
+      "revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+      "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
+    },
+    "workloads": {
+      "status": "pass",
+      "task": "1.3",
+      "description": "the workloads cover every required performance area",
+      "details": [
+        "cpu: bench 1.0.0 (implemented)",
+        "memory_allocation: bench 1.0.0 (implemented)",
+        "memory_bandwidth: bench 1.0.0 (implemented)",
+        "io: bench 1.0.0 (implemented)",
+        "graphics: graphics-demo 1.0.0 (implemented), web-bench 0.1.0 (defined)",
+        "audio_video_decoding: media-decode 0.1.0 (defined), web-bench 0.1.0 (defined)"
+      ],
+      "checked_at": "2026-11-12T15:52:14Z",
+      "seconds": 0.0,
+      "revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+      "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
+    },
+    "prompt-container": {
+      "status": "pass",
+      "task": "2.2, 2.3",
+      "description": "the container image starts the target OS and a prompt",
+      "details": [
+        "target OS environment up in 0.2s; the prompt answered a typed command",
+        "image sha256:b147f8efc041cec2a112b36b8d6082b0b1faa52f689572044c4b1bd50a10a310"
+      ],
+      "checked_at": "2026-11-12T15:52:15Z",
+      "seconds": 1.0,
+      "revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+      "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
+    },
+    "drivers-container": {
+      "status": "pass",
+      "task": "3.2",
+      "description": "emulated, mocked and host-routed drivers in container mode",
+      "details": [
+        "emulated: no host-side process ran; provider model:emu-swrng-1; 130390.9 bytes/s",
+        "mocked: sample is the stub's fixed pattern; provider mock:fixed-pattern; 3872930067.3 bytes/s",
+        "host: sample found in the 4202496 bytes served by the host-side process; provider host:host.docker.internal:34557; 9929489.6 bytes/s"
+      ],
+      "checked_at": "2026-11-12T15:53:39Z",
+      "seconds": 2.6,
+      "revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+      "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
+    },
+    "wayland-container": {
+      "status": "pass",
+      "task": "4.1",
+      "description": "a Wayland workload renders in container mode",
+      "details": [
+        "Wayland at 1280x720: 1838.6 frames/s on cpu; the display capture is 1280x720 and shows its frame",
+        "wl_shm XRGB8888; frame time p99 1.2 ms",
+        "graphics provider: emulated"
+      ],
+      "checked_at": "2026-11-12T16:43:06Z",
+      "seconds": 27.6,
+      "revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+      "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
+    },
+    "gles-container": {
+      "status": "pass",
+      "task": "4.1",
+      "description": "a OpenGL ES workload renders in container mode",
+      "details": [
+        "OpenGL ES at 1280x720: 195.4 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 1280x720 and shows its frame",
+        "OpenGL ES 3.2 Mesa 25.0.7-2+deb13u1; frame time p99 14.8 ms",
+        "graphics provider: emulated"
+      ],
+      "checked_at": "2026-11-12T16:45:50Z",
+      "seconds": 0.0,
+      "revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+      "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
+    },
+    "vulkan-container": {
+      "status": "pass",
+      "task": "4.1",
+      "description": "a Vulkan workload renders in container mode",
+      "details": [
+        "Vulkan at 1280x720: 369.6 frames/s on llvmpipe (LLVM 19.1.7, 256 bits) (CPU); the display capture is 1280x720 and shows its frame",
+        "Vulkan 1.4.305; frame time p99 3.9 ms",
+        "graphics provider: emulated"
+      ],
+      "checked_at": "2026-11-12T16:45:50Z",
+      "seconds": 0.0,
+      "revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+      "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
+    },
+    "flutter-container": {
+      "status": "pass",
+      "task": "4.1",
+      "description": "a Flutter workload renders in container mode",
+      "details": [
+        "Flutter at 1280x720: 17.5 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 1280x720 and shows its frame",
+        "Flutter 3.47.9, Dart 3.13.7; frame build p99 2.6 ms, raster p99 85.6 ms",
+        "graphics provider: emulated"
+      ],
+      "checked_at": "2026-11-12T16:45:50Z",
+      "seconds": 0.0,
+      "revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+      "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
+    },
+    "graphics-emulated-container": {
+      "status": "pass",
+      "task": "4.2",
+      "description": "graphics are emulated on request and as the fallback, in container mode",
+      "details": [
+        "requested emulation: OpenGL ES at 1280x720: 194.5 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 1280x720 and shows its frame",
+        "requested emulation: Vulkan at 1280x720: 363.1 frames/s on llvmpipe (LLVM 19.1.7, 256 bits) (CPU); the display capture is 1280x720 and shows its frame",
+        "auto fell back to emulation: no compatible host graphics acceleration: the container engine's GPU render node (/dev/dri/renderD128) belongs to the nvidia kernel driver, which the target's graphics stack (Mesa) cannot render with; it works only with that vendor's own libraries"
+      ],
+      "checked_at": "2026-11-12T16:46:17Z",
+      "seconds": 27.2,
+      "revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+      "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
+    },
+    "graphics-host-container": {
+      "status": "unavailable",
+      "task": "4.2",
+      "description": "graphics are mapped to host acceleration and preferred, in container mode",
+      "details": [
+        "the container engine's GPU render node (/dev/dri/renderD128) belongs to the nvidia kernel driver, which the target's graphics stack (Mesa) cannot render with; it works only with that vendor's own libraries. Asking for it is refused: host graphics acceleration is not available: the container engine's GPU render node (/dev/dri/renderD128) belongs to the nvidia kernel driver, which the target's graphics stack (Mesa) cannot render with; it works only with that vendor's own libraries"
+      ],
+      "checked_at": "2026-11-12T17:19:19Z",
+      "seconds": 0.4,
+      "revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+      "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
+    },
+    "resolution-container": {
+      "status": "pass",
+      "task": "4.3",
+      "description": "720p, 1080p and 4K are rendered and displayed in container mode",
+      "details": [
+        "Wayland at 1280x720: 1838.6 frames/s on cpu; the display capture is 1280x720 and shows its frame",
+        "OpenGL ES at 1280x720: 195.4 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 1280x720 and shows its frame",
+        "Vulkan at 1280x720: 369.6 frames/s on llvmpipe (LLVM 19.1.7, 256 bits) (CPU); the display capture is 1280x720 and shows its frame",
+        "Flutter at 1280x720: 17.5 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 1280x720 and shows its frame",
+        "Wayland at 1920x1080: 722.7 frames/s on cpu; the display capture is 1920x1080 and shows its frame",
+        "OpenGL ES at 1920x1080: 60.7 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 1920x1080 and shows its frame",
+        "Vulkan at 1920x1080: 157.4 frames/s on llvmpipe (LLVM 19.1.7, 256 bits) (CPU); the display capture is 1920x1080 and shows its frame",
+        "Flutter at 1920x1080: 9.3 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 1920x1080 and shows its frame",
+        "Wayland at 3840x2160: 147.6 frames/s on cpu; the display capture is 3840x2160 and shows its frame",
+        "OpenGL ES at 3840x2160: 13.2 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 3840x2160 and shows its frame",
+        "Vulkan at 3840x2160: 35.5 frames/s on llvmpipe (LLVM 19.1.7, 256 bits) (CPU); the display capture is 3840x2160 and shows its frame",
+        "Flutter at 3840x2160: 3.5 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 3840x2160 and shows its frame"
+      ],
+      "checked_at": "2026-11-12T16:48:21Z",
+      "seconds": 71.3,
+      "revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+      "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
+    },
+    "image": {
+      "status": "pass",
+      "task": "1.2",
+      "description": "the client OS image boots in VM mode and its revision is recorded",
+      "details": [
+        "emu-target-debian 0.2.0 booted in 1.9s, kernel 6.12.115+deb13.1-amd64",
+        "source: Debian 13 (trixie), docker.io/library/debian:trixie-slim@sha256:a72b4433de1c, apt snapshot 20261104T212339Z",
+        "definition 8c962d4eb7c4, build revision 336753703e6a532c48da120ccccb42c113d3b5d3-dirty, rootfs sha256 ec4f0f0f8c05"
+      ],
+      "checked_at": "2026-11-12T15:52:14Z",
+      "seconds": 2.5,
+      "revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+      "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
+    },
+    "prompt-vm": {
+      "status": "pass",
+      "task": "2.2, 2.4",
+      "description": "the target OS boots in host-native VM mode to a prompt",
+      "details": [
+        "booted on kvm (x86_64, cpu host) in 1.9s; the prompt answered a typed command"
+      ],
+      "checked_at": "2026-11-12T15:52:18Z",
+      "seconds": 2.4,
+      "revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+      "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
+    },
+    "bench-container": {
+      "status": "pass",
+      "task": "2.5",
+      "description": "CPU, memory and I/O workloads run in container mode",
+      "details": [
+        "13 measurements across cpu, io, memory_allocation, memory_bandwidth",
+        "record identifies host linux-x86_64, mode container, image emu-target-debian 0.2.0, workload bench 1.0.0"
+      ],
+      "checked_at": "2026-11-12T15:52:24Z",
+      "seconds": 5.6,
+      "revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+      "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
+    },
+    "bench-vm": {
+      "status": "pass",
+      "task": "2.5",
+      "description": "CPU, memory and I/O workloads run in host-native VM mode",
+      "details": [
+        "13 measurements across cpu, io, memory_allocation, memory_bandwidth",
+        "record identifies host linux-x86_64, mode vm-native, image emu-target-debian 0.2.0, workload bench 1.0.0"
+      ],
+      "checked_at": "2026-11-12T15:52:31Z",
+      "seconds": 7.1,
+      "revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+      "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
+    },
+    "results": {
+      "status": "pass",
+      "task": "2.5",
+      "description": "recorded results carry their environment identity",
+      "details": [
+        "59 records, all fully identified",
+        "this host has bench results for: container, vm-arm32, vm-arm64, vm-native"
+      ],
+      "checked_at": "2026-11-12T17:19:19Z",
+      "seconds": 0.0,
+      "revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+      "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
+    },
+    "vm-arm32": {
+      "status": "pass",
+      "task": "3.1",
+      "description": "ARM32 VM guest mode starts the target OS workload",
+      "details": [
+        "armv7l guest on tcg simulating cortex-a15 (CPU part 0xc0f) booted in 44.9s and ran the prompt workload"
+      ],
+      "checked_at": "2026-11-12T15:53:17Z",
+      "seconds": 46.8,
+      "revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+      "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
+    },
+    "vm-arm64": {
+      "status": "pass",
+      "task": "3.1",
+      "description": "ARM64 VM guest mode starts the target OS workload",
+      "details": [
+        "aarch64 guest on tcg simulating cortex-a53 (CPU part 0xd03) booted in 16.9s and ran the prompt workload"
+      ],
+      "checked_at": "2026-11-12T15:53:36Z",
+      "seconds": 18.6,
+      "revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+      "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
+    },
+    "drivers-vm": {
+      "status": "pass",
+      "task": "3.2",
+      "description": "emulated, mocked and host-routed drivers in host-native VM mode",
+      "details": [
+        "emulated: no host-side process ran; provider kernel:virtio_rng.0; 5262108.9 bytes/s",
+        "mocked: sample is the stub's fixed pattern; provider mock:fixed-pattern; 3785260652.4 bytes/s",
+        "host: sample found in the 983232 bytes served by the host-side process; provider kernel:virtio_rng.0; 1912215.6 bytes/s"
+      ],
+      "checked_at": "2026-11-12T15:53:45Z",
+      "seconds": 6.9,
+      "revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+      "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
+    },
+    "drivers-vm-arm32": {
+      "status": "pass",
+      "task": "3.2",
+      "description": "the three driver strategies in an ARM32 VM",
+      "details": [
+        "emulated: no host-side process ran; provider kernel:virtio_rng.0; 610349.4 bytes/s",
+        "mocked: sample is the stub's fixed pattern; provider mock:fixed-pattern; 40921957.8 bytes/s",
+        "host: sample found in the 196800 bytes served by the host-side process; provider kernel:virtio_rng.0; 370603.5 bytes/s"
+      ],
+      "checked_at": "2026-11-12T15:55:28Z",
+      "seconds": 102.7,
+      "revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+      "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
+    },
+    "drivers-vm-arm64": {
+      "status": "pass",
+      "task": "3.2",
+      "description": "the three driver strategies in an ARM64 VM",
+      "details": [
+        "emulated: no host-side process ran; provider kernel:virtio_rng.0; 1171061.0 bytes/s",
+        "mocked: sample is the stub's fixed pattern; provider mock:fixed-pattern; 46530635.0 bytes/s",
+        "host: sample found in the 393408 bytes served by the host-side process; provider kernel:virtio_rng.0; 642689.3 bytes/s"
+      ],
+      "checked_at": "2026-11-12T15:56:23Z",
+      "seconds": 55.0,
+      "revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+      "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
+    },
+    "wayland-vm": {
+      "status": "pass",
+      "task": "4.1",
+      "description": "a Wayland workload renders in a host-native VM",
+      "details": [
+        "Wayland at 1280x720: 1948.0 frames/s on cpu; the display capture is 1280x720 and shows its frame",
+        "wl_shm XRGB8888; frame time p99 0.6 ms",
+        "graphics provider: host"
+      ],
+      "checked_at": "2026-11-12T16:43:32Z",
+      "seconds": 25.9,
+      "revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+      "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
+    },
+    "wayland-vm-arm64": {
+      "status": "pass",
+      "task": "4.1",
+      "description": "a Wayland workload renders in an ARM64 VM",
+      "details": [
+        "Wayland at 1280x720: 74.7 frames/s on cpu; the display capture is 1280x720 and shows its frame",
+        "wl_shm XRGB8888; frame time p99 449.9 ms",
+        "graphics provider: host"
+      ],
+      "checked_at": "2026-11-12T16:44:42Z",
+      "seconds": 69.7,
+      "revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+      "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
+    },
+    "wayland-vm-arm32": {
+      "status": "pass",
+      "task": "4.1",
+      "description": "a Wayland workload renders in an ARM32 VM",
+      "details": [
+        "Wayland at 1280x720: 46.0 frames/s on cpu; the display capture is 1280x720 and shows its frame",
+        "wl_shm XRGB8888; frame time p99 517.2 ms",
+        "graphics provider: host"
+      ],
+      "checked_at": "2026-11-12T16:45:50Z",
+      "seconds": 68.1,
+      "revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+      "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
+    },
+    "gles-vm": {
+      "status": "pass",
+      "task": "4.1",
+      "description": "a OpenGL ES workload renders in a host-native VM",
+      "details": [
+        "OpenGL ES at 1280x720: 177.3 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1280x720 and shows its frame",
+        "OpenGL ES 3.2 Mesa 25.0.7-2+deb13u1; frame time p99 11.2 ms",
+        "graphics provider: host"
+      ],
+      "checked_at": "2026-11-12T16:45:50Z",
+      "seconds": 0.0,
+      "revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+      "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
+    },
+    "gles-vm-arm64": {
+      "status": "pass",
+      "task": "4.1",
+      "description": "a OpenGL ES workload renders in an ARM64 VM",
+      "details": [
+        "OpenGL ES at 1280x720: 88.4 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1280x720 and shows its frame",
+        "OpenGL ES 3.2 Mesa 25.0.7-2+deb13u1; frame time p99 113.6 ms",
+        "graphics provider: host"
+      ],
+      "checked_at": "2026-11-12T16:45:50Z",
+      "seconds": 0.0,
+      "revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+      "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
+    },
+    "gles-vm-arm32": {
+      "status": "pass",
+      "task": "4.1",
+      "description": "a OpenGL ES workload renders in an ARM32 VM",
+      "details": [
+        "OpenGL ES at 1280x720: 52.4 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1280x720 and shows its frame",
+        "OpenGL ES 3.2 Mesa 25.0.7-2+deb13u1; frame time p99 273.7 ms",
+        "graphics provider: host"
+      ],
+      "checked_at": "2026-11-12T16:45:50Z",
+      "seconds": 0.0,
+      "revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+      "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
+    },
+    "vulkan-vm": {
+      "status": "pass",
+      "task": "4.1",
+      "description": "a Vulkan workload renders in a host-native VM",
+      "details": [
+        "Vulkan at 1280x720: 344.4 frames/s on llvmpipe (LLVM 19.1.7, 256 bits) (CPU); the display capture is 1280x720 and shows its frame",
+        "Vulkan 1.4.305; frame time p99 4.1 ms",
+        "graphics provider: host"
+      ],
+      "checked_at": "2026-11-12T16:45:50Z",
+      "seconds": 0.0,
+      "revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+      "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
+    },
+    "vulkan-vm-arm64": {
+      "status": "pass",
+      "task": "4.1",
+      "description": "a Vulkan workload renders in an ARM64 VM",
+      "details": [
+        "Vulkan at 1280x720: 2.4 frames/s on llvmpipe (LLVM 19.1.7, 128 bits) (CPU); the display capture is 1280x720 and shows its frame",
+        "Vulkan 1.4.305; frame time p99 425.2 ms",
+        "graphics provider: host"
+      ],
+      "checked_at": "2026-11-12T16:45:50Z",
+      "seconds": 0.0,
+      "revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+      "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
+    },
+    "vulkan-vm-arm32": {
+      "status": "fail",
+      "task": "4.1",
+      "description": "a Vulkan workload renders in an ARM32 VM",
+      "details": [
+        "Vulkan is unavailable: the vulkan test ended with status 134: malloc(): invalid size (unsorted) "
+      ],
+      "checked_at": "2026-11-12T16:45:50Z",
+      "seconds": 0.0,
+      "revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+      "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
+    },
+    "flutter-vm": {
+      "status": "pass",
+      "task": "4.1",
+      "description": "a Flutter workload renders in a host-native VM",
+      "details": [
+        "Flutter at 1280x720: 60.5 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1280x720 and shows its frame",
+        "Flutter 3.47.9, Dart 3.13.7; frame build p99 2.9 ms, raster p99 1.9 ms",
+        "graphics provider: host"
+      ],
+      "checked_at": "2026-11-12T16:45:50Z",
+      "seconds": 0.0,
+      "revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+      "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
+    },
+    "flutter-vm-arm64": {
+      "status": "pass",
+      "task": "4.1",
+      "description": "a Flutter workload renders in an ARM64 VM",
+      "details": [
+        "Flutter at 1280x720: 9.4 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1280x720 and shows its frame",
+        "Flutter 3.47.9, Dart 3.13.7; frame build p99 51.0 ms, raster p99 83.6 ms",
+        "graphics provider: host"
+      ],
+      "checked_at": "2026-11-12T16:45:50Z",
+      "seconds": 0.0,
+      "revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+      "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
+    },
+    "flutter-vm-arm32": {
+      "status": "fail",
+      "task": "4.1",
+      "description": "a Flutter workload renders in an ARM32 VM",
+      "details": [
+        "the arm32 target image has no Flutter workload: the Flutter SDK (3.47.9) builds Linux applications for x86_64 and arm64 only"
+      ],
+      "checked_at": "2026-11-12T16:45:50Z",
+      "seconds": 0.0,
+      "revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+      "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
+    },
+    "graphics-emulated-vm": {
+      "status": "pass",
+      "task": "4.2",
+      "description": "graphics are emulated on request and as the fallback, in VM mode",
+      "details": [
+        "requested emulation: OpenGL ES at 1280x720: 133.5 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 1280x720 and shows its frame",
+        "requested emulation: Vulkan at 1280x720: 309.4 frames/s on llvmpipe (LLVM 19.1.7, 256 bits) (CPU); the display capture is 1280x720 and shows its frame",
+        "auto did not need the fallback here: host acceleration is available"
+      ],
+      "checked_at": "2026-11-12T16:46:44Z",
+      "seconds": 26.7,
+      "revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+      "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
+    },
+    "graphics-host-vm": {
+      "status": "pass",
+      "task": "4.2",
+      "description": "graphics are mapped to host acceleration and preferred, in VM mode",
+      "details": [
+        "requested host acceleration: OpenGL ES at 1280x720: 148.2 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1280x720 and shows its frame",
+        "requested host acceleration: Vulkan: rendered by the target CPU (llvmpipe (LLVM 19.1.7, 256 bits) (CPU))",
+        "auto preferred host acceleration: QEMU maps the target's OpenGL ES to the host GPU (virtio-gpu with virglrenderer)"
+      ],
+      "checked_at": "2026-11-12T17:19:19Z",
+      "seconds": 50.8,
+      "revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+      "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
+    },
+    "resolution-vm": {
+      "status": "pass",
+      "task": "4.3",
+      "description": "720p, 1080p and 4K are rendered and displayed in a host-native VM",
+      "details": [
+        "Wayland at 1280x720: 1875.0 frames/s on cpu; the display capture is 1280x720 and shows its frame",
+        "OpenGL ES at 1280x720: 219.4 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1280x720 and shows its frame",
+        "Vulkan at 1280x720: 341.9 frames/s on llvmpipe (LLVM 19.1.7, 256 bits) (CPU); the display capture is 1280x720 and shows its frame",
+        "Flutter at 1280x720: 60.6 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1280x720 and shows its frame",
+        "Wayland at 1920x1080: 723.4 frames/s on cpu; the display capture is 1920x1080 and shows its frame",
+        "OpenGL ES at 1920x1080: 169.4 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1920x1080 and shows its frame",
+        "Vulkan at 1920x1080: 155.3 frames/s on llvmpipe (LLVM 19.1.7, 256 bits) (CPU); the display capture is 1920x1080 and shows its frame",
+        "Flutter at 1920x1080: 56.9 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1920x1080 and shows its frame",
+        "Wayland at 3840x2160: 152.7 frames/s on cpu; the display capture is 2560x2048 and shows the top left part of its frame (QEMU's capture of a display rendered on the host GPU reaches no further)",
+        "OpenGL ES at 3840x2160: 245.5 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 2560x2048 and shows the top left part of its frame (QEMU's capture of a display rendered on the host GPU reaches no further)",
+        "Vulkan at 3840x2160: 38.0 frames/s on llvmpipe (LLVM 19.1.7, 256 bits) (CPU); the display capture is 2560x2048 and shows the top left part of its frame (QEMU's capture of a display rendered on the host GPU reaches no further)",
+        "Flutter at 3840x2160: 28.6 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 2560x2048 and shows the top left part of its frame (QEMU's capture of a display rendered on the host GPU reaches no further)",
+        "with emulated graphics, for the whole frame: Wayland at 3840x2160: 69.8 frames/s on cpu; the display capture is 3840x2160 and shows its frame",
+        "with emulated graphics, for the whole frame: OpenGL ES at 3840x2160: 8.3 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 3840x2160 and shows its frame",
+        "with emulated graphics, for the whole frame: Vulkan at 3840x2160: 35.2 frames/s on llvmpipe (LLVM 19.1.7, 256 bits) (CPU); the display capture is 3840x2160 and shows its frame",
+        "with emulated graphics, for the whole frame: Flutter at 3840x2160: 3.4 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 3840x2160 and shows its frame"
+      ],
+      "checked_at": "2026-11-12T16:57:00Z",
+      "seconds": 105.0,
+      "revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+      "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
+    },
+    "resolution-vm-arm64": {
+      "status": "pass",
+      "task": "4.3",
+      "description": "720p, 1080p and 4K are rendered and displayed in an ARM64 VM",
+      "details": [
+        "Wayland at 1280x720: 145.9 frames/s on cpu; the display capture is 1280x720 and shows its frame",
+        "OpenGL ES at 1280x720: 109.5 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1280x720 and shows its frame",
+        "Vulkan at 1280x720: 2.4 frames/s on llvmpipe (LLVM 19.1.7, 128 bits) (CPU); the display capture is 1280x720 and shows its frame",
+        "Flutter at 1280x720: 10.9 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1280x720 and shows its frame",
+        "Wayland at 1920x1080: 34.0 frames/s on cpu; the display capture is 1920x1080 and shows its frame",
+        "OpenGL ES at 1920x1080: 92.5 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1920x1080 and shows its frame",
+        "Vulkan at 1920x1080: 1.1 frames/s on llvmpipe (LLVM 19.1.7, 128 bits) (CPU); the display capture is 1920x1080 and shows its frame",
+        "Flutter at 1920x1080: 7.6 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1920x1080 and shows its frame",
+        "Wayland at 3840x2160: 1.3 frames/s on cpu; the display capture is 2560x2048 and shows the top left part of its frame (QEMU's capture of a display rendered on the host GPU reaches no further)",
+        "OpenGL ES at 3840x2160: 56.6 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 2560x2048 and shows the top left part of its frame (QEMU's capture of a display rendered on the host GPU reaches no further)",
+        "Vulkan at 3840x2160: 0.3 frames/s on llvmpipe (LLVM 19.1.7, 128 bits) (CPU); the display capture is 2560x2048 and shows the top left part of its frame (QEMU's capture of a display rendered on the host GPU reaches no further)",
+        "Flutter at 3840x2160: 2.9 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 2560x2048 and shows the top left part of its frame (QEMU's capture of a display rendered on the host GPU reaches no further)",
+        "with emulated graphics, for the whole frame: Wayland at 3840x2160: 1.4 frames/s on cpu; the display capture is 3840x2160 and shows its frame",
+        "with emulated graphics, for the whole frame: OpenGL ES at 3840x2160: 0.2 frames/s on llvmpipe (LLVM 19.1.7, 128 bits); the display capture is 3840x2160 and shows its frame",
+        "with emulated graphics, for the whole frame: Vulkan at 3840x2160: 0.3 frames/s on llvmpipe (LLVM 19.1.7, 128 bits) (CPU); the display capture is 3840x2160 and shows its frame",
+        "with emulated graphics, for the whole frame: Flutter at 3840x2160: 0.1 frames/s on llvmpipe (LLVM 19.1.7, 128 bits); the display capture is 3840x2160 and shows its frame"
+      ],
+      "checked_at": "2026-11-12T17:03:38Z",
+      "seconds": 398.2,
+      "revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+      "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
+    },
+    "resolution-vm-arm32": {
+      "status": "pass",
+      "task": "4.3",
+      "description": "720p, 1080p and 4K are rendered and displayed in an ARM32 VM",
+      "details": [
+        "Wayland at 1280x720: 109.7 frames/s on cpu; the display capture is 1280x720 and shows its frame",
+        "OpenGL ES at 1280x720: 53.4 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1280x720 and shows its frame",
+        "Wayland at 1920x1080: 39.0 frames/s on cpu; the display capture is 1920x1080 and shows its frame",
+        "OpenGL ES at 1920x1080: 72.3 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1920x1080 and shows its frame",
+        "Wayland at 3840x2160: 0.9 frames/s on cpu; the display capture is 2560x2048 and shows the top left part of its frame (QEMU's capture of a display rendered on the host GPU reaches no further)",
+        "OpenGL ES at 3840x2160: 4.3 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 2560x2048 and shows the top left part of its frame (QEMU's capture of a display rendered on the host GPU reaches no further)",
+        "with emulated graphics, for the whole frame: Wayland at 3840x2160: 0.9 frames/s on cpu; the display capture is 3840x2160 and shows its frame",
+        "with emulated graphics, for the whole frame: OpenGL ES at 3840x2160: 0.2 frames/s on llvmpipe (LLVM 19.1.7, 128 bits); the display capture is 3840x2160 and shows its frame",
+        "not covered, because unavailable in this mode: Vulkan, Flutter"
+      ],
+      "checked_at": "2026-11-12T17:08:28Z",
+      "seconds": 290.3,
+      "revision": "336753703e6a532c48da120ccccb42c113d3b5d3-dirty",
+      "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
+    }
+  }
+}
