@@ -8,7 +8,8 @@ context: |
   Requirements will be added incrementally. Do not assume target hardware,
   middleware, emulator fidelity, or implementation choices until they are
   explicitly specified. The emulator must run on Linux, macOS, and Windows as a
-  development/host OS; do not assume specific versions or distributions.
+  development/host OS. Linux host support must include Ubuntu 22.04 LTS,
+  Ubuntu 24.04 LTS, and Ubuntu 26.04 LTS.
   The emulator must provide container-based execution for quick development and
   CI, and a VM-based mode that emulates the target OS kernel and drivers. Both
   modes must support emulated target-OS drivers, mocked drivers, and host-side
