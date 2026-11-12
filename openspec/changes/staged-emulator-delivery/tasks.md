@@ -28,9 +28,10 @@
 - [ ] 4.2 Prefer compatible host graphics acceleration and retain emulation fallback; verify both paths.
   - Implemented: `--graphics auto|host|emulated`. `auto` uses host acceleration when the host has a compatible one (QEMU's virtio-gpu with virglrenderer in VM mode, the container engine's GPU render node in container mode) and otherwise emulates.
   - Verified on macOS (ARM64) and Windows (x86-64): emulation on request, and as the fallback of `auto`, in container and VM modes.
-  - Open: the host-acceleration path is not verified on any host. macOS (ARM64) has none with the installed tools: Homebrew's QEMU is built without the GPU-accelerated display device, and the container engine's virtual machine has no GPU. In container mode on Windows, Podman's engine in WSL has no GPU render node.
-  - Open: host acceleration in VM mode on Windows. It ran there for the first time (QEMU 11.1.0, NVIDIA GPU): the target rendered OpenGL ES and Flutter on the host GPU through virglrenderer, Vulkan stayed on the target CPU, and virglrenderer reported errors for some of Flutter's commands. But QEMU's display without a window (`egl-headless`) stayed black, so no frame reached the emulator's display. The launcher therefore reports host acceleration as unavailable on Windows and falls back to emulation. It needs a display that shows the frame (the windowed display of stage 6 is a candidate), or a host such as Linux with QEMU's OpenGL modules.
-  - QEMU refuses to capture the display over its machine protocol while the display is a texture on the host GPU. For host acceleration the launcher now reads the capture from QEMU's VNC server. That capture is confirmed against the emulated display; on Windows it returns the black display described above, and it has not been run on a host where the accelerated display works.
+  - Open: the host-acceleration path is not verified by `./emu verify` on any host. macOS (ARM64) has none with the installed tools: Homebrew's QEMU is built without the GPU-accelerated display device, and the container engine's virtual machine has no GPU. In container mode on Windows, Podman's engine in WSL has no GPU render node.
+  - Host acceleration works in VM mode on Windows when the display is shown in a window (`emu run --window`, QEMU 11.1.0, NVIDIA GPU), and `auto` prefers it there. Checked by hand, not by `./emu verify`: the target reported OpenGL ES and Flutter rendered on the host GPU (175 and 59 frames/s, against 99 and 17 emulated), pictures taken of the window showed those frames, and a simulated ARM64 target was accelerated as well. Vulkan stayed on the target CPU.
+  - Open: QEMU ends with an access violation after the target has shut down whenever it showed a display rendered on the host GPU on Windows. The workload's results are complete by then; the launcher reports the status.
+  - Open: no capture of a display that is rendered on the host GPU, so the verification of this path cannot be automated yet. QEMU refuses to capture such a display over its machine protocol. Without a window the launcher reads the capture from QEMU's VNC server instead; that capture is confirmed against the emulated display, but on Windows QEMU's display without a window (`egl-headless`) stays black, which is why host acceleration is used there only with a window. With a window QEMU offers no capture at all.
 - [x] 4.3 Support 720p, 1080p, and 4K rendering and verify each selected resolution.
   - Verified with emulated graphics in all four modes, on macOS (ARM64) and on Windows (x86-64), by capturing the emulator's display at each resolution. ARM32 VM mode is covered with Wayland and OpenGL ES only (see 4.1).
 
@@ -45,6 +46,7 @@
 
 ## 7. Stage 6: Windowed display UX
 - [ ] 7.1 Implement windowed and full-screen modes with a hotkey to switch between them and verify both transitions.
+  - Started ahead of this stage: `emu run --window` shows a VM's display in QEMU's own window (run on Windows with QEMU's SDL window only). Full-screen mode, the hotkey and their verification are not done.
 - [ ] 7.2 Scale the display when the window is resized and verify the compact toolbar can mute audio and restore 1:1 pixel density.
 
 ## 8. Stage 7: Full qualification and report

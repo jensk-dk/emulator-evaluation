@@ -58,11 +58,11 @@
       "task": "2.2, 2.4",
       "description": "the target OS boots in host-native VM mode to a prompt",
       "details": [
-        "booted on whpx (x86_64, cpu max,-vmx,-svm) in 3.4s; the prompt answered a typed command"
+        "booted on whpx (x86_64, cpu max,-vmx,-svm) in 3.3s; the prompt answered a typed command"
       ],
-      "checked_at": "2026-11-12T01:04:46Z",
-      "seconds": 8.5,
-      "revision": "0d05858ee819feb63a41b6b247a4d091aa3b8c36-dirty",
+      "checked_at": "2026-11-12T14:49:37Z",
+      "seconds": 8.0,
+      "revision": "27ec276d42ce72194e41ce72626d3365cb3b80e5-dirty",
       "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
     },
     "image": {
@@ -179,13 +179,13 @@
       "task": "4.1",
       "description": "a OpenGL ES workload renders in container mode",
       "details": [
-        "OpenGL ES at 1280x720: 173.0 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 1280x720 and shows its frame",
-        "OpenGL ES 3.2 Mesa 25.0.7-2+deb13u1; frame time p99 15.2 ms",
+        "OpenGL ES at 1280x720: 174.0 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 1280x720 and shows its frame",
+        "OpenGL ES 3.2 Mesa 25.0.7-2+deb13u1; frame time p99 16.2 ms",
         "graphics provider: emulated"
       ],
-      "checked_at": "2026-11-12T01:15:54Z",
-      "seconds": 0.0,
-      "revision": "0d05858ee819feb63a41b6b247a4d091aa3b8c36-dirty",
+      "checked_at": "2026-11-12T14:51:27Z",
+      "seconds": 36.9,
+      "revision": "27ec276d42ce72194e41ce72626d3365cb3b80e5-dirty",
       "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
     },
     "gles-vm": {
@@ -193,13 +193,13 @@
       "task": "4.1",
       "description": "a OpenGL ES workload renders in a host-native VM",
       "details": [
-        "OpenGL ES at 1280x720: 114.7 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 1280x720 and shows its frame",
-        "OpenGL ES 3.2 Mesa 25.0.7-2+deb13u1; frame time p99 21.8 ms",
+        "OpenGL ES at 1280x720: 110.4 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 1280x720 and shows its frame",
+        "OpenGL ES 3.2 Mesa 25.0.7-2+deb13u1; frame time p99 23.4 ms",
         "graphics provider: emulated"
       ],
-      "checked_at": "2026-11-12T01:15:54Z",
-      "seconds": 0.0,
-      "revision": "0d05858ee819feb63a41b6b247a4d091aa3b8c36-dirty",
+      "checked_at": "2026-11-12T14:50:13Z",
+      "seconds": 35.3,
+      "revision": "27ec276d42ce72194e41ce72626d3365cb3b80e5-dirty",
       "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
     },
     "vulkan-container": {
@@ -249,13 +249,13 @@
       "task": "4.1",
       "description": "a Flutter workload renders in a host-native VM",
       "details": [
-        "Flutter at 1280x720: 15.9 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 1280x720 and shows its frame",
-        "Flutter 3.47.9, Dart 3.13.7; frame build p99 5.2 ms, raster p99 127.1 ms",
+        "Flutter at 1280x720: 16.0 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 1280x720 and shows its frame",
+        "Flutter 3.47.9, Dart 3.13.7; frame build p99 9.6 ms, raster p99 120.4 ms",
         "graphics provider: emulated"
       ],
-      "checked_at": "2026-11-12T01:15:55Z",
+      "checked_at": "2026-11-12T14:50:13Z",
       "seconds": 0.0,
-      "revision": "0d05858ee819feb63a41b6b247a4d091aa3b8c36-dirty",
+      "revision": "27ec276d42ce72194e41ce72626d3365cb3b80e5-dirty",
       "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
     },
     "graphics-emulated-container": {
@@ -279,9 +279,9 @@
       "details": [
         "the container engine has no GPU render node (/dev/dri); the engine runs in a virtual machine that offers none. Asking for it is refused: host graphics acceleration is not available: the container engine has no GPU render node (/dev/dri); the engine runs in a virtual machine that offers none"
       ],
-      "checked_at": "2026-11-12T01:16:33Z",
+      "checked_at": "2026-11-12T14:51:29Z",
       "seconds": 1.8,
-      "revision": "0d05858ee819feb63a41b6b247a4d091aa3b8c36-dirty",
+      "revision": "27ec276d42ce72194e41ce72626d3365cb3b80e5-dirty",
       "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
     },
     "graphics-emulated-vm": {
@@ -289,13 +289,13 @@
       "task": "4.2",
       "description": "graphics are emulated on request and as the fallback, in VM mode",
       "details": [
-        "requested emulation: OpenGL ES at 1280x720: 106.6 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 1280x720 and shows its frame",
-        "requested emulation: Vulkan at 1280x720: 279.0 frames/s on llvmpipe (LLVM 19.1.7, 256 bits) (CPU); the display capture is 1280x720 and shows its frame",
-        "auto fell back to emulation: no compatible host graphics acceleration: on Windows, QEMU's display that renders on the host GPU without a window (egl-headless) stays black: the target renders on the host GPU, but no frame reaches the emulator's display"
+        "requested emulation: OpenGL ES at 1280x720: 107.4 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 1280x720 and shows its frame",
+        "requested emulation: Vulkan at 1280x720: 282.1 frames/s on llvmpipe (LLVM 19.1.7, 256 bits) (CPU); the display capture is 1280x720 and shows its frame",
+        "auto fell back to emulation: no compatible host graphics acceleration: on Windows, QEMU's display that renders on the host GPU without a window (egl-headless) stays black: the target renders on the host GPU, but no frame reaches the emulator's display. In a window (--window) it does"
       ],
-      "checked_at": "2026-11-12T01:17:08Z",
-      "seconds": 34.2,
-      "revision": "0d05858ee819feb63a41b6b247a4d091aa3b8c36-dirty",
+      "checked_at": "2026-11-12T14:50:48Z",
+      "seconds": 35.2,
+      "revision": "27ec276d42ce72194e41ce72626d3365cb3b80e5-dirty",
       "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
     },
     "graphics-host-vm": {
@@ -303,11 +303,11 @@
       "task": "4.2",
       "description": "graphics are mapped to host acceleration and preferred, in VM mode",
       "details": [
-        "on Windows, QEMU's display that renders on the host GPU without a window (egl-headless) stays black: the target renders on the host GPU, but no frame reaches the emulator's display. Asking for it is refused: host graphics acceleration is not available: on Windows, QEMU's display that renders on the host GPU without a window (egl-headless) stays black: the target renders on the host GPU, but no frame reaches the emulator's display"
+        "on Windows, QEMU's display that renders on the host GPU without a window (egl-headless) stays black: the target renders on the host GPU, but no frame reaches the emulator's display. In a window (--window) it does. Asking for it is refused: host graphics acceleration is not available: on Windows, QEMU's display that renders on the host GPU without a window (egl-headless) stays black: the target renders on the host GPU, but no frame reaches the emulator's display. In a window (--window) it does"
       ],
-      "checked_at": "2026-11-12T01:17:09Z",
-      "seconds": 1.4,
-      "revision": "0d05858ee819feb63a41b6b247a4d091aa3b8c36-dirty",
+      "checked_at": "2026-11-12T14:50:50Z",
+      "seconds": 1.5,
+      "revision": "27ec276d42ce72194e41ce72626d3365cb3b80e5-dirty",
       "image_definition_sha256": "8c962d4eb7c410d2b4fbfe697a42ab6f9efd95da1eb24d862651e58acd203b2b"
     },
     "resolution-container": {

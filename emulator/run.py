@@ -31,7 +31,7 @@ class RunOptions:
     def __init__(self, mode, workload="prompt", args=(), arch="native", cpus=DEFAULT_CPUS,
                  memory_mb=DEFAULT_MEMORY_MB, drivers=None, options=None, extra_args=(), timeout=None,
                  echo=True, stdin_script=None, quiet_build=False, rebuild=False, resolution=None, graphics=None,
-                 screenshot_dir=None, screenshot_format="png"):
+                 screenshot_dir=None, screenshot_format="png", window=False):
         self.mode = mode
         self.workload = workload
         self.args = list(args)
@@ -50,6 +50,7 @@ class RunOptions:
         self.graphics = graphics                # auto, host or emulated
         self.screenshot_dir = screenshot_dir    # capture the display here when a workload shows a finished frame
         self.screenshot_format = screenshot_format
+        self.window = window                    # show a VM's display in a window
 
 
 class Outcome:
@@ -109,22 +110,26 @@ def _image_identity(manifest, kind):
     return identity
 
 
-def _display_plan(opts, probe):
+def _display_plan(opts, probe, window=None):
     """The display this run gives the target, or None when it has none. A
-    display is attached for workloads that use one, and whenever a resolution
-    or graphics provider is asked for."""
+    display is attached for workloads that use one, and whenever a resolution,
+    a graphics provider or a window is asked for. `window` names the emulator's
+    display backend that shows it in one."""
     declared = catalog.workload(opts.workload) or {}
-    if not (declared.get("display") or opts.resolution or opts.graphics or opts.screenshot_dir):
+    if not (declared.get("display") or opts.resolution or opts.graphics or opts.screenshot_dir or window):
         return None
     width, height = graphics.resolution(opts.resolution)
     plan = graphics.choose(opts.graphics, probe)
-    plan.update({"width": width, "height": height,
+    plan.update({"width": width, "height": height, "window": window,
                  "screen_hold": graphics.SCREEN_HOLD_SECONDS if opts.screenshot_dir else 0})
     return plan
 
 
 def _display_record(plan, device):
-    return {"display": {"resolution": "%dx%d" % (plan["width"], plan["height"])},
+    display = {"resolution": "%dx%d" % (plan["width"], plan["height"])}
+    if plan.get("window"):
+        display["window"] = plan["window"]
+    return {"display": display,
             "graphics": {"requested": plan["requested"], "provider": plan["provider"], "reason": plan["reason"],
                          "device": device}}
 
@@ -154,6 +159,9 @@ def launch(opts):
         if opts.mode == "container":
             if opts.arch != "native":
                 raise EmuError("container mode runs the host's CPU architecture; --arch applies to VM mode")
+            if opts.window:
+                raise EmuError("--window shows the display of a VM; in container mode the target renders to an "
+                               "output that is not shown anywhere", hint="add --mode vm")
             runtime = container.detect()
             arch = host.host_arch()
             manifest = image.ensure("container", lambda: runtime, arch, quiet=opts.quiet_build, rebuild=opts.rebuild)
@@ -206,7 +214,8 @@ def launch(opts):
                 name = os.environ.get("TERM", "")
                 terminal = (name if name.replace("-", "").isalnum() else "vt100", size.columns, size.lines)
             qemu = host.require_tool(vm.QEMU_BINARY[guest], "VM mode with a %s guest" % guest)
-            display = _display_plan(opts, lambda: graphics.probe_vm(qemu))
+            window = graphics.window_backend(qemu) if opts.window else None
+            display = _display_plan(opts, lambda: graphics.probe_vm(qemu, window), window)
             display_args, display_backend, display_device = [], "none", None
             if display:
                 display_args, display_backend, display_device = graphics.vm_arguments(
@@ -238,8 +247,10 @@ def launch(opts):
         outcome.environment = {"host": host.describe(), "emulator": emulator, "image": image_identity,
                                "drivers": dict(opts.drivers), "launcher_revision": image.git_revision()}
         if emulator.get("graphics"):
-            outcome.notes.append("display %s, graphics %s (%s)" % (
-                emulator["display"]["resolution"], emulator["graphics"]["provider"], emulator["graphics"]["reason"]))
+            shown = " in a window" if emulator["display"].get("window") else ""
+            outcome.notes.append("display %s%s, graphics %s (%s)" % (
+                emulator["display"]["resolution"], shown, emulator["graphics"]["provider"],
+                emulator["graphics"]["reason"]))
         if opts.echo:
             for note in outcome.notes:
                 print("emu: " + note, file=sys.stderr, flush=True)

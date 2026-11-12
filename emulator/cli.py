@@ -47,6 +47,11 @@ def _print_summary(outcomes):
         print("%-20s %-16s %14.1f  %s%s" % (area, test, statistics.median(values), unit, spread))
 
 
+def _status(code):
+    """An exit status as a person looks it up: Windows fault codes in hex."""
+    return "0x%08X" % code if code > 255 else str(code)
+
+
 def cmd_run(args):
     declared = catalog.workload(args.workload)
     if declared is None:
@@ -64,10 +69,13 @@ def cmd_run(args):
             mode=args.mode, workload=args.workload, args=workload_args, arch=args.arch, cpus=args.cpus,
             memory_mb=args.memory, drivers=driver_features.parse(args.driver), options=_options(args.option),
             extra_args=args.emulator_arg or [], timeout=args.timeout, rebuild=args.rebuild and index == 0,
-            resolution=args.resolution, graphics=args.graphics, screenshot_dir=args.screenshot)
+            resolution=args.resolution, graphics=args.graphics, screenshot_dir=args.screenshot,
+            window=args.window)
         outcome = launch(opts)
         outcomes.append(outcome)
         if outcome.attached:
+            if outcome.process_exit > 255:
+                print("emu: the emulator ended with status %s" % _status(outcome.process_exit), file=sys.stderr)
             return outcome.process_exit
         if outcome.timed_out:
             print("emu: timed out after %s seconds" % args.timeout, file=sys.stderr)
@@ -76,6 +84,11 @@ def cmd_run(args):
             print("emu: the emulator stopped before the workload reported an exit status (emulator exit %s)"
                   % outcome.process_exit, file=sys.stderr)
             return 70
+        if outcome.process_exit not in (0, outcome.exit_code):
+            # Seen on Windows: QEMU faults as it ends when it showed a display
+            # rendered on the host GPU. The workload's results are complete.
+            print("emu: the emulator ended with status %s after the workload had finished"
+                  % _status(outcome.process_exit), file=sys.stderr)
         for screen in outcome.screens:
             if screen.get("file"):
                 print("emu: captured the display (%dx%d) to %s" % (screen["captured_width"],
@@ -146,6 +159,14 @@ def cmd_doctor(args):
         probe = graphics.probe_vm(binary)
         print("graphics    VM mode: %s" % ("host acceleration available: " + probe["reason"] if probe["available"]
                                            else "emulated only: " + probe["reason"]))
+        try:
+            window = graphics.window_backend(binary)
+            probe = graphics.probe_vm(binary, window)
+            print("graphics    VM mode with --window (%s): %s" % (
+                window, "host acceleration available: " + probe["reason"] if probe["available"]
+                else "emulated only: " + probe["reason"]))
+        except EmuError as error:
+            print("graphics    VM mode with --window: not available: %s" % error)
     if runtime:
         manifest = image.load_manifest("container", native)
         if manifest and runtime.image_id(manifest["image_tag"]):
@@ -241,6 +262,8 @@ def build_parser():
                      help="how graphics are provided: host maps them to the host's graphics acceleration, "
                           "emulated renders on the target CPU, auto prefers host and falls back to emulated "
                           "(default: auto)")
+    run.add_argument("--window", action="store_true",
+                     help="VM mode: show the emulator's display in a window. Closing the window ends the emulator")
     run.add_argument("--screenshot", metavar="DIR",
                      help="save a PNG of the display to DIR each time a graphics workload has a finished frame up")
     run.add_argument("--driver", action="append", metavar="FEATURE=STRATEGY",

@@ -28,6 +28,7 @@ the container runtime. Linux hosts have not been run yet. The task list and
     ./emu run               # interactive prompt on the target OS, container mode
     ./emu run --mode vm     # the same in a host-native VM
     ./emu run --mode vm --workload graphics-demo --screenshot shots   # graphics, with display captures
+    ./emu run --mode vm --workload graphics-demo --window             # graphics, with the display in a window
 
 On Windows use `setup.cmd` and `emu.cmd`. (`setup.cmd` runs `setup.ps1`
 where the PowerShell execution policy does not allow scripts, which is the
@@ -48,7 +49,7 @@ dependency and install what is missing. `--check` / `-Check` only reports.
 | Hardware virtualization | host-native VM mode | Hypervisor.framework | KVM | Windows Hypervisor Platform |
 | Container runtime | container mode, image builds | Colima + Docker CLI (Homebrew) | Podman | Podman |
 | Foreign-architecture emulation | building ARM target images | registered in the engine VM | `qemu-user-static` | registered in the engine VM |
-| QEMU OpenGL modules (optional) | mapping VM graphics to the host GPU | not in Homebrew's QEMU | system package | in winget's QEMU, but not usable yet (see [Display and graphics](#display-and-graphics)) |
+| QEMU OpenGL modules (optional) | mapping VM graphics to the host GPU | not in Homebrew's QEMU | system package | in winget's QEMU; used when the display is in a window (see [Display and graphics](#display-and-graphics)) |
 
 An existing Docker or Podman installation is used as it is. Where both are
 installed, Docker is used when its engine answers. To choose, set the
@@ -84,7 +85,7 @@ creates Podman's engine, which runs in WSL 2.
 
     ./emu run [--mode container|vm] [--arch native|arm32|arm64] [--workload NAME]
               [--cpus N] [--memory MIB] [--resolution 720p|1080p|4k] [--graphics auto|host|emulated]
-              [--driver FEATURE=STRATEGY] [--option KEY=VALUE] [--screenshot DIR]
+              [--window] [--driver FEATURE=STRATEGY] [--option KEY=VALUE] [--screenshot DIR]
               [--record] [--repeat N] [-- WORKLOAD_ARGS]
 
 | Mode | What runs |
@@ -155,13 +156,14 @@ involved.
 
 ## Display and graphics
 
-The emulator has a display when the workload uses one, or when `--resolution`
-or `--graphics` is given. `--resolution` selects 720p, 1080p (the default) or
-4K.
+The emulator has a display when the workload uses one, or when `--resolution`,
+`--graphics` or `--window` is given. `--resolution` selects 720p, 1080p (the
+default) or 4K.
 
 | | VM mode | Container mode |
 |---|---|---|
 | Display | QEMU's emulated display adapter, driven by the target kernel's DRM/KMS driver | none; the compositor renders to a headless output of the selected size |
+| `--window` | the display is shown in a window of its size | not available |
 | `--graphics emulated` | the target CPU renders OpenGL ES and Vulkan (Mesa llvmpipe and lavapipe) | the same |
 | `--graphics host` | QEMU's virtio-gpu maps OpenGL ES, and Vulkan where QEMU offers it, to the host GPU | the container gets the engine's GPU render node (`/dev/dri`) |
 
@@ -169,26 +171,38 @@ or `--graphics` is given. `--resolution` selects 720p, 1080p (the default) or
 compatible one and otherwise emulates; the launcher prints which it chose and
 why. `--graphics host` fails rather than silently emulating.
 
-Neither verified host has usable host acceleration yet, so both run emulated
-graphics. `./emu doctor` shows what a host offers.
+Without `--window` a VM's display is not shown anywhere; `--screenshot`
+captures it. `--window` shows it in QEMU's SDL window, or in QEMU's Cocoa or
+GTK window where the build has no SDL. Closing the window ends the emulator.
+Only the SDL window on Windows has been run. The windowed display of the later
+stage (full screen, scaling, toolbar) is not part of this.
 
-- macOS on ARM64: Homebrew's QEMU is built without the GPU-accelerated display
-  device, and the container engine's virtual machine has no GPU.
-- Windows on x86-64, VM mode: QEMU has the device, and with it the target
-  renders OpenGL ES and Flutter on the host GPU (seen with QEMU 11.1.0 on an
-  NVIDIA GPU: Flutter at 50 frames/s, against 18 emulated). But the display
-  QEMU offers for it without a window (`egl-headless`) stays black, so no frame
-  reaches the emulator's display. The launcher therefore reports host
-  acceleration as unavailable on Windows and emulates. A windowed display, a
-  later stage, may change that.
-- Windows on x86-64, container mode: Podman's engine in WSL has no GPU render
-  node.
+What the verified hosts offer; `./emu doctor` shows it for any host:
+
+- macOS on ARM64: no host acceleration. Homebrew's QEMU is built without the
+  GPU-accelerated display device, and the container engine's virtual machine
+  has no GPU.
+- Windows on x86-64, VM mode with `--window`: host acceleration. QEMU 11.1.0
+  maps OpenGL ES to the host GPU and shows it in its window. On an NVIDIA GPU
+  the OpenGL ES test ran at 175 frames/s and the Flutter test at 59, against
+  99 and 17 emulated in the same window. A simulated ARM64 target gets it as
+  well: OpenGL ES at 75 frames/s, against 2 emulated. Vulkan stays on the
+  target CPU. Two limits:
+  - QEMU ends with an access violation once the target has shut down. The
+    workload's results are complete by then; the launcher reports the status.
+  - Such a display cannot be captured, so `--screenshot` says so instead of
+    saving a picture, and `./emu verify` does not cover this path.
+- Windows on x86-64, VM mode without a window: emulated. The display QEMU
+  offers for host rendering without a window (`egl-headless`) stays black, so
+  the launcher does not use it there.
+- Windows on x86-64, container mode: emulated. Podman's engine in WSL has no
+  GPU render node.
 
 The launcher captures a VM's display through QEMU's machine protocol. QEMU
-refuses that while the display is a texture on the host GPU, so with host
-acceleration the capture is read from QEMU's VNC server instead. That path
-has only been run on Windows, where it returns the black display described
-above; it is still to be run on a host where the display works.
+refuses that while the display is a texture on the host GPU. Without a window
+the capture is then read from QEMU's VNC server; that path has only been run
+on Windows, where it returns the black display described above, and is still
+to be run on a host where that display works.
 
 `graphics-demo` runs a Wayland, an OpenGL ES, a Vulkan and a Flutter test.
 `--screenshot DIR` saves a PNG of the emulator's display at the end of each

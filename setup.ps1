@@ -169,14 +169,15 @@ function Test-QemuDep {
 # display device and a display backend that renders without a window. Without
 # them graphics are emulated, so this is a note, not a missing dependency.
 # QEMU for Windows has both, but that display stays black (seen with QEMU
-# 11.1.0), so the launcher emulates graphics there as well.
+# 11.1.0). The launcher therefore uses host acceleration on Windows only when
+# the display is shown in a window (emu run --window).
 function Test-GraphicsNote {
   $native = Get-NativeQemu
   if (-not (Test-Command $native)) { return }
   $devices = Get-AllOutput $native @('-device', 'help')
   $displays = Get-AllOutput $native @('-display', 'help')
   if ($devices -match 'virtio-gpu-gl-pci' -and $displays -match 'egl-headless') {
-    Write-Host '  [note]  host graphics acceleration for VM mode: QEMU can render on the host GPU, but its display without a window stays black on Windows; graphics are emulated'
+    Write-Host '  [note]  host graphics acceleration for VM mode: available when the display is shown in a window (emu run --window); without a window graphics are emulated'
   } else {
     Write-Host '  [note]  host graphics acceleration for VM mode: this QEMU build has none; graphics are emulated'
   }

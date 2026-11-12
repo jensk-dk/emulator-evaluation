@@ -29,6 +29,11 @@ DEFAULT_RESOLUTION = "1080p"
 CHOICES = ("auto", "host", "emulated")
 # How long a workload keeps its last frame on the display for a capture.
 SCREEN_HOLD_SECONDS = 4
+# QEMU's displays that open a window, in order of preference. SDL's window
+# takes the size of the target's display; GTK's gives the display its own.
+WINDOWS = ("sdl", "cocoa", "gtk")
+# The ones that can show a display that is rendered on the host GPU.
+OPENGL_WINDOWS = ("sdl", "gtk")
 # Marker blocks every graphics workload draws (target/src/emugfx.c): the four
 # corners, in the order top left, top right, bottom left, bottom right.
 CORNER_COLORS = ((255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 255))
@@ -52,20 +57,41 @@ def _qemu_output(binary, *args):
         return ""
 
 
-def probe_vm(binary):
+def window_backend(binary):
+    """The QEMU display that shows the emulator's display in a window."""
+    displays = _qemu_output(binary, "-display", "help").split()
+    for name in WINDOWS:
+        if name in displays:
+            return name
+    raise EmuError("this QEMU build has no display that opens a window (%s)" % ", ".join(WINDOWS))
+
+
+def probe_vm(binary, window=None):
     """Whether this QEMU can map the guest's graphics to the host's GPU.
 
     That needs the virtio-gpu device with a host renderer (virglrenderer) and
-    a display backend that gives it a GPU context without opening a window.
+    a display that gives it a GPU context: the window (`window` names QEMU's
+    display for it) when the emulator's display is shown in one, and otherwise
+    a display backend that renders without a window.
     """
-    if binary in _probes:
-        return _probes[binary]
+    key = (binary, window)
+    if key in _probes:
+        return _probes[key]
     devices = _qemu_output(binary, "-device", "help")
     displays = _qemu_output(binary, "-display", "help")
+    # Vulkan is mapped as well where vm_arguments turns that on.
+    venus = host.host_os() == "linux" and "venus" in _qemu_output(binary, "-device", "virtio-gpu-gl-pci,help")
+    mapped = "QEMU maps the target's OpenGL ES%s to the host GPU (virtio-gpu with virglrenderer)" \
+             % (" and Vulkan" if venus else "")
     if "virtio-gpu-gl-pci" not in devices:
         probe = {"available": False,
                  "reason": "this QEMU build has no GPU-accelerated display device (virtio-gpu-gl); "
                            "it was built without virglrenderer"}
+    elif window in OPENGL_WINDOWS:
+        probe = {"available": True, "venus": venus, "reason": mapped + " and shows it in an OpenGL window"}
+    elif window:
+        probe = {"available": False,
+                 "reason": "QEMU's %s window does not show a display that is rendered on the host GPU" % window}
     elif "egl-headless" not in displays:
         probe = {"available": False,
                  "reason": "this QEMU build has no display backend that renders on the host GPU without a window "
@@ -77,13 +103,10 @@ def probe_vm(binary):
         probe = {"available": False,
                  "reason": "on Windows, QEMU's display that renders on the host GPU without a window "
                            "(egl-headless) stays black: the target renders on the host GPU, but no frame "
-                           "reaches the emulator's display"}
+                           "reaches the emulator's display. In a window (--window) it does"}
     else:
-        venus = "venus" in _qemu_output(binary, "-device", "virtio-gpu-gl-pci,help")
-        probe = {"available": True, "venus": venus,
-                 "reason": "QEMU maps the target's OpenGL ES%s to the host GPU (virtio-gpu with virglrenderer)"
-                           % (" and Vulkan" if venus else "")}
-    _probes[binary] = probe
+        probe = {"available": True, "venus": venus, "reason": mapped}
+    _probes[key] = probe
     return probe
 
 
@@ -128,13 +151,15 @@ def choose(requested, probe):
 
 def vm_arguments(plan, width, height, memory_mb, options):
     """QEMU arguments for the display device; returns (arguments, display
-    backend, device description)."""
+    backend, device description). The display is shown in a window when the
+    plan names one, and nowhere otherwise."""
     size = "xres=%d,yres=%d" % (width, height)
+    window = plan.get("window")
     if plan["provider"] != "host":
         # An emulated display adapter without 3D. Its frame-buffer allowance
         # has to grow with the resolution.
         allowance = max(256, (width * height * 4 * 16) >> 20)
-        return (["-device", "virtio-gpu-pci,%s,max_hostmem=%dM" % (size, allowance)], "none",
+        return (["-device", "virtio-gpu-pci,%s,max_hostmem=%dM" % (size, allowance)], window or "none",
                 "virtio-gpu (2D), rendering by the target CPU")
     device = "virtio-gpu-gl-pci," + size
     arguments = []
@@ -146,7 +171,7 @@ def vm_arguments(plan, width, height, memory_mb, options):
         arguments += ["-object", "memory-backend-memfd,id=emu-ram,size=%dM" % memory_mb,
                       "-machine", "memory-backend=emu-ram"]
         description = "virtio-gpu with virglrenderer (OpenGL ES and Vulkan on the host GPU)"
-    return arguments + ["-device", device], "egl-headless", description
+    return arguments + ["-device", device], window + ",gl=on" if window else "egl-headless", description
 
 
 def container_arguments(plan):
@@ -286,6 +311,19 @@ class Vnc:
         return width, height, pixels
 
 
+class NoCapture:
+    """Stands in where the display cannot be captured, and says why."""
+
+    def __init__(self, reason):
+        self.reason = reason
+
+    def capture(self, path, image_format):
+        raise EmuError(self.reason)
+
+    def close(self):
+        pass
+
+
 def capture_endpoint(plan):
     """How the display of a VM is captured during one run. Returns (QEMU
     arguments, a client with capture(path, format) and close(), directory to
@@ -294,7 +332,11 @@ def capture_endpoint(plan):
     QEMU writes the image itself when asked over its machine protocol. It
     refuses while the display is a texture on the host GPU; the image then
     comes from QEMU's VNC server, which the headless display feeds each frame.
+    A window that shows such a display feeds nobody, so there is no capture.
     """
+    if plan["provider"] == "host" and plan.get("window"):
+        return [], NoCapture("QEMU has no way to capture a display that is rendered on the host GPU and shown "
+                             "in a window"), None
     kind, client = ("vnc", Vnc) if plan["provider"] == "host" else ("qmp", Qmp)
     if host.host_os() != "windows" and hasattr(socket, "AF_UNIX"):
         # A short private path: socket paths have a tight length limit.
