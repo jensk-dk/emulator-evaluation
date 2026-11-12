@@ -1,6 +1,18 @@
 # emulator-evaluation
 
-This repo contains an evaluation of various technologies for a device emulator.
+<picture>
+  <img alt="Emu Device Emulator" src="docs/emu-logo.svg">
+</picture>
+
+This repo contains a generic device emulator for Linux-based TVs and set-top boxes. Features:
+
+* Runs on Linux, Mac and Windows hosts.
+* Setup script that can check or install required dependencies for each host OS.
+* VM mode for development and Container mode for CI.
+* Supports Wayland, OpenGL ES, Vulkan and Flutter graphics on target OS.
+* Supports A/V decoding in emulator with common broadcast and broadband A/V formats and codecs
+* Unified command line command regardless of the underlying emulator technology used.
+* Comprehensive performance analysis and reporting
 
 The requirements live in the [openspec](openspec) folder. Delivery is staged
 ([tasks](openspec/changes/staged-emulator-delivery/tasks.md)); this repo

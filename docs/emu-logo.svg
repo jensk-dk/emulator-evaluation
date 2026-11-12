@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Emu logo">
+  <rect width="512" height="512" fill="#fff"/>
+  <!-- legs -->
+  <g fill="none" stroke="#000" stroke-width="13" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M200 345 L190 408 L198 462 L240 467"/>
+    <path d="M265 345 L282 405 L268 462 L312 467"/>
+  </g>
+  <!-- body, neck and head -->
+  <path fill="#000" d="M100 340
+    C85 260 150 185 245 185
+    C285 185 310 197 322 178
+    C335 150 338 122 340 100
+    C342 75 365 62 385 72
+    L428 90
+    L388 99
+    C375 104 368 112 366 125
+    C362 165 368 205 372 240
+    C378 300 330 352 250 356
+    C190 359 150 350 130 366
+    C116 374 104 362 100 340 Z"/>
+  <!-- eye -->
+  <circle cx="377" cy="83" r="4.5" fill="#fff"/>
+</svg>
