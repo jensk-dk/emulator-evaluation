@@ -1,7 +1,7 @@
 # emulator-evaluation
 
 <picture>
-  <img alt="Emu Device Emulator" src="docs/emu-logo.svg">
+  <img alt="Emu Device Emulator" src="docs/emu-logo.svg" width="150" height="150">
 </picture>
 
 This repo contains a generic device emulator for Linux-based TVs and set-top boxes. Features:
