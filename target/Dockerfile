@@ -38,7 +38,7 @@ COPY src/emubench.c src/emugfx.c src/build-emugfx.sh /src/
 COPY src/shaders/ /src/shaders/
 RUN mkdir -p /out \
     && gcc -O2 -Wall -Wextra -pthread -o /out/emubench /src/emubench.c -lm \
-    && /src/build-emugfx.sh /src /out/emugfx
+    && sh /src/build-emugfx.sh /src /out/emugfx
 
 # ------------------------------------------------------------ flutter ---
 # Builds the Flutter workload with a pinned Flutter SDK. The SDK builds Linux
@@ -68,7 +68,22 @@ RUN set -eu; \
     flutter precache --linux
 COPY src/flutter_demo/ /src/flutter_demo/
 COPY src/build-flutter-demo.sh /src/
-RUN [ -e /out/flutter/UNAVAILABLE ] || /src/build-flutter-demo.sh /src/flutter_demo /out/flutter
+RUN [ -e /out/flutter/UNAVAILABLE ] || sh /src/build-flutter-demo.sh /src/flutter_demo /out/flutter
+
+# ------------------------------------------------------------- rootfs ---
+# The target's own files. Their modes are set here, from their content, so the
+# image is the same whatever host builds it: a build context that comes from a
+# Windows host has no executable bit to go by. A file that starts with "#!" is
+# a program; everything else is data.
+FROM base AS rootfs
+COPY rootfs/ /rootfs/
+RUN set -eu; \
+    find /rootfs -type d -exec chmod 0755 {} +; \
+    find /rootfs -type f -exec chmod 0644 {} +; \
+    find /rootfs -type f | while IFS= read -r file; do \
+      if [ "$(head -c 2 "$file")" = "#!" ]; then chmod 0755 "$file"; fi; \
+    done; \
+    test -x /rootfs/opt/emu/init
 
 # ----------------------------------------------------------------- os ---
 # Target OS userland shared by both execution modes.
@@ -90,7 +105,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # ------------------------------------------------------------- target ---
 # Container-mode image.
 FROM os AS target
-COPY rootfs/ /
+COPY --from=rootfs /rootfs/ /
 COPY --from=tools /out/emubench /out/emugfx /usr/local/bin/
 COPY --from=flutter /out/flutter/ /opt/emu/flutter/
 ARG IMAGE_NAME=emu-target
@@ -114,6 +129,10 @@ RUN set -eu; \
     apt-get update; \
     apt-get install -y --no-install-recommends initramfs-tools zstd; \
     echo 'MODULES=list' > /etc/initramfs-tools/conf.d/emu.conf; \
+    # The target never hibernates. Left to itself, the initramfs is told to \
+    # resume from the swap device of the host that builds the image, and the \
+    # target then waits half a minute at every boot for a device it never has. \
+    echo 'RESUME=none' >> /etc/initramfs-tools/conf.d/emu.conf; \
     cat /tmp/initramfs-modules >> /etc/initramfs-tools/modules; \
     apt-get install -y --no-install-recommends "$KERNEL_PACKAGE"; \
     rm -rf /var/lib/apt/lists/* /tmp/initramfs-modules; \
@@ -122,7 +141,7 @@ RUN set -eu; \
 # ------------------------------------------------------------- vmroot ---
 # VM-mode root filesystem: the same files as the container image, plus kernel.
 FROM vmos AS vmroot
-COPY rootfs/ /
+COPY --from=rootfs /rootfs/ /
 COPY --from=tools /out/emubench /out/emugfx /usr/local/bin/
 COPY --from=flutter /out/flutter/ /opt/emu/flutter/
 ARG IMAGE_NAME=emu-target

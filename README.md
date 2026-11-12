@@ -6,9 +6,9 @@ The requirements live in the [openspec](openspec) folder. Delivery is staged
 ([tasks](openspec/changes/staged-emulator-delivery/tasks.md)); this repo
 holds the code for stages 0 to 3: the evaluation foundation, a cross-platform
 runnable baseline, VM CPU and driver fidelity, and graphics. So far they are
-verified on one host, macOS on ARM64; Linux and Windows hosts have not been
-run yet. The task list and `evaluation/verification/` show what has been
-verified, and on which hosts.
+verified on two hosts: macOS on ARM64, and Windows on x86-64 with Podman as
+the container runtime. Linux hosts have not been run yet. The task list and
+`evaluation/verification/` show what has been verified, and on which hosts.
 
 ## Quick start
 
@@ -17,7 +17,9 @@ verified, and on which hosts.
     ./emu run --mode vm     # the same in a host-native VM
     ./emu run --mode vm --workload graphics-demo --screenshot shots   # graphics, with display captures
 
-On Windows use `.\setup.ps1` and `emu.cmd`.
+On Windows use `setup.cmd` and `emu.cmd`. (`setup.cmd` runs `setup.ps1`
+where the PowerShell execution policy does not allow scripts, which is the
+default.)
 
 The first run builds the target OS image, which downloads Debian packages and
 takes a few minutes. Later runs start in seconds.
@@ -34,13 +36,37 @@ dependency and install what is missing. `--check` / `-Check` only reports.
 | Hardware virtualization | host-native VM mode | Hypervisor.framework | KVM | Windows Hypervisor Platform |
 | Container runtime | container mode, image builds | Colima + Docker CLI (Homebrew) | Podman | Podman |
 | Foreign-architecture emulation | building ARM target images | registered in the engine VM | `qemu-user-static` | registered in the engine VM |
-| QEMU OpenGL modules (optional) | mapping VM graphics to the host GPU | not in Homebrew's QEMU | system package | not checked yet |
+| QEMU OpenGL modules (optional) | mapping VM graphics to the host GPU | not in Homebrew's QEMU | system package | in winget's QEMU, but not usable yet (see [Display and graphics](#display-and-graphics)) |
 
-An existing Docker or Podman installation is used as it is.
+An existing Docker or Podman installation is used as it is. Where both are
+installed, Docker is used when its engine answers. To choose, set the
+environment variable `EMU_CONTAINER_RUNTIME` to `podman` or `docker`; the
+launcher and `setup.ps1` read it.
 
 The launcher starts a stopped container engine itself. On macOS, restarting
 Colima drops the ARM32 build emulation; `./setup.sh` restores it, and it is
 only needed to rebuild the ARM32 image.
+
+### Windows
+
+Nothing on Windows needs Docker Desktop or a sign-in: `setup.cmd` installs
+QEMU and Podman with winget (each installer asks for elevation once) and
+creates Podman's engine, which runs in WSL 2.
+
+- The Podman machine is created rootful. A rootless one cannot register the
+  ARM build emulation, and cannot give a container CPUs of its own: the
+  launcher then limits CPU time instead and says so.
+- Host-native VM mode uses the Windows Hypervisor Platform. Where WSL 2 works
+  it is usually available already; otherwise `setup.ps1` says which Windows
+  feature to enable.
+- Building the images writes many gigabytes into Podman's virtual disk
+  (`ext4.vhdx`), and that file does not shrink when the data is deleted. Here
+  it was 13 GB after the x86-64 images and 18 GB once the ARM64 image was
+  built too, and Windows grew its page file by several gigabytes during the
+  builds. To get the space back afterwards, save the container image
+  (`podman save`), remove and recreate the machine (`podman machine rm`,
+  `setup.cmd`), and load it again. VM mode needs nothing from the engine once
+  its image is built.
 
 ## Launcher
 
@@ -108,6 +134,13 @@ The first feature is `hwrng`, the hardware random number generator at
 and [emulator/hostd.py](emulator/hostd.py); the target halves in
 [target/rootfs/opt/emu/drivers](target/rootfs/opt/emu/drivers).
 
+In container mode the shim reaches the host-side process over the network.
+Podman's engine on Windows has no route to a process on Windows' loopback
+address, so there a relay container on the engine's network carries the
+connections to the host over its standard streams
+([emulator/relay.py](emulator/relay.py)). No firewall rule or WSL setting is
+involved.
+
 ## Display and graphics
 
 The emulator has a display when the workload uses one, or when `--resolution`
@@ -124,11 +157,26 @@ or `--graphics` is given. `--resolution` selects 720p, 1080p (the default) or
 compatible one and otherwise emulates; the launcher prints which it chose and
 why. `--graphics host` fails rather than silently emulating.
 
-On this project's only verified host (macOS on ARM64) neither mode has host
-acceleration: Homebrew's QEMU is built without the GPU-accelerated display
-device, and the container engine's virtual machine has no GPU. Both therefore
-run emulated graphics, and the host-acceleration path is implemented but has
-never been run. `./emu doctor` shows what a host offers.
+Neither verified host has usable host acceleration yet, so both run emulated
+graphics. `./emu doctor` shows what a host offers.
+
+- macOS on ARM64: Homebrew's QEMU is built without the GPU-accelerated display
+  device, and the container engine's virtual machine has no GPU.
+- Windows on x86-64, VM mode: QEMU has the device, and with it the target
+  renders OpenGL ES and Flutter on the host GPU (seen with QEMU 11.1.0 on an
+  NVIDIA GPU: Flutter at 50 frames/s, against 18 emulated). But the display
+  QEMU offers for it without a window (`egl-headless`) stays black, so no frame
+  reaches the emulator's display. The launcher therefore reports host
+  acceleration as unavailable on Windows and emulates. A windowed display, a
+  later stage, may change that.
+- Windows on x86-64, container mode: Podman's engine in WSL has no GPU render
+  node.
+
+The launcher captures a VM's display through QEMU's machine protocol. QEMU
+refuses that while the display is a texture on the host GPU, so with host
+acceleration the capture is read from QEMU's VNC server instead. That path
+has only been run on Windows, where it returns the black display described
+above; it is still to be run on a host where the display works.
 
 `graphics-demo` runs a Wayland, an OpenGL ES, a Vulkan and a Flutter test.
 `--screenshot DIR` saves a PNG of the emulator's display at the end of each

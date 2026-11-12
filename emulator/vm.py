@@ -1,6 +1,8 @@
 """VM mode: the target OS kernel and userland in a QEMU virtual machine."""
 import base64
+import socket
 import subprocess
+import time
 
 from . import host
 from .errors import EmuError
@@ -11,6 +13,13 @@ CONSOLE = {"x86_64": "ttyS0", "arm64": "ttyAMA0", "arm32": "ttyAMA0"}
 NATIVE_ACCELERATOR = {"macos": "hvf", "linux": "kvm", "windows": "whpx"}
 # Target CPUs simulated when the guest architecture is not run natively.
 SIMULATED_CPU = {"arm64": "cortex-a53", "arm32": "cortex-a15", "x86_64": "max"}
+# The host's own CPU under each hypervisor. QEMU has no "host" model for WHPX,
+# and its "max" model announces nested virtualization, which WHPX does not
+# provide: a guest that is told it has it fails in its first second.
+ACCELERATED_CPU = {"kvm": "host", "hvf": "host", "whpx": "max,-vmx,-svm"}
+# What QEMU prints when a hypervisor stops running the guest for good. QEMU
+# itself keeps running after that, so the launcher has to end it.
+GAVE_UP = ("WHPX: Unexpected VP exit code",)
 
 
 def qemu_version(binary):
@@ -35,7 +44,28 @@ def _accelerator_available(accelerator):
             return done.stdout.strip() == "1"
         except (OSError, subprocess.SubprocessError):
             return False
-    return accelerator == "whpx" and system == "windows"
+    return accelerator == "whpx" and system == "windows" and _whpx_available()
+
+
+def _whpx_available():
+    """Whether the Windows Hypervisor Platform can run a VM right now.
+
+    Asks the platform's own API, as QEMU does. The state of the optional
+    Windows feature does not say: the API also works when another feature
+    (the one WSL 2 uses) keeps the hypervisor running, and does not work yet
+    while a newly enabled feature waits for a restart."""
+    try:
+        import ctypes
+        api = ctypes.WinDLL("WinHvPlatform.dll")
+        buffer = (ctypes.c_ubyte * 256)()       # larger than any capability
+        written = ctypes.c_uint32(0)
+        api.WHvGetCapability.restype = ctypes.c_long
+        hypervisor_present = 0                  # WHvCapabilityCodeHypervisorPresent
+        result = api.WHvGetCapability(hypervisor_present, ctypes.byref(buffer), ctypes.sizeof(buffer),
+                                      ctypes.byref(written))
+        return result == 0 and any(buffer[:4])
+    except (OSError, AttributeError):
+        return False
 
 
 def resolve(arch_choice, accelerator=None, cpu=None):
@@ -58,7 +88,7 @@ def resolve(arch_choice, accelerator=None, cpu=None):
         if accelerator == "tcg":
             cpu = "max" if native else SIMULATED_CPU[guest]
         else:
-            cpu = "host" if accelerator in ("kvm", "hvf") else "max"
+            cpu = ACCELERATED_CPU.get(accelerator, "max")
     return {
         "variant": "vm-native" if native else "vm-%s" % guest,
         "guest_arch": guest,
@@ -98,8 +128,39 @@ def kernel_command_line(guest, workload, args, drivers, verbose, terminal=None, 
     return " ".join(parts)
 
 
+class Console:
+    """The target's console on a connection that QEMU opens to the launcher,
+    in place of QEMU's standard streams.
+
+    QEMU's console on standard input drops, on Windows, every character that
+    arrives before the target has taken the previous one. A person does not
+    type that fast; a script does."""
+
+    def __init__(self):
+        self._listener = socket.create_server(("127.0.0.1", 0))
+        self.port = self._listener.getsockname()[1]
+        self._connection = None
+
+    def accept(self, process, seconds=60):
+        """The connection from the emulator `process`, or None if it ended
+        (or the time passed) without opening one."""
+        self._listener.settimeout(0.5)
+        deadline = time.time() + seconds
+        while self._connection is None and process.poll() is None and time.time() < deadline:
+            try:
+                self._connection = self._listener.accept()[0]
+            except socket.timeout:
+                pass
+        return self._connection
+
+    def close(self):
+        for item in (self._connection, self._listener):
+            if item:
+                item.close()
+
+
 def run_command(resolved, artifacts, data_disk, cmdline, cpus, memory_mb, console_on_tty, extra_args, options,
-                display_backend="none"):
+                display_backend="none", console=None):
     guest = resolved["guest_arch"]
     binary = host.require_tool(QEMU_BINARY[guest], "VM mode with a %s guest" % guest)
     disk_cache = options.get("disk-cache")
@@ -116,7 +177,10 @@ def run_command(resolved, artifacts, data_disk, cmdline, cpus, memory_mb, consol
         "-device", "virtio-blk-pci,drive=data",
         "-netdev", "user,id=net0", "-device", "virtio-net-pci,netdev=net0",
     ]
-    # Ctrl-C goes to the target. On a terminal, Ctrl-A X quits the emulator.
-    mux = ",mux=on" if console_on_tty else ""
-    command += ["-chardev", "stdio,id=console,signal=off" + mux, "-serial", "chardev:console", "-monitor", "none"]
+    if console:
+        backend = "socket,id=console,host=127.0.0.1,port=%d" % console.port
+    else:
+        # Ctrl-C goes to the target. On a terminal, Ctrl-A X quits the emulator.
+        backend = "stdio,id=console,signal=off" + (",mux=on" if console_on_tty else "")
+    command += ["-chardev", backend, "-serial", "chardev:console", "-monitor", "none"]
     return command + list(extra_args), binary

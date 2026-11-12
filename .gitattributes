@@ -1,0 +1,6 @@
+# Text files are checked out with LF line endings on every host. The target
+# image is built from the files under target/, and a script with Windows line
+# endings does not run on the target OS.
+* text=auto eol=lf
+# Windows command scripts need CRLF.
+*.cmd text eol=crlf

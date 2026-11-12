@@ -23,16 +23,39 @@ def definition():
         return json.load(handle)
 
 
+def _definition_files():
+    return sorted(p for p in TARGET_DIR.rglob("*") if p.is_file() and "__pycache__" not in p.parts)
+
+
 def definition_sha256():
-    """Hash of everything that defines the image (the target/ directory)."""
+    """Hash of everything that defines the image (the target/ directory).
+
+    It covers file names and contents only, so every host computes the same
+    hash from the same revision. File modes are not part of it: a Windows
+    file system has no executable bit, and target/Dockerfile sets the modes
+    in the image from the files' contents.
+    """
     digest = hashlib.sha256()
-    for path in sorted(p for p in TARGET_DIR.rglob("*") if p.is_file() and "__pycache__" not in p.parts):
+    for path in _definition_files():
         relative = path.relative_to(TARGET_DIR).as_posix()
         digest.update(relative.encode() + b"\0")
         digest.update(hashlib.sha256(path.read_bytes()).digest())
-        # The executable bit ends up in the image, so it is part of the definition.
-        digest.update(b"x" if path.stat().st_mode & 0o100 else b"-")
     return digest.hexdigest()
+
+
+def check_definition():
+    """Refuse to build from files with Windows line endings: the target's
+    scripts would not run, and the definition would hash differently."""
+    converted = []
+    for path in _definition_files():
+        data = path.read_bytes()
+        if b"\r\n" in data and b"\0" not in data:       # text files only
+            converted.append(path.relative_to(ROOT).as_posix())
+    if converted:
+        raise EmuError(
+            "the image definition has Windows (CRLF) line endings in %d files, such as %s"
+            % (len(converted), converted[0]),
+            hint="check the files out with LF line endings; .gitattributes asks for them, so a fresh clone has them")
 
 
 def git_revision():
@@ -218,6 +241,7 @@ def ensure(kind, runtime_factory, arch, quiet=False, rebuild=False):
         present = runtime_factory().image_id(manifest["image_tag"]) == manifest.get("image_id")
     if present and not rebuild:
         return manifest
+    check_definition()
     reason = "rebuilding" if manifest else "building"
     print("emu: %s the %s image for %s (the first build downloads packages and takes a while)" % (reason, kind, arch),
           flush=True)

@@ -1,4 +1,5 @@
-"""Reads the images the launcher captures from the emulator's display.
+"""Reads the images the launcher captures from the emulator's display, and
+writes the ones it has to put together itself.
 
 Standard library only: binary PPM (what QEMU's screendump writes) and 8-bit
 RGB or RGBA PNG without interlacing (what the target's compositor writes).
@@ -112,6 +113,23 @@ def _png_pixels(data):
         out[row * stride:(row + 1) * stride] = line
         previous = line
     return Image(width, height, channels, bytes(out))
+
+
+def save(path, width, height, rgb, image_format):
+    """Write 8-bit RGB pixels, rows from the top, as "ppm" or "png"."""
+    if image_format == "ppm":
+        data = b"P6\n%d %d\n255\n" % (width, height) + bytes(rgb)
+    elif image_format == "png":
+        stride = width * 3
+        rows = b"".join(b"\0" + bytes(rgb[row * stride:(row + 1) * stride]) for row in range(height))
+        data = _PNG_SIGNATURE
+        for kind, body in ((b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)),
+                           (b"IDAT", zlib.compress(rows, 6)), (b"IEND", b"")):
+            data += struct.pack(">I", len(body)) + kind + body + struct.pack(">I", zlib.crc32(kind + body))
+    else:
+        raise EmuError("unknown image format %r" % image_format)
+    with open(path, "wb") as handle:
+        handle.write(data)
 
 
 def load(path):

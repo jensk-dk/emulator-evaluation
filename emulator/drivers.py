@@ -17,7 +17,7 @@ import os
 import subprocess
 import sys
 
-from . import host
+from . import host, relay
 from .errors import EmuError
 from .paths import ROOT
 
@@ -54,6 +54,7 @@ class Plan:
         self.container_env = {}
         self.host_processes = []    # dicts describing running host-side processes
         self._children = []
+        self._relays = []
 
     def start_host_process(self, feature, bind, trace_path):
         command = [sys.executable, "-m", "emulator.hostd", feature, "--bind", bind]
@@ -74,7 +75,22 @@ class Plan:
         self.host_processes.append(info)
         return info
 
+    def start_relay(self, runtime, image_tag, platform, run_dir, port):
+        """Give containers a way to the host-side process on `port` where the
+        engine has none; returns the port they reach it on."""
+        name = "emu-relay-%s-%d" % (os.path.basename(run_dir).lower(), port)
+        try:
+            self._relays.append(relay.Relay(runtime, image_tag, platform, name, ("127.0.0.1", port),
+                                            host.tool_env(), os.path.join(run_dir, name + ".log")))
+        except (OSError, RuntimeError) as error:
+            self.stop()
+            raise EmuError("the relay to the host-side process failed to start: %s" % error)
+        return self._relays[-1].port
+
     def stop(self):
+        for item in self._relays:
+            item.stop()
+        self._relays = []
         for child in self._children:
             if child.poll() is None:
                 child.terminate()
@@ -119,11 +135,16 @@ def _container_bind_address(runtime):
     return "0.0.0.0"
 
 
-def plan_container(drivers, runtime, run_dir, options):
+def plan_container(drivers, runtime, run_dir, options, image_tag, platform):
     plan = Plan()
     if drivers.get("hwrng") == "host":
         bind = options.get("host-bind") or _container_bind_address(runtime)
         info = plan.start_host_process("hwrng", bind, os.path.join(run_dir, "hwrng-host.trace"))
+        port = info["port"]
+        chosen = options.get("host-bind") or options.get("host-address")
+        if not chosen and not runtime.reaches_host_loopback():
+            port = plan.start_relay(runtime, image_tag, platform, run_dir, port)
+            info["relay"] = "a container on the engine's network, port %d" % port
         address = options.get("host-address") or runtime.host_address()
-        plan.container_env["EMU_DRIVER_HWRNG_HOST"] = "%s:%d" % (address, info["port"])
+        plan.container_env["EMU_DRIVER_HWRNG_HOST"] = "%s:%d" % (address, port)
     return plan

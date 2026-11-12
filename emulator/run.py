@@ -17,7 +17,7 @@ DEFAULT_MEMORY_MB = 2048
 DEFAULT_DATA_DISK_MB = 1024
 KNOWN_OPTIONS = {
     "accel": "VM accelerator: hvf, kvm, whpx or tcg (default: the host's hypervisor for native, tcg otherwise)",
-    "cpu": "VM CPU model (default: host for native, cortex-a53 for arm64, cortex-a15 for arm32)",
+    "cpu": "VM CPU model (default: the host's own for native, cortex-a53 for arm64, cortex-a15 for arm32)",
     "disk-cache": "QEMU cache mode of the data disk, such as none or writeback (default: QEMU's default)",
     "data-disk-mb": "size of the VM's /data scratch disk in MiB (default: %d)" % DEFAULT_DATA_DISK_MB,
     "verbose-boot": "show kernel boot messages in VM mode (yes/no, default: no)",
@@ -147,8 +147,9 @@ def launch(opts):
     attached = interactive and opts.stdin_script is None and host.stdin_is_tty() and sys.stdout.isatty()
     plan = None
     screens = None
-    qmp = None
-    qmp_directory = None
+    capturer = None
+    capture_directory = None
+    console = None
     try:
         if opts.mode == "container":
             if opts.arch != "native":
@@ -156,7 +157,8 @@ def launch(opts):
             runtime = container.detect()
             arch = host.host_arch()
             manifest = image.ensure("container", lambda: runtime, arch, quiet=opts.quiet_build, rebuild=opts.rebuild)
-            plan = driver_features.plan_container(opts.drivers, runtime, str(run_dir), opts.options)
+            plan = driver_features.plan_container(opts.drivers, runtime, str(run_dir), opts.options,
+                                                  manifest["image_tag"], manifest["platform"])
             env = dict(plan.container_env)
             if opts.drivers:
                 env["EMU_DRIVERS"] = ",".join("%s=%s" % item for item in sorted(opts.drivers.items()))
@@ -184,6 +186,10 @@ def launch(opts):
             if (emulator["engine"].get("cpus") or 0) < opts.cpus:
                 outcome.notes.append("the container engine has %s CPUs, fewer than the %d requested"
                                      % (emulator["engine"].get("cpus"), opts.cpus))
+            elif not container.can_pin(emulator["engine"], opts.cpus):
+                outcome.notes.append("the container engine cannot pin CPUs (rootless, without the cpuset controller): "
+                                     "the target sees all %s CPUs and is limited to the CPU time of %d"
+                                     % (emulator["engine"].get("cpus"), opts.cpus))
             image_identity = _image_identity(manifest, "container")
         elif opts.mode == "vm":
             resolved = vm.resolve(opts.arch, opts.options.get("accel"), opts.options.get("cpu"))
@@ -206,16 +212,17 @@ def launch(opts):
                 display_args, display_backend, display_device = graphics.vm_arguments(
                     display, display["width"], display["height"], opts.memory_mb, opts.options)
                 if display["screen_hold"]:
-                    qmp_args, qmp_address, qmp_directory = graphics.qmp_endpoint()
-                    display_args += qmp_args
-                    qmp = graphics.Qmp(qmp_address)
+                    capture_args, capturer, capture_directory = graphics.capture_endpoint(display)
+                    display_args += capture_args
                     screens = graphics.Screens(opts.screenshot_dir, outcome.run_id, opts.screenshot_format,
-                                               graphics.vm_capture(qmp, opts.screenshot_format))
+                                               lambda path: capturer.capture(path, opts.screenshot_format))
             cmdline = vm.kernel_command_line(guest, opts.workload, opts.args, opts.drivers,
                                              _flag(opts.options, "verbose-boot"), terminal, display)
+            if interactive and not attached and host.host_os() == "windows":
+                console = vm.Console()
             command, binary = vm.run_command(
                 resolved, image.artifact_dir("vm", guest), data_disk, cmdline, opts.cpus, opts.memory_mb,
-                attached, display_args + plan.qemu_args + opts.extra_args, opts.options, display_backend)
+                attached, display_args + plan.qemu_args + opts.extra_args, opts.options, display_backend, console)
             emulator = {"mode": "vm", "variant": resolved["variant"], "guest_arch": guest,
                         "accelerator": resolved["accelerator"], "cpu_model": resolved["cpu_model"],
                         "machine": resolved["machine"], "runtime": vm.qemu_version(binary)}
@@ -243,7 +250,7 @@ def launch(opts):
             outcome.process_exit = subprocess.call(command, env=host.tool_env())
             outcome.duration_seconds = time.time() - outcome.started_at
         else:
-            _capture(command, opts, outcome, interactive, None if attached else screens)
+            _capture(command, opts, outcome, interactive, None if attached else screens, console)
         if screens:
             outcome.screens = screens.captures
         for process in plan.host_processes:
@@ -256,47 +263,63 @@ def launch(opts):
     finally:
         if plan:
             plan.stop()
-        if qmp:
-            qmp.close()
-        graphics.remove_directory(qmp_directory)
+        if capturer:
+            capturer.close()
+        if console:
+            console.close()
+        graphics.remove_directory(capture_directory)
         shutil.rmtree(run_dir, ignore_errors=True)
 
 
-def _forward_input(process, source, ready, end_with_eot):
-    """Copy input to the emulator once the target is up."""
+def _forward_input(process, sink, source, ready, end_with_eot):
+    """Copy input to the target, through `sink`, once the target is up."""
     ready.wait(timeout=300)
     time.sleep(0.5)
     try:
         if isinstance(source, bytes):
-            process.stdin.write(source)
-            process.stdin.flush()
+            sink.write(source)
+            sink.flush()
         else:
             while True:
                 chunk = source.read1(4096) if hasattr(source, "read1") else source.read(4096)
                 if not chunk:
                     break
-                process.stdin.write(chunk)
-                process.stdin.flush()
+                sink.write(chunk)
+                sink.flush()
         if end_with_eot:
             # A serial console has no end-of-file; Ctrl-D tells the shell.
-            process.stdin.write(b"\x04")
-            process.stdin.flush()
+            sink.write(b"\x04")
+            sink.flush()
             process.wait()
-        process.stdin.close()
+        sink.close()
     except (OSError, ValueError):
         pass
 
 
-def _capture(command, opts, outcome, interactive, screens=None):
-    stdin = subprocess.PIPE if interactive else subprocess.DEVNULL
+def _capture(command, opts, outcome, interactive, screens=None, console=None):
+    """Run the emulator and take in what it and the target print. The target's
+    console is on the emulator's standard streams, or on `console`."""
+    stdin = subprocess.PIPE if interactive and not console else subprocess.DEVNULL
     outcome.started_at = time.time()
     process = subprocess.Popen(command, stdin=stdin, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                env=host.tool_env())
     ready = threading.Event()
-    if interactive:
-        source = opts.stdin_script if opts.stdin_script is not None else sys.stdin.buffer
-        threading.Thread(target=_forward_input, args=(process, source, ready, opts.mode == "vm"),
-                         daemon=True).start()
+    lock = threading.Lock()
+
+    def take(stream):
+        try:
+            for raw in iter(stream.readline, b""):
+                line = raw.decode("utf-8", errors="replace").rstrip("\r\n")
+                with lock:
+                    outcome.output.append(line)
+                    if opts.echo:
+                        print(line, flush=True)
+                    _parse(line, outcome, ready, screens)
+                    if opts.mode == "vm" and any(text in line for text in vm.GAVE_UP):
+                        outcome.notes.append("the hypervisor stopped running the target; the emulator was ended")
+                        process.kill()
+        except OSError:
+            pass    # the emulator closed the console's connection as it ended
 
     def on_timeout():
         outcome.timed_out = True
@@ -305,13 +328,19 @@ def _capture(command, opts, outcome, interactive, screens=None):
     watchdog = threading.Timer(opts.timeout, on_timeout) if opts.timeout else None
     if watchdog:
         watchdog.start()
+    console_reader = None
     try:
-        for raw in iter(process.stdout.readline, b""):
-            line = raw.decode("utf-8", errors="replace").rstrip("\r\n")
-            outcome.output.append(line)
-            if opts.echo:
-                print(line, flush=True)
-            _parse(line, outcome, ready, screens)
+        sink = process.stdin
+        connection = console.accept(process) if console else None
+        if connection:
+            sink = connection.makefile("wb", buffering=0)
+            console_reader = threading.Thread(target=take, args=(connection.makefile("rb"),), daemon=True)
+            console_reader.start()
+        if interactive and sink:
+            source = opts.stdin_script if opts.stdin_script is not None else sys.stdin.buffer
+            threading.Thread(target=_forward_input, args=(process, sink, source, ready, opts.mode == "vm"),
+                             daemon=True).start()
+        take(process.stdout)
     except KeyboardInterrupt:
         process.kill()
         raise
@@ -319,6 +348,8 @@ def _capture(command, opts, outcome, interactive, screens=None):
         outcome.process_exit = process.wait()
         if watchdog:
             watchdog.cancel()
+        if console_reader:
+            console_reader.join(timeout=5)
         ready.set()
         process.stdout.close()
         outcome.duration_seconds = time.time() - outcome.started_at

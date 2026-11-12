@@ -16,6 +16,7 @@ import json
 import os
 import shutil
 import socket
+import struct
 import subprocess
 import tempfile
 import time
@@ -69,6 +70,14 @@ def probe_vm(binary):
         probe = {"available": False,
                  "reason": "this QEMU build has no display backend that renders on the host GPU without a window "
                            "(egl-headless)"}
+    elif host.host_os() == "windows":
+        # Seen with QEMU 11.1.0: OpenGL ES and Flutter render on the host GPU
+        # (virglrenderer on ANGLE), and every frame read from the display is
+        # black.
+        probe = {"available": False,
+                 "reason": "on Windows, QEMU's display that renders on the host GPU without a window "
+                           "(egl-headless) stays black: the target renders on the host GPU, but no frame "
+                           "reaches the emulator's display"}
     else:
         venus = "venus" in _qemu_output(binary, "-device", "virtio-gpu-gl-pci,help")
         probe = {"available": True, "venus": venus,
@@ -92,7 +101,7 @@ def probe_container(runtime, tag, platform):
     if node:
         probe = {"available": True, "reason": "the container engine has a GPU render node (%s)" % node}
     else:
-        where = "; the engine runs in a virtual machine that has no GPU" if host.host_os() != "linux" else ""
+        where = "; the engine runs in a virtual machine that offers none" if host.host_os() != "linux" else ""
         probe = {"available": False, "reason": "the container engine has no GPU render node (/dev/dri)" + where}
     _probes[key] = probe
     return probe
@@ -147,6 +156,24 @@ def container_arguments(plan):
 
 # ---------------------------------------------------------- captures ---
 
+def _connect(address):
+    """Connect to a socket QEMU listens on (a TCP address or a socket path),
+    waiting for QEMU to open it."""
+    deadline = time.time() + 30
+    while True:
+        try:
+            if isinstance(address, tuple):
+                return socket.create_connection(address, timeout=30)
+            found = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            found.settimeout(30)
+            found.connect(address)
+            return found
+        except OSError:
+            if time.time() > deadline:
+                raise
+            time.sleep(0.1)
+
+
 class Qmp:
     """Minimal client for QEMU's machine protocol, used to capture the display."""
 
@@ -155,22 +182,11 @@ class Qmp:
         self._socket = None
         self._buffer = b""
 
+    def capture(self, path, image_format):
+        self.command("screendump", filename=os.path.abspath(path), format=image_format)
+
     def _connect(self):
-        deadline = time.time() + 30
-        while True:
-            try:
-                if isinstance(self.address, tuple):
-                    self._socket = socket.create_connection(self.address, timeout=30)
-                else:
-                    self._socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-                    self._socket.settimeout(30)
-                    self._socket.connect(self.address)
-                break
-            except OSError:
-                self._socket = None
-                if time.time() > deadline:
-                    raise
-                time.sleep(0.1)
+        self._socket = _connect(self.address)
         self._read()            # greeting
         self.command("qmp_capabilities")
 
@@ -200,18 +216,103 @@ class Qmp:
             self._socket = None
 
 
-def qmp_endpoint():
-    """Where QEMU listens for the machine protocol during one run. Returns
-    (QEMU arguments, address for Qmp, directory to remove afterwards)."""
+class Vnc:
+    """Minimal client for QEMU's VNC server, used to capture the display
+    where QEMU will not write the image itself."""
+
+    def __init__(self, address):
+        self.address = address
+
+    def close(self):
+        pass
+
+    def capture(self, path, image_format):
+        # A connection per capture: the server states the display's size when
+        # one opens, and the target changes that size when it sets a mode.
+        connection = _connect(self.address)
+        try:
+            width, height, pixels = self._frame(connection)
+        finally:
+            connection.close()
+        rgb = bytearray(width * height * 3)
+        rgb[0::3], rgb[1::3], rgb[2::3] = pixels[2::4], pixels[1::4], pixels[0::4]
+        imagefile.save(path, width, height, rgb, image_format)
+
+    @staticmethod
+    def _frame(connection):
+        def receive(count):
+            data = bytearray()
+            while len(data) < count:
+                chunk = connection.recv(min(count - len(data), 1 << 20))
+                if not chunk:
+                    raise OSError("QEMU closed the VNC connection")
+                data += chunk
+            return data
+
+        receive(12)                                         # the server's protocol version
+        connection.sendall(b"RFB 003.008\n")
+        if 1 not in receive(receive(1)[0]):                 # 1: no authentication
+            raise OSError("QEMU's VNC server does not accept a connection without authentication")
+        connection.sendall(b"\x01")
+        if receive(4) != b"\0\0\0\0":
+            raise OSError("QEMU's VNC server refused the connection")
+        connection.sendall(b"\x01")                         # share the display with other clients
+        width, height = struct.unpack(">HH", receive(20)[:4])
+        receive(struct.unpack(">I", receive(4))[0])         # the display's name
+        # Pixels as four bytes: blue, green, red, unused. Raw encoding only.
+        connection.sendall(struct.pack(">BxxxBBBBHHHBBBxxx", 0, 32, 24, 0, 1, 255, 255, 255, 16, 8, 0))
+        connection.sendall(struct.pack(">BxHi", 2, 1, 0))
+        connection.sendall(struct.pack(">BBHHHH", 3, 0, 0, 0, width, height))
+        pixels = bytearray(width * height * 4)
+        covered = 0
+        while covered < width * height:
+            kind = receive(1)[0]
+            if kind == 2:                                   # bell
+                continue
+            if kind == 3:                                   # text from the server's clipboard
+                receive(struct.unpack(">xxxI", receive(7))[0])
+                continue
+            if kind != 0:
+                raise OSError("unexpected VNC message %d from QEMU" % kind)
+            for _ in range(struct.unpack(">xH", receive(3))[0]):
+                x, y, w, h, encoding = struct.unpack(">HHHHi", receive(12))
+                if encoding != 0:
+                    raise OSError("QEMU's VNC server sent encoding %d, not raw pixels" % encoding)
+                data = receive(w * h * 4)
+                for row in range(h):
+                    start = ((y + row) * width + x) * 4
+                    pixels[start:start + w * 4] = data[row * w * 4:(row + 1) * w * 4]
+                covered += w * h
+        return width, height, pixels
+
+
+def capture_endpoint(plan):
+    """How the display of a VM is captured during one run. Returns (QEMU
+    arguments, a client with capture(path, format) and close(), directory to
+    remove afterwards).
+
+    QEMU writes the image itself when asked over its machine protocol. It
+    refuses while the display is a texture on the host GPU; the image then
+    comes from QEMU's VNC server, which the headless display feeds each frame.
+    """
+    kind, client = ("vnc", Vnc) if plan["provider"] == "host" else ("qmp", Qmp)
     if host.host_os() != "windows" and hasattr(socket, "AF_UNIX"):
         # A short private path: socket paths have a tight length limit.
         directory = tempfile.mkdtemp(prefix="emu-", dir="/tmp")
-        path = os.path.join(directory, "qmp.sock")
-        return ["-qmp", "unix:%s,server=on,wait=off" % path], path, directory
+        path = os.path.join(directory, kind + ".sock")
+        arguments = ["-vnc", "unix:" + path] if kind == "vnc" else ["-qmp", "unix:%s,server=on,wait=off" % path]
+        return arguments, client(path), directory
     with socket.socket() as probe:
         probe.bind(("127.0.0.1", 0))
         port = probe.getsockname()[1]
-    return ["-qmp", "tcp:127.0.0.1:%d,server=on,wait=off" % port], ("127.0.0.1", port), None
+    if kind == "vnc":
+        # QEMU counts VNC displays from port 5900.
+        while port < 5900:
+            with socket.socket() as probe:
+                probe.bind(("127.0.0.1", 0))
+                port = probe.getsockname()[1]
+        return ["-vnc", "127.0.0.1:%d" % (port - 5900)], client(("127.0.0.1", port)), None
+    return ["-qmp", "tcp:127.0.0.1:%d,server=on,wait=off" % port], client(("127.0.0.1", port)), None
 
 
 class Screens:
@@ -237,12 +338,6 @@ class Screens:
         except (OSError, EmuError, ValueError, subprocess.SubprocessError) as error:
             entry["error"] = "%s" % error
         self.captures.append(entry)
-
-
-def vm_capture(qmp, image_format):
-    def capture(path):
-        qmp.command("screendump", filename=os.path.abspath(path), format=image_format)
-    return capture
 
 
 def container_capture(runtime, name):
