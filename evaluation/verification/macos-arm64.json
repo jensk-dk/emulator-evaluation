@@ -12,7 +12,7 @@
         "model": "Apple M6"
       }
     ],
-    "python": "3.9.6"
+    "python": "3.15.2"
   },
   "checks": {
     "matrix": {
@@ -308,13 +308,13 @@
       "task": "4.2",
       "description": "graphics are emulated on request and as the fallback, in VM mode",
       "details": [
-        "requested emulation: OpenGL ES at 1280x720: 341.2 frames/s on llvmpipe (LLVM 19.1.7, 128 bits); the display capture is 1280x720 and shows its frame",
-        "requested emulation: Vulkan at 1280x720: 410.6 frames/s on llvmpipe (LLVM 19.1.7, 128 bits) (CPU); the display capture is 1280x720 and shows its frame",
+        "requested emulation: OpenGL ES at 1280x720: 336.4 frames/s on llvmpipe (LLVM 19.1.7, 128 bits); the display capture is 1280x720 and shows its frame",
+        "requested emulation: Vulkan at 1280x720: 413.7 frames/s on llvmpipe (LLVM 19.1.7, 128 bits) (CPU); the display capture is 1280x720 and shows its frame",
         "auto fell back to emulation: no compatible host graphics acceleration: this QEMU build has no GPU-accelerated display device (virtio-gpu-gl); it was built without virglrenderer"
       ],
-      "checked_at": "2026-11-13T06:24:33Z",
-      "seconds": 23.3,
-      "revision": "690b0d032ed413a4aa4bef01631069f30ec3ee5b-dirty",
+      "checked_at": "2026-11-13T16:55:55Z",
+      "seconds": 46.9,
+      "revision": "63abdef98c33f684073853f3135094c88e267965-dirty",
       "image_definition_sha256": "0dec37ffb3f28e57d59a89f834aee42038befdc43ab826f73d42ae3a8c80b2dd"
     },
     "graphics-host-vm": {
@@ -324,9 +324,9 @@
       "details": [
         "this QEMU build has no GPU-accelerated display device (virtio-gpu-gl); it was built without virglrenderer. Asking for it is refused: host graphics acceleration is not available: this QEMU build has no GPU-accelerated display device (virtio-gpu-gl); it was built without virglrenderer"
       ],
-      "checked_at": "2026-11-13T06:24:33Z",
+      "checked_at": "2026-11-13T16:55:55Z",
       "seconds": 0.0,
-      "revision": "690b0d032ed413a4aa4bef01631069f30ec3ee5b-dirty",
+      "revision": "63abdef98c33f684073853f3135094c88e267965-dirty",
       "image_definition_sha256": "0dec37ffb3f28e57d59a89f834aee42038befdc43ab826f73d42ae3a8c80b2dd"
     },
     "flutter-vm-arm64": {

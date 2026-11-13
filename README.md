@@ -56,7 +56,7 @@ dependency and install what is missing. `--check` / `-Check` only reports.
 | Container runtime | container mode, image builds | Colima + Docker CLI (Homebrew) | Podman | Podman |
 | Foreign-architecture emulation | building ARM target images | registered in the engine VM | `qemu-user-static` | registered in the engine VM |
 | Audio player (optional) | playing the target's sound on the host | built by the launcher with the Command Line Tools' compiler | `pacat`, `pw-cat` or `aplay`; system package | not implemented yet |
-| QEMU OpenGL modules (optional) | mapping VM graphics to the host GPU | not in Homebrew's QEMU | system package | in winget's QEMU; used when the display is in a window (see [Display and graphics](#display-and-graphics)) |
+| QEMU OpenGL modules (optional) | mapping VM graphics to the host GPU | not in Homebrew's QEMU; an experimental build has them, installed only with `./setup.sh --experimental-qemu` (see [Experimental: host graphics on macOS](#experimental-host-graphics-on-macos)) | system package | in winget's QEMU; used when the display is in a window (see [Display and graphics](#display-and-graphics)) |
 
 An existing Docker or Podman installation is used as it is. Where both are
 installed, Docker is used when its engine answers. To choose, set the
@@ -210,12 +210,15 @@ toolbar) is not part of this.
 
 What the verified hosts offer; `./emu doctor` shows it for any host:
 
-- macOS on ARM64: no host acceleration, in either mode. Homebrew's QEMU is
-  built without the GPU-accelerated display device, and QEMU itself has no
-  OpenGL display for macOS: the builds that have one are patched forks in
-  third-party Homebrew taps, which this project does not install. The
-  container engine's virtual machine has no GPU. `--window` shows the
-  emulated display in QEMU's Cocoa window, and such a display can be captured.
+- macOS on ARM64, with the QEMU that `setup.sh` installs: no host
+  acceleration, in either mode. Homebrew's QEMU is built without the
+  GPU-accelerated display device, and QEMU itself has no OpenGL display for
+  macOS. The container engine's virtual machine has no GPU. `--window` shows
+  the emulated display in QEMU's Cocoa window, and such a display can be
+  captured.
+- macOS on ARM64, with an experimental QEMU build: host acceleration in VM
+  mode with `--window`. See
+  [Experimental: host graphics on macOS](#experimental-host-graphics-on-macos).
 - Linux on x86-64 (Kubuntu 24.04, QEMU 8.2.2, NVIDIA GPU with NVIDIA's own
   driver), VM mode: host acceleration, with and without a window. QEMU maps
   OpenGL ES to the host GPU; `./emu verify` covers this path here, by a capture
@@ -252,6 +255,95 @@ The launcher captures a VM's display through QEMU's machine protocol. QEMU
 refuses that while the display is a texture on the host GPU. Without a window
 the capture is then read from QEMU's VNC server. That works on Linux, up to
 2560x2048 pixels; on Windows it returns the black display described above.
+
+### Experimental: host graphics on macOS
+
+A patched QEMU from a third-party Homebrew tap
+([milesbuckton/homebrew-qemu-virgl](https://github.com/milesbuckton/homebrew-qemu-virgl))
+adds an OpenGL mode to QEMU's Cocoa window, through ANGLE. It is not a
+dependency of this project: it is one person's fork of QEMU's unreleased
+development branch. `setup.sh` installs it only when asked to:
+
+    ./setup.sh --experimental-qemu
+
+The option needs the Xcode app, which ANGLE's build uses; the Command Line
+Tools are not enough. Xcode does not have to be the selected developer
+directory. The option then:
+
+1. tells Homebrew to trust the tap, and taps it;
+2. takes the tap at the commit below and applies
+   [docs/macos-experimental-qemu.patch](docs/macos-experimental-qemu.patch) to
+   its formulas. The patch pins the commit each formula builds from, and lets
+   ANGLE's build find Xcode where `xcode-select` points at the Command Line
+   Tools;
+3. builds the formulas from source, in dependency order (`gn`, `libangle`,
+   `libepoxy-angle`, `virglrenderer`, `qemu-virgl`);
+4. pins the five packages, so that `brew upgrade` does not build them again
+   from other commits.
+
+`./setup.sh --check` reports the build wherever it is installed. The commits
+it is built from:
+
+| Part | Source | Commit |
+|---|---|---|
+| Tap | github.com/milesbuckton/homebrew-qemu-virgl | `56626e28` |
+| QEMU 11.1.90 | gitlab.com/milesbuckton/qemu | `c95b8c49` |
+| virglrenderer | gitlab.freedesktop.org/miles.buckton/virglrenderer | `890d0648` |
+| ANGLE | chromium.googlesource.com/angle/angle | `47d8f0e2` |
+| libepoxy | github.com/anholt/libepoxy | `d1f952c4` |
+
+Two things can stop the option:
+
+- The tap's history is a single commit. If the tap is rewritten, that commit
+  may no longer be there to fetch; the option then stops and says so.
+- Homebrew's own `virglrenderer` has the same name as the tap's. Where that
+  one is installed, the option stops and does not replace it.
+
+To remove the build again (Homebrew does not uninstall a pinned package):
+
+    brew unpin qemu-virgl virglrenderer libepoxy-angle libangle gn
+    brew uninstall qemu-virgl virglrenderer libepoxy-angle libangle gn
+    brew untap milesbuckton/qemu-virgl
+    brew untrust --tap milesbuckton/qemu-virgl
+
+The build installs beside Homebrew's QEMU. The launcher uses it when the
+environment variable `EMU_QEMU_DIR` names its directory; that variable works
+for any other QEMU build too. A build that has only the ARM64 emulator, as
+this one, then runs ARM32 targets as well.
+
+    EMU_QEMU_DIR=/opt/homebrew/opt/qemu-virgl/bin ./emu run --mode vm --workload graphics-demo --window
+
+What was seen, in single runs that were not recorded as results:
+
+- With `--window`, OpenGL ES and Flutter render on the Apple GPU (the target
+  reports `virgl (ANGLE (Apple, Apple M6, OpenGL 4.1 Metal))`), for
+  host-native, simulated ARM64 and simulated ARM32 targets. QEMU ends cleanly.
+  Vulkan stays on the target CPU.
+- Frames per second at 1080p, host graphics against emulated:
+
+  | Test | Host-native | ARM64 | ARM32 |
+  |---|---|---|---|
+  | OpenGL ES | 100 against 143 | 205 against 2.8 | 104 against 1.5 |
+  | Flutter | 60 against 17 | 32 against 0.5 | no Flutter |
+
+  On a host-native target the OpenGL ES test stays at about 100 frames/s at
+  every resolution; at 4K that is against 35 emulated, and Flutter stays at 60
+  against 5.
+- Video playback through OpenGL ES on simulated targets: an ARM64 target
+  dropped 0 of 125 frames of the MPEG-2 stream and 19 of the AVC stream
+  (against 106 and 108 emulated); an ARM32 target 1 and 0 (against 105 and
+  91).
+- One playback did not end: the HEVC stream through OpenGL ES on an ARM64
+  target ran into the workload's time limit.
+- On a host-native target the HEVC stream lost frames with this build (21 of
+  125 through Wayland, 26 through OpenGL ES, 61 through Vulkan), where the
+  installed QEMU loses none. Not investigated.
+- Without a window the build crashes as soon as the target starts to use the
+  GPU, so the launcher emulates graphics there and says why.
+- The display cannot be captured while it is rendered on the host GPU: QEMU
+  refuses the capture over its machine protocol and refuses to start its VNC
+  server beside the OpenGL window. `./emu verify` therefore cannot cover this
+  path on macOS; `graphics-host-vm` stays unavailable there.
 
 `graphics-demo` runs a Wayland, an OpenGL ES, a Vulkan and a Flutter test.
 `--screenshot DIR` saves a PNG of the emulator's display at the end of each

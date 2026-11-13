@@ -7,6 +7,12 @@
 #   ./setup.sh           check, then install what is missing (asks first)
 #   ./setup.sh --yes     same, without asking
 #   ./setup.sh --check   check only; exit 1 if anything is missing
+#   ./setup.sh --experimental-qemu
+#                        macOS on ARM64: also build and install an experimental
+#                        QEMU that maps a VM's graphics to the host GPU. It is
+#                        third-party software built from source, not a
+#                        dependency, and never installed without this option;
+#                        see "Experimental: host graphics on macOS" in the README
 #
 # Host dependencies:
 #   python3 >= 3.9            runs the launcher (./emu)
@@ -29,10 +35,12 @@ set -u
 
 MODE=install
 ASSUME_YES=0
+EXPERIMENTAL_QEMU=0
 for arg in "$@"; do
   case "$arg" in
     --check) MODE=check ;;
     -y|--yes) ASSUME_YES=1 ;;
+    --experimental-qemu) EXPERIMENTAL_QEMU=1 ;;
     -h|--help) sed -n '2,/^# Written for/p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "setup.sh: unknown argument: $arg" >&2; exit 2 ;;
   esac
@@ -47,6 +55,20 @@ esac
 # A translated (Rosetta) shell on Apple Silicon still has an ARM64 host.
 if [ "$OS" = Darwin ] && [ "$(sysctl -n hw.optional.arm64 2>/dev/null)" = 1 ]; then
   ARCH=arm64; QEMU_NATIVE=qemu-system-aarch64
+fi
+
+# The experimental QEMU for macOS (--experimental-qemu) comes from a
+# third-party Homebrew tap. It is built from the tap at one commit, with this
+# project's changes to the tap's formulas: those pin the commit of each source
+# and let the build find Xcode.
+EXP_TAP=milesbuckton/qemu-virgl
+EXP_TAP_COMMIT=56626e28d85569703532bc0794027b9e3205cbd9
+EXP_QEMU_COMMIT=c95b8c49          # the start of QEMU's commit, which its --version shows
+EXP_FORMULAE="gn libangle libepoxy-angle virglrenderer qemu-virgl"      # in build order
+EXP_PATCH="$(cd "$(dirname "$0")" && pwd)/docs/macos-experimental-qemu.patch"
+if [ "$EXPERIMENTAL_QEMU" = 1 ] && ! { [ "$OS" = Darwin ] && [ "$ARCH" = arm64 ]; }; then
+  echo "setup.sh: --experimental-qemu is for macOS on ARM64; on Linux, host graphics comes with the distribution's QEMU" >&2
+  exit 2
 fi
 
 # Package managers install outside a minimal PATH; look there too.
@@ -67,6 +89,7 @@ warn()    { printf '  [warn]  %s\n' "$*"; WARNINGS=$((WARNINGS + 1)); }
 info()    { printf '%s\n' "$*"; }
 have()    { command -v "$1" >/dev/null 2>&1; }
 is_missing() { case " $MISSING " in *" $1 "*) return 0 ;; *) return 1 ;; esac; }
+is_optional() { case " $OPTIONAL " in *" $1 "*) return 0 ;; *) return 1 ;; esac; }
 
 # ----------------------------------------------------------------- checks ---
 
@@ -122,6 +145,30 @@ check_graphics() {
     optional qemu-gl "host graphics acceleration for VM mode: QEMU's OpenGL modules are not installed; graphics are emulated without them"
   else
     note "host graphics acceleration for VM mode: this QEMU build has none; graphics are emulated"
+  fi
+}
+
+# Prints the experimental QEMU's emulator, if that build is installed.
+experimental_qemu() {
+  have brew || return 1
+  local bin; bin="$(brew --prefix)/opt/qemu-virgl/bin/qemu-system-aarch64"
+  [ -x "$bin" ] && printf '%s' "$bin"
+}
+
+# Reported wherever it is installed; asked for only with --experimental-qemu.
+check_experimental_qemu() {
+  [ "$OS" = Darwin ] && [ "$ARCH" = arm64 ] || return 0
+  local bin version
+  if bin=$(experimental_qemu); then
+    version=$("$bin" --version 2>/dev/null | head -1)
+    case "$version" in
+      *"-g$EXP_QEMU_COMMIT"*)
+        ok "experimental QEMU with host graphics for VM mode: ${version#QEMU emulator version }; the launcher uses it when EMU_QEMU_DIR=$(dirname "$bin")" ;;
+      *)
+        note "experimental QEMU: the build in $(dirname "$bin") is not the one this project pinned (${version:-it does not run})" ;;
+    esac
+  elif [ "$EXPERIMENTAL_QEMU" = 1 ]; then
+    optional experimental-qemu "experimental QEMU with host graphics for VM mode: not installed"
   fi
 }
 
@@ -247,6 +294,7 @@ run_checks() {
   check_python
   check_qemu
   check_graphics
+  check_experimental_qemu
   check_audio
   check_accel
   check_container
@@ -348,7 +396,100 @@ install_macos() {
       run docker run --rm --privileged tonistiigi/binfmt --install "$emulators" >/dev/null || return 1
     fi
   fi
+
+  if is_optional experimental-qemu; then
+    install_experimental_qemu || return 1
+  fi
 }
+
+# Prints Xcode's developer directory, whether Xcode is the selected one or not
+# (Homebrew looks for Xcode in the same places).
+xcode_developer_dir() {
+  local dir app
+  dir=$(xcode-select -p 2>/dev/null)
+  case "$dir" in
+    *.app/Contents/Developer) [ -d "$dir" ] && { printf '%s' "$dir"; return 0; } ;;
+  esac
+  for app in /Applications/Xcode.app "$(mdfind "kMDItemCFBundleIdentifier == 'com.apple.dt.Xcode'" 2>/dev/null | head -1)"; do
+    if [ -n "$app" ] && [ -d "$app/Contents/Developer" ]; then
+      printf '%s' "$app/Contents/Developer"; return 0
+    fi
+  done
+  return 1
+}
+
+# Reads a patch; prints a number for what it changes, whatever its line numbers.
+patch_id() { git patch-id --stable | cut -d' ' -f1; }
+
+# The body is a subshell, so that its Homebrew settings stay its own.
+install_experimental_qemu() (
+  info "Building the experimental QEMU..."
+  # ANGLE's build needs the Xcode app; the Command Line Tools are not enough.
+  if ! xcode=$(xcode_developer_dir); then
+    info "  This needs the Xcode app, which is not installed. Install Xcode from the App"
+    info "  Store, open it once, then run ./setup.sh --experimental-qemu again."
+    return 1
+  fi
+  if ! answer=$(DEVELOPER_DIR="$xcode" /usr/bin/xcodebuild -license check 2>&1); then
+    info "  Xcode ($xcode) is not ready to build with:"
+    info "  ${answer:-xcodebuild -license check failed}"
+    return 1
+  fi
+  [ -f "$EXP_PATCH" ] || { info "  $EXP_PATCH is missing."; return 1; }
+
+  # Homebrew must not update itself in between: that moves the tap off its commit.
+  export HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_ENV_HINTS=1 HOMEBREW_NO_INSTALL_CLEANUP=1
+  prefix=$(brew --prefix)
+
+  # Homebrew 7 loads formulas from a tap only once the tap is trusted.
+  if brew help trust >/dev/null 2>&1; then
+    run brew trust --tap "$EXP_TAP" || return 1
+  fi
+  tap_dir=$(brew --repository "$EXP_TAP")
+  [ -d "$tap_dir/.git" ] || run brew tap "$EXP_TAP" || return 1
+
+  # The formulas as this project built them: the tap at its commit, with the patch.
+  head=$(git -C "$tap_dir" rev-parse HEAD 2>/dev/null)
+  changes=$(git -C "$tap_dir" diff --no-ext-diff --src-prefix=a/ --dst-prefix=b/ HEAD | patch_id)
+  if [ "$head" = "$EXP_TAP_COMMIT" ] && [ "$changes" = "$(patch_id < "$EXP_PATCH")" ]; then
+    info "  The tap in $tap_dir has this project's changes already."
+  elif [ -n "$(git -C "$tap_dir" status --porcelain)" ]; then
+    info "  The tap in $tap_dir has local changes that are not this project's."
+    info "  They are left alone; undo them or remove the tap, then run this again."
+    return 1
+  else
+    if [ "$head" != "$EXP_TAP_COMMIT" ]; then
+      git -C "$tap_dir" cat-file -e "$EXP_TAP_COMMIT^{commit}" 2>/dev/null ||
+        run git -C "$tap_dir" fetch --quiet origin "$EXP_TAP_COMMIT" || {
+          info "  The tap no longer has commit $EXP_TAP_COMMIT, which this build is made from."
+          return 1
+        }
+      run git -C "$tap_dir" checkout --quiet --detach "$EXP_TAP_COMMIT" || return 1
+    fi
+    run git -C "$tap_dir" apply "$EXP_PATCH" || return 1
+  fi
+
+  # Homebrew keeps one package of a name, and its own virglrenderer has this
+  # name too. Look before building anything.
+  to_build=""
+  for formula in $EXP_FORMULAE; do
+    receipt="$prefix/opt/$formula/INSTALL_RECEIPT.json"
+    if [ ! -f "$receipt" ]; then
+      to_build="$to_build $formula"
+    elif ! grep -Eq "\"tap\": *\"$EXP_TAP\"" "$receipt"; then
+      info "  Another $formula is installed, one that is not from $EXP_TAP. The"
+      info "  experimental QEMU needs its own, and that one is not replaced."
+      return 1
+    fi
+  done
+  for formula in $to_build; do
+    run brew install --build-from-source "$EXP_TAP/$formula" || return 1
+  done
+  # Keep a later `brew upgrade` from building them again from other commits.
+  # shellcheck disable=SC2086
+  run brew pin $EXP_FORMULAE || info "  Could not pin them; brew upgrade may rebuild them from newer sources."
+  experimental_qemu >/dev/null || { info "  The build ended without a QEMU in $prefix/opt/qemu-virgl."; return 1; }
+)
 
 install_linux() {
   local native_pkg cli=""
@@ -453,13 +594,16 @@ if [ -z "$MISSING" ] && [ -z "$OPTIONAL" ]; then
   exit 0
 fi
 
+RERUN="./setup.sh"
+[ "$EXPERIMENTAL_QEMU" = 0 ] || RERUN="./setup.sh --experimental-qemu"
+
 if [ "$MODE" = check ]; then
   info ""
   if [ -z "$MISSING" ]; then
-    info "All host dependencies are present. Optional extras not installed:$OPTIONAL. Run ./setup.sh to install."
+    info "All host dependencies are present. Optional extras not installed:$OPTIONAL. Run $RERUN to install."
     exit 0
   fi
-  info "Missing:$MISSING. Run ./setup.sh to install."
+  info "Missing:$MISSING. Run $RERUN to install."
   exit 1
 fi
 
@@ -467,12 +611,27 @@ info ""
 [ -z "$MISSING" ] || info "Missing:$MISSING"
 [ -z "$OPTIONAL" ] || info "Optional:$OPTIONAL"
 if [ "$OS" = Darwin ]; then
-  info "These are installed with Homebrew (installed first if absent); the container"
-  info "engine is Colima unless Docker is already installed."
+  if [ -n "$MISSING" ]; then
+    info "These are installed with Homebrew (installed first if absent); the container"
+    info "engine is Colima unless Docker is already installed."
+  fi
+  if is_optional experimental-qemu; then
+    info "The experimental QEMU is third-party software. Homebrew is told to trust the tap"
+    info "$EXP_TAP and builds QEMU, ANGLE, virglrenderer and libepoxy from"
+    info "source, which needs the Xcode app and takes some minutes. The build is installed"
+    info "beside Homebrew's QEMU, and the launcher uses it only when EMU_QEMU_DIR names it."
+  fi
 else
   info "These are installed with the system package manager and need root (sudo)."
 fi
-if [ -n "$MISSING" ]; then
+if is_optional experimental-qemu; then
+  # Asked for by name, so not installing it is not a success.
+  if [ -n "$MISSING" ]; then
+    confirm "Install the missing dependencies and the experimental QEMU?" || exit 1
+  else
+    confirm "Build and install the experimental QEMU?" || exit 1
+  fi
+elif [ -n "$MISSING" ]; then
   confirm "Install the missing dependencies?" || exit 1
 else
   confirm "Install the optional extras?" || exit 0
@@ -489,6 +648,10 @@ info ""
 if [ -z "$MISSING" ]; then
   info "All host dependencies are present."
   [ -z "$OPTIONAL" ] || info "Optional extras still not installed:$OPTIONAL."
+  if is_optional experimental-qemu; then
+    info "The experimental QEMU was asked for and is not installed; see the output above."
+    exit 1
+  fi
   exit 0
 fi
 info "Still missing:$MISSING"

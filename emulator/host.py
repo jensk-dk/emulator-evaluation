@@ -77,7 +77,22 @@ def tool_env(extra=None):
     return env
 
 
+# Names a directory to take QEMU's programs from before any other place, to
+# run another QEMU build than the installed one. Programs it lacks are still
+# found in the usual places.
+QEMU_DIR_VARIABLE = "EMU_QEMU_DIR"
+
+
 def find_tool(name):
+    directory = os.environ.get(QEMU_DIR_VARIABLE, "").strip()
+    if directory and name.startswith("qemu-"):
+        found = shutil.which(name, path=directory)
+        if not found and name == "qemu-system-arm":
+            # A build with only the ARM64 emulator: that one runs 32-bit ARM
+            # targets as well.
+            found = shutil.which("qemu-system-aarch64", path=directory)
+        if found:
+            return found
     return shutil.which(name, path=tool_path())
 
 

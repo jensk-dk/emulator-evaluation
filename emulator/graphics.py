@@ -33,8 +33,11 @@ SCREEN_HOLD_SECONDS = 4
 # QEMU's displays that open a window, in order of preference. SDL's window
 # takes the size of the target's display; GTK's gives the display its own.
 WINDOWS = ("sdl", "cocoa", "gtk")
-# The ones that can show a display that is rendered on the host GPU.
-OPENGL_WINDOWS = ("sdl", "gtk")
+# The ones that can show a display that is rendered on the host GPU, with the
+# option that turns that on. QEMU's Cocoa window cannot, except in builds that
+# carry the macOS OpenGL patches (see opengl_window); those render through
+# ANGLE, which offers OpenGL ES.
+OPENGL_WINDOWS = {"sdl": "gl=on", "gtk": "gl=on", "cocoa": "gl=es"}
 # Marker blocks every graphics workload draws (target/src/emugfx.c): the four
 # corners, in the order top left, top right, bottom left, bottom right.
 CORNER_COLORS = ((255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 255))
@@ -69,6 +72,17 @@ def window_backend(binary):
         if name in displays:
             return name
     raise EmuError("this QEMU build has no display that opens a window (%s)" % ", ".join(WINDOWS))
+
+
+def opengl_window(binary, window):
+    """Whether this QEMU's window of that kind shows a display rendered on
+    the host GPU. SDL and GTK windows do. The Cocoa window does only in a
+    build that was made with OpenGL at all, which on macOS means one that
+    carries the macOS OpenGL patches; such a build also has the display
+    without a window. An unpatched build refuses the option when it starts."""
+    if window != "cocoa":
+        return window in OPENGL_WINDOWS
+    return "egl-headless" in _qemu_output(binary, "-display", "help").split()
 
 
 def _render_node():
@@ -108,7 +122,7 @@ def probe_vm(binary, window=None):
                  "reason": ("this user cannot open the host's GPU render node (%s)" % found[0]) if found else
                            "the host has no GPU render node (/dev/dri/renderD*): no GPU driver is loaded, and "
                            "the host renders its own graphics on the CPU"}
-    elif window in OPENGL_WINDOWS:
+    elif window and opengl_window(binary, window):
         probe = {"available": True, "venus": venus, "reason": mapped + " and shows it in an OpenGL window"}
     elif window:
         probe = {"available": False,
@@ -125,6 +139,14 @@ def probe_vm(binary, window=None):
                  "reason": "on Windows, QEMU's display that renders on the host GPU without a window "
                            "(egl-headless) stays black: the target renders on the host GPU, but no frame "
                            "reaches the emulator's display. In a window (--window) it does"}
+    elif host.host_os() == "macos":
+        # Seen with a QEMU 11.1.90 build that carries the macOS OpenGL patches:
+        # QEMU ends with a segmentation fault as soon as the target's driver
+        # starts the host renderer (the OpenGL context is made current on a
+        # thread it was not made for). In the Cocoa window the same build works.
+        probe = {"available": False,
+                 "reason": "on macOS, QEMU's display that renders on the host GPU without a window (egl-headless) "
+                           "crashes when the target starts to use the GPU. In a window (--window) it works"}
     else:
         probe = {"available": True, "venus": venus, "reason": mapped}
     _probes[key] = probe
@@ -200,7 +222,8 @@ def vm_arguments(plan, width, height, memory_mb, options):
         arguments += ["-object", "memory-backend-memfd,id=emu-ram,size=%dM" % memory_mb,
                       "-machine", "memory-backend=emu-ram"]
         description = "virtio-gpu with virglrenderer (OpenGL ES and Vulkan on the host GPU)"
-    return arguments + ["-device", device], window + ",gl=on" if window else "egl-headless", description
+    backend = "%s,%s" % (window, OPENGL_WINDOWS[window]) if window else "egl-headless"
+    return arguments + ["-device", device], backend, description
 
 
 def container_arguments(plan):

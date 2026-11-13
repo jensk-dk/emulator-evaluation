@@ -1,0 +1,85 @@
+diff --git a/Formula/libangle.rb b/Formula/libangle.rb
+index 292ae1c..744ee7d 100644
+--- a/Formula/libangle.rb
++++ b/Formula/libangle.rb
+@@ -12,7 +12,7 @@ class Libangle < Formula
+   # (e.g. third_party/gles1_conform -> chrome-internal.googlesource.com), which
+   # would require auth. The DEPS-managed third_party/* are staged manually below.
+   url "https://chromium.googlesource.com/angle/angle.git",
+-      branch: "main",
++      revision: "47d8f0e238b79b3031a8f431648bf94d1459c03f",
+       using:  NoSubmoduleGitDownloadStrategy
+   version "main"
+   license "BSD-3-Clause"
+@@ -44,6 +44,7 @@ class Libangle < Formula
+   # (verified with `otool -L`), so it must not install into users' machines.
+   depends_on "rapidjson" => :build
+   # Metal-backed GL on macOS only.
++  depends_on xcode: :build # local change: build against the Xcode SDK
+   depends_on :macos
+ 
+   # ANGLE's public API is EGL + GLES + KHR. Its include/ directory also carries
+@@ -160,6 +161,24 @@ class Libangle < Formula
+   deny_network_access!
+ 
+   def install
++    # Local change: the Chromium build asks xcodebuild and xcrun about Xcode.
++    # Where Xcode is installed but not selected (xcode-select points at the
++    # Command Line Tools) they answer for the Command Line Tools, and
++    # Homebrew's own xcrun shim discards DEVELOPER_DIR. So put wrappers ahead
++    # of it that name Xcode, for this build only.
++    xcode_developer_dir = MacOS::Xcode.prefix.to_s
++    xcode_bin = buildpath/"xcode-bin"
++    xcode_bin.mkpath
++    %w[xcrun xcodebuild xcode-select].each do |tool|
++      (xcode_bin/tool).write <<~SH
++        #!/bin/bash
++        export DEVELOPER_DIR="#{xcode_developer_dir}"
++        exec /usr/bin/#{tool} "$@"
++      SH
++      (xcode_bin/tool).chmod 0755
++    end
++    ENV.prepend_path "PATH", xcode_bin
++    ENV["DEVELOPER_DIR"] = xcode_developer_dir
+     ohai "Staging Chromium build dependencies..."
+ 
+     # ANGLE's DEPS file is the source of truth for the revisions staged below.
+diff --git a/Formula/libepoxy-angle.rb b/Formula/libepoxy-angle.rb
+index cedf9b6..4202176 100644
+--- a/Formula/libepoxy-angle.rb
++++ b/Formula/libepoxy-angle.rb
+@@ -2,7 +2,7 @@ class LibepoxyAngle < Formula
+   desc "Library for handling OpenGL function pointer management"
+   homepage "https://github.com/anholt/libepoxy"
+   url "https://github.com/anholt/libepoxy.git",
+-      branch: "master"
++      revision: "d1f952c4565c389d82fd1657153e84e050f35b27"
+   version "master"
+   license "MIT"
+ 
+diff --git a/Formula/qemu-virgl.rb b/Formula/qemu-virgl.rb
+index 12c1b95..af310a9 100644
+--- a/Formula/qemu-virgl.rb
++++ b/Formula/qemu-virgl.rb
+@@ -13,7 +13,7 @@ class QemuVirgl < Formula
+   # aarch64 build installs is committed in `pc-bios/`, and no meson.build
+   # outside `roms/` refers to a `roms/` path. Cloning them is pure fetch time.
+   url "https://gitlab.com/milesbuckton/qemu.git",
+-      branch: "master",
++      revision: "c95b8c499ba420d677812a7500c037e058a7ec8a",
+       using:  NoSubmoduleGitDownloadStrategy
+   version "master"
+   license "GPL-2.0-only"
+diff --git a/Formula/virglrenderer.rb b/Formula/virglrenderer.rb
+index 91321aa..9b10f78 100644
+--- a/Formula/virglrenderer.rb
++++ b/Formula/virglrenderer.rb
+@@ -9,7 +9,7 @@ class Virglrenderer < Formula
+   homepage "https://gitlab.freedesktop.org/miles.buckton/virglrenderer"
+ 
+   url "https://gitlab.freedesktop.org/miles.buckton/virglrenderer.git",
+-      branch: "main"
++      revision: "890d0648ab1aa24fd00e4552e66fba4b7a391c8c"
+   version "main"
+   license "MIT"
+ 
