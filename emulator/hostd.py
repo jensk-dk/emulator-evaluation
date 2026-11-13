@@ -6,12 +6,15 @@ TCP connection in container mode) and the process answers using a host OS
 facility.
 
     python -m emulator.hostd hwrng [--bind ADDRESS] [--port PORT] [--trace FILE]
+    python -m emulator.hostd audio [--bind ADDRESS] [--port PORT] [--trace FILE]
+                                   [--sink DEVICE] [--player none] [--muted] [--pipe PATH]
 
 On startup it prints one JSON line with the address it listens on.
 """
 import argparse
 import json
 import os
+import platform
 import socketserver
 import sys
 import threading
@@ -69,7 +72,8 @@ class _Server(socketserver.ThreadingTCPServer):
                 self._trace.flush()
 
 
-FEATURES = {"hwrng": {"source": "host OS entropy (os.urandom)", "protocol": "egd"}}
+FEATURES = {"hwrng": {"source": "host OS entropy (os.urandom)", "protocol": "egd"},
+            "audio": {"source": "the host OS audio path", "protocol": "pcm"}}
 
 
 def main(argv=None):
@@ -77,8 +81,18 @@ def main(argv=None):
     parser.add_argument("feature", choices=sorted(FEATURES))
     parser.add_argument("--bind", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=0)
-    parser.add_argument("--trace", help="append every byte served, as hex, to this file")
+    parser.add_argument("--trace", help="hwrng: append every byte served, as hex, to this file; "
+                                        "audio: log the sound's level and pitch here")
+    parser.add_argument("--sink", help="audio: the host output device to play on (default: the host's default)")
+    parser.add_argument("--player", choices=("auto", "none"), default="auto",
+                        help="audio: none takes the sound in without playing it")
+    parser.add_argument("--muted", action="store_true", help="audio: start muted")
+    parser.add_argument("--pipe", help="audio: also take samples from this named pipe, which is created")
     args = parser.parse_args(argv)
+    if args.feature == "audio":
+        from . import hostaudio
+        system = {"Darwin": "macos", "Linux": "linux", "Windows": "windows"}.get(platform.system(), "unknown")
+        return hostaudio.serve(args, system)
     try:
         server = _Server((args.bind, args.port), args.trace)
     except OSError as error:

@@ -104,7 +104,7 @@ def _escape(path):
     return str(path).replace(",", ",,")
 
 
-def kernel_command_line(guest, workload, args, drivers, verbose, terminal=None, display=None):
+def kernel_command_line(guest, workload, args, drivers, verbose, terminal=None, display=None, settings=None):
     parts = ["console=" + CONSOLE[guest], "root=/dev/vda", "rootfstype=ext4", "rw", "init=/opt/emu/init",
              "net.ifnames=0", "panic=-1"]
     if terminal:
@@ -125,6 +125,8 @@ def kernel_command_line(guest, workload, args, drivers, verbose, terminal=None, 
         parts += ["emu.display=%dx%d" % (display["width"], display["height"]), "emu.graphics=" + display["provider"]]
         if display.get("screen_hold"):
             parts.append("emu.screenhold=%d" % display["screen_hold"])
+    # What driver features tell the target (emulator/drivers.py).
+    parts += ["emu.%s=%s" % item for item in sorted((settings or {}).items())]
     return " ".join(parts)
 
 

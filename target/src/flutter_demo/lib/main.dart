@@ -17,6 +17,9 @@
 // the result).
 //
 // Output: one "EMU-RESULT:" line, and with a hold time an "EMU-SCREEN:" line.
+//
+// With EMU_VIDEO_SOURCE set the application shows decoded video instead: see
+// video.dart.
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as developer;
@@ -26,6 +29,8 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
+
+import 'video.dart';
 
 const List<int> kMarker = <int>[255, 0, 128];
 const int kShapes = 64;
@@ -38,6 +43,12 @@ double _environmentSeconds(String name, double fallback) {
 }
 
 void main() {
+  // The media-decode workload uses the application to show decoded video.
+  final String? video = Platform.environment['EMU_VIDEO_SOURCE'];
+  if (video != null && video.isNotEmpty) {
+    runApp(VideoApp(source: video));
+    return;
+  }
   final int started = developer.Timeline.now;
   runApp(DemoApp(startedMicroseconds: started));
 }

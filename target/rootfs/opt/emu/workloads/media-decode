@@ -1,0 +1,606 @@
+#!/usr/bin/env python3
+"""Workload "media-decode": decoding and playing the reference streams.
+
+    media-decode [--tests video,audio,playback[,sound]] [--streams ID,...]
+                 [--technologies wayland,gles,vulkan,flutter] [--full]
+                 [--sound-seconds S]
+
+Three performance tests (see evaluation/workloads.json and
+evaluation/procedures.md#audio-and-video-decoding):
+
+  video     video_decode_speed: each video stream decoded as fast as possible
+            (MPEG-2, AVC and HEVC, each in MP2TS, in MP4 and as MSE-style
+            fragments).
+  audio     audio_decode_speed: each audio stream decoded as fast as possible
+            (MP2, AC-3, AAC, HE-AAC).
+  playback  playback_dropped_frames: streams played in real time, full screen,
+            through each graphics technology, with their sound on the target's
+            audio device. By default one stream per video codec, each from a
+            different container; --full plays every video stream.
+
+and a functional one, run when asked for:
+
+  sound     audio_playback: the first seconds of each audio stream decoded
+            and played on the target's audio device, one after another. On
+            the host each is heard as a tone of the pitch that names its codec.
+
+The streams are in /opt/emu/media (target/media/build-media.sh builds them).
+Media arrives in one of three ways: a file in an MP2TS or an MP4 container,
+or MSE-style: an initialisation segment and media fragments, appended one
+after another to the decoder's input while it runs.
+
+Decoding is FFmpeg's (libavcodec), in the ffmpeg program for the speed tests
+and in the mpv player for playback. The Flutter application gets its video as
+decoded frames from the ffmpeg program and draws them itself.
+
+Each test prints one EMU-RESULT line per case. With EMU_SCREEN_HOLD set, a
+played stream's last frame stays on the display and an EMU-SCREEN line tells
+the launcher to capture it.
+"""
+import argparse
+import json
+import os
+import re
+import shutil
+import socket
+import subprocess
+import sys
+import tempfile
+import threading
+import time
+
+VERSION = "1.0.0"
+MEDIA = "/opt/emu/media"
+AREA = "audio_video_decoding"
+TESTS = ("video", "audio", "playback", "sound")
+DEFAULT_TESTS = ("video", "audio", "playback")
+TECHNOLOGIES = ("wayland", "gles", "vulkan", "flutter")
+# Played by default: every video codec, and every way media arrives.
+DEFAULT_PLAYED = ("mpeg2-mp2ts", "avc-mp4", "hevc-fragments")
+FLUTTER = "/opt/emu/flutter"
+AUDIO_STATE = "/run/emu/drivers/audio.json"
+# In MSE-style playback a fragment is appended when the player has less than
+# this much media ahead of the playback position.
+BUFFER_AHEAD_SECONDS = 2.0
+
+
+def emit(marker, data):
+    print("%s: %s" % (marker, json.dumps(data)), flush=True)
+
+
+def result(test, case, unit, value, **fields):
+    data = {"area": AREA, "test": test, "case": case, "unit": unit, "value": value}
+    data.update(fields)
+    emit("EMU-RESULT", data)
+
+
+def output_of(command, timeout=900):
+    try:
+        done = subprocess.run(command, capture_output=True, text=True, timeout=timeout)
+        return done.stdout + done.stderr
+    except (OSError, subprocess.SubprocessError):
+        return ""
+
+
+def stream_fields(stream):
+    fields = {"stream": stream["id"], "container": stream["container"], "stream_sha256": stream["sha256"]}
+    if "video" in stream:
+        fields["video_codec"] = stream["video"]["codec"]
+    fields["audio_codec"] = stream["audio"]["codec"]
+    return fields
+
+
+# ------------------------------------------------------------- injection ---
+
+class Injector(threading.Thread):
+    """Appends a stream's initialisation segment and media fragments to a
+    decoder's input, the way a page feeds a Media Source buffer.
+
+    paced=False appends each fragment as soon as the decoder has taken the one
+    before. paced=True keeps a bounded amount of media ahead of real time."""
+
+    def __init__(self, stream, sink, paced):
+        super().__init__(daemon=True)
+        self.stream = stream
+        self.sink = sink
+        self.paced = paced
+        self.appended = 0
+        self.bytes = 0
+        self.error = None
+
+    def run(self):
+        fragments = self.stream["fragments"]
+        directory = os.path.join(MEDIA, fragments["directory"])
+        media = fragments["media"]
+        each = self.stream["seconds"] / len(media)
+        started = time.monotonic()
+        try:
+            for index, name in enumerate([fragments["init"]] + media):
+                if self.paced and index > 0:
+                    due = (index - 1) * each - BUFFER_AHEAD_SECONDS
+                    delay = due - (time.monotonic() - started)
+                    if delay > 0:
+                        time.sleep(delay)
+                with open(os.path.join(directory, name), "rb") as handle:
+                    data = handle.read()
+                self.sink.write(data)
+                self.sink.flush()
+                self.bytes += len(data)
+                if index > 0:
+                    self.appended += 1
+        except (OSError, ValueError) as error:
+            self.error = str(error)      # the decoder went away
+        finally:
+            try:
+                self.sink.close()
+            except OSError:
+                pass
+
+
+def source_of(stream):
+    """(input argument, whether it is injected) for ffmpeg and mpv."""
+    if "fragments" in stream:
+        return "-", True
+    return os.path.join(MEDIA, stream["file"]), False
+
+
+# ---------------------------------------------------------- decode speed ---
+
+def decode_once(stream, kind):
+    """Decode one stream's video or audio as fast as possible; returns
+    (seconds it took, frames decoded or None, injector or None, error)."""
+    source, injected = source_of(stream)
+    select = ["-map", "0:v:0", "-an"] if kind == "video" else ["-map", "0:a:0", "-vn"]
+    command = ["ffmpeg", "-nostdin", "-hide_banner", "-benchmark", "-i", "pipe:0" if injected else source] \
+        + select + ["-f", "null", "-"]
+    if injected:
+        command.remove("-nostdin")
+    try:
+        process = subprocess.Popen(command, stdin=subprocess.PIPE if injected else subprocess.DEVNULL,
+                                   stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    except OSError as error:
+        return None, None, None, str(error)
+    injector = None
+    if injected:
+        injector = Injector(stream, process.stdin, paced=False)
+        injector.start()
+    try:
+        _, errors = process.communicate(timeout=3600) if not injected else (None, process.stderr.read())
+        process.wait(timeout=3600)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        return None, None, injector, "decoding did not finish"
+    if injector:
+        injector.join(timeout=10)
+    text = errors.decode(errors="replace")
+    took = re.search(r"rtime=([0-9.]+)s", text)
+    frames = re.findall(r"frame=\s*(\d+)", text)
+    if process.returncode != 0 or not took:
+        return None, None, injector, "ffmpeg ended with status %s: %s" % (process.returncode, text.strip()[-300:])
+    return float(took.group(1)), int(frames[-1]) if frames else None, injector, None
+
+
+def decode_speed(stream, kind):
+    """Media seconds decoded per second of wall-clock time. A stream that
+    decodes in well under a second is decoded again, until a second of
+    decoding has been timed; the result is the average over those rounds."""
+    test = kind + "_decode_speed"
+    fields = stream_fields(stream)
+    fields["decoder"] = "FFmpeg " + FFMPEG_VERSION
+    rounds = 0
+    spent = 0.0
+    frames = injector = None
+    while rounds < 40 and (rounds == 0 or spent < 1.0):
+        took, frames, injector, error = decode_once(stream, kind)
+        if error:
+            result(test, stream["id"], "x realtime", None, unavailable=error, **fields)
+            return
+        if kind == "video" and frames != stream["video"]["frames"]:
+            result(test, stream["id"], "x realtime", None, unavailable="decoded %s of %d frames"
+                   % (frames, stream["video"]["frames"]), **fields)
+            return
+        rounds += 1
+        spent += took
+    spent = max(spent, 1e-6)
+    if kind == "video":
+        fields.update(frames=frames, frames_per_second=round(frames * rounds / spent, 1), threads=os.cpu_count(),
+                      resolution="%dx%d" % (stream["video"]["width"], stream["video"]["height"]))
+    if injector:
+        fields.update(fragments_appended=injector.appended, bytes_appended=injector.bytes)
+    result(test, stream["id"], "x realtime", round(stream["seconds"] * rounds / spent, 2),
+           media_seconds=stream["seconds"], seconds=round(spent / rounds, 4), rounds=rounds, **fields)
+
+
+# -------------------------------------------------------------- playback ---
+
+class Mpv:
+    """The mpv player with its control socket."""
+
+    def __init__(self, arguments, stdin):
+        self.directory = tempfile.mkdtemp(prefix="emu-mpv.")
+        self.socket_path = os.path.join(self.directory, "control")
+        self.log_path = os.path.join(self.directory, "log")
+        command = ["mpv", "--no-config", "--no-terminal", "--no-osc", "--osd-level=0", "--no-input-default-bindings",
+                   "--hwdec=no", "--fs", "--keep-open=yes", "--idle=no", "--msg-level=all=warn",
+                   "--log-file=" + self.log_path, "--input-ipc-server=" + self.socket_path] + arguments
+        self.process = subprocess.Popen(command, stdin=stdin, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self._connection = None
+        self._buffer = b""
+
+    def _connect(self, deadline):
+        while self._connection is None:
+            if self.process.poll() is not None or time.monotonic() > deadline:
+                raise OSError("the player ended before it could be controlled")
+            try:
+                found = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                found.connect(self.socket_path)
+                found.settimeout(30)
+                self._connection = found
+            except OSError:
+                time.sleep(0.05)
+
+    def get(self, name, deadline):
+        self._connect(deadline)
+        self._connection.sendall(json.dumps({"command": ["get_property", name], "request_id": 1}).encode() + b"\n")
+        while True:
+            while b"\n" not in self._buffer:
+                chunk = self._connection.recv(65536)
+                if not chunk:
+                    raise OSError("the player closed its control connection")
+                self._buffer += chunk
+            line, _, self._buffer = self._buffer.partition(b"\n")
+            reply = json.loads(line)
+            if reply.get("request_id") == 1:        # other lines are the player's events
+                return reply.get("data")
+
+    def set(self, name, value, deadline):
+        self._connect(deadline)
+        self._connection.sendall(json.dumps({"command": ["set_property", name, value]}).encode() + b"\n")
+
+    def errors(self):
+        try:
+            with open(self.log_path, errors="replace") as handle:
+                lines = [line.strip() for line in handle if "][e]" in line or "][f]" in line]
+        except OSError:
+            lines = []
+        return " ".join(lines[-3:])[-300:]
+
+    def close(self):
+        try:
+            if self._connection:
+                self._connection.sendall(b'{"command": ["quit"]}\n')
+                self._connection.close()
+        except OSError:
+            pass
+        try:
+            self.process.wait(timeout=20)
+        except subprocess.TimeoutExpired:
+            self.process.kill()
+            self.process.wait()
+        shutil.rmtree(self.directory, ignore_errors=True)
+
+
+def vulkan_device():
+    """The Vulkan device mpv is told to use. mpv will not pick a device that
+    renders on the CPU by itself, and with emulated graphics there is no other."""
+    listing = output_of(["mpv", "--no-config", "--vo=gpu", "--gpu-api=vulkan", "--gpu-context=waylandvk",
+                         "--vulkan-device=help"])
+    names = re.findall(r"^\s*'(.+)' \(GPU \d+", listing, re.MULTILINE)
+    hardware = [name for name in names if "llvmpipe" not in name]
+    return (hardware or names or [None])[0]
+
+
+def output_arguments(technology, width, height):
+    if technology == "wayland":
+        return ["--vo=wlshm", "--geometry=%dx%d" % (width, height)]
+    # For the GPU outputs: mpv's plain rendering path, which draws the decoded
+    # picture straight to the window. Its default path renders through
+    # intermediate images, and with Mesa's CPU renderer that shows a black or a
+    # green picture in many runs. And frames are drawn whether or not the
+    # compositor has asked for one: a headless compositor does not always ask.
+    gpu = ["--vo=gpu", "--gpu-dumb-mode=yes", "--force-render"]
+    if technology == "gles":
+        return gpu + ["--gpu-api=opengl", "--gpu-context=wayland", "--opengl-es=yes"]
+    device = vulkan_device()
+    return gpu + ["--gpu-api=vulkan", "--gpu-context=waylandvk"] + (["--vulkan-device=" + device] if device else [])
+
+
+def renderer_of(technology, display):
+    """What draws for this technology on this display, and whether that is
+    host graphics acceleration."""
+    if technology == "wayland":
+        return "cpu", False
+    if technology == "vulkan":
+        devices = (display or {}).get("vulkan") or []
+        chosen = next((d for d in devices if d.get("accelerated")), devices[0] if devices else {})
+        return chosen.get("name"), bool(chosen.get("accelerated"))
+    gles = (display or {}).get("gles") or {}
+    return gles.get("renderer"), bool(gles.get("accelerated"))
+
+
+def play_mpv(stream, technology, width, height, audio, limit):
+    """Play through mpv; returns (counters, error)."""
+    source, injected = source_of(stream)
+    arguments = output_arguments(technology, width, height) + ["--ao=alsa" if audio else "--ao=null", source]
+    player = Mpv(arguments, subprocess.PIPE if injected else subprocess.DEVNULL)
+    injector = None
+    if injected:
+        injector = Injector(stream, player.process.stdin, paced=True)
+        injector.start()
+    deadline = time.monotonic() + limit
+    capture = float(os.environ.get("EMU_SCREEN_HOLD", "0") or 0) > 0
+    try:
+        started = None
+        while True:
+            if player.process.poll() is not None:
+                return None, "the player ended with status %s: %s" % (player.process.returncode, player.errors())
+            if time.monotonic() > deadline:
+                return None, "playback did not finish in %d seconds" % limit
+            position = player.get("time-pos", deadline)
+            if started is None and position is not None:
+                started = time.monotonic()
+            if capture and position is not None and position >= stream["seconds"] * 0.6:
+                # For a capture of the display the stream is paused on a frame
+                # in its second half. (Not in a measured run: see hold.)
+                capture = False
+                player.set("pause", True, deadline)
+                time.sleep(0.5)
+                hold(stream, technology, width, height)
+                player.set("pause", False, deadline)
+            if player.get("eof-reached", deadline):
+                break
+            time.sleep(0.05)
+        counters = {
+            "seconds": round(time.monotonic() - (started or time.monotonic()), 3),
+            "dropped_by_output": player.get("frame-drop-count", deadline) or 0,
+            "dropped_by_decoder": player.get("decoder-frame-drop-count", deadline) or 0,
+            "mistimed_frames": player.get("mistimed-frame-count", deadline) or 0,
+            "delayed_frames": player.get("vo-delayed-frame-count", deadline) or 0,
+            "player": "mpv " + MPV_VERSION,
+        }
+        if injector:
+            injector.join(timeout=5)
+            counters.update(fragments_appended=injector.appended, bytes_appended=injector.bytes)
+        counters["dropped"] = counters["dropped_by_output"] + counters["dropped_by_decoder"]
+        return counters, None
+    except (OSError, ValueError) as error:
+        return None, "%s %s" % (error, player.errors())
+    finally:
+        player.close()
+
+
+def play_flutter(stream, width, height, audio, limit):
+    """Play through the Flutter application: ffmpeg decodes in real time and
+    hands it the frames; the application draws each one it gets in time."""
+    if os.path.exists(os.path.join(FLUTTER, "UNAVAILABLE")):
+        with open(os.path.join(FLUTTER, "UNAVAILABLE")) as handle:
+            return None, handle.read().strip()
+    source, injected = source_of(stream)
+    video = stream["video"]
+    directory = tempfile.mkdtemp(prefix="emu-flutter.")
+    frames = os.path.join(directory, "frames")
+    os.mkfifo(frames)
+    decoder = ["ffmpeg", "-hide_banner", "-v", "error", "-y", "-re", "-i", "pipe:0" if injected else source,
+               "-map", "0:v:0", "-fps_mode", "passthrough", "-f", "rawvideo", "-pix_fmt", "rgba", frames]
+    if audio:
+        decoder += ["-map", "0:a:0", "-f", "alsa", "default"]
+    if not injected:
+        decoder.insert(1, "-nostdin")
+    environment = dict(os.environ, EMU_VIDEO_SOURCE=frames, EMU_VIDEO_WIDTH=str(video["width"]),
+                       EMU_VIDEO_HEIGHT=str(video["height"]), EMU_VIDEO_FRAMES=str(video["frames"]),
+                       EMU_GFX_HOLD=os.environ.get("EMU_SCREEN_HOLD", "0"))
+    application = decoding = injector = None
+    try:
+        application = subprocess.Popen([os.path.join(FLUTTER, "emu_flutter_demo")], env=environment,
+                                       stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        decoding = subprocess.Popen(decoder, stdin=subprocess.PIPE if injected else subprocess.DEVNULL,
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if injected:
+            injector = Injector(stream, decoding.stdin, paced=True)
+            injector.start()
+        watchdog = threading.Timer(limit, application.kill)
+        watchdog.start()
+        try:
+            counters = None
+            for raw in application.stdout:
+                line = raw.decode(errors="replace").strip()
+                if line.startswith("EMU-VIDEO: "):
+                    counters = json.loads(line[len("EMU-VIDEO: "):])
+                    counters["player"] = "Flutter %s with frames from FFmpeg %s" % (FLUTTER_VERSION, FFMPEG_VERSION)
+                    if injector:
+                        counters.update(fragments_appended=injector.appended, bytes_appended=injector.bytes)
+                    # The application keeps the last frame up while it is captured.
+                    hold(stream, "flutter", width, height, wait=False)
+            application.wait()
+        finally:
+            watchdog.cancel()
+        if counters is None:
+            return None, "the Flutter application ended with status %s without a result" % application.returncode
+        return counters, None
+    except (OSError, ValueError) as error:
+        return None, str(error)
+    finally:
+        for process in (decoding, application):
+            if process and process.poll() is None:
+                process.kill()
+                process.wait()
+        shutil.rmtree(directory, ignore_errors=True)
+
+
+def hold(stream, technology, width, height, wait=True):
+    """Tell the launcher that a frame of a played stream is on the display,
+    and keep it there while the launcher captures it. Only when the launcher
+    asked for captures (EMU_SCREEN_HOLD): a run that is measured plays through."""
+    seconds = float(os.environ.get("EMU_SCREEN_HOLD", "0") or 0)
+    if seconds <= 0:
+        return
+    emit("EMU-SCREEN", {"test": "playback_dropped_frames", "case": "%s/%s" % (stream["id"], technology),
+                        "technology": technology, "stream": stream["id"], "kind": "video", "width": width,
+                        "height": height, "marker": stream["video"]["marker"]})
+    if wait:
+        time.sleep(seconds)
+
+
+def display_running():
+    return subprocess.run(["/opt/emu/display", "status"]).returncode == 0
+
+
+def playback(stream, technology, width, height, display, audio):
+    case = "%s/%s" % (stream["id"], technology)
+    fields = stream_fields(stream)
+    renderer, accelerated = renderer_of(technology, display)
+    fields.update(technology=technology, resolution="%dx%d" % (width, height), renderer=renderer,
+                  accelerated=accelerated, frames=stream["video"]["frames"], media_seconds=stream["seconds"],
+                  audio="the target's audio device" if audio else "none: the target has no audio device")
+    # Generous: under CPU emulation playback runs far behind real time.
+    limit = stream["seconds"] * 20 + 900
+    restarts = 0
+    while True:
+        # A playback only counts if the display was there for all of it. When
+        # the compositor has ended, it is started again and the stream is
+        # played once more.
+        if not display_running() and subprocess.run(["/opt/emu/display", "start"]).returncode != 0:
+            counters, error = None, "the display service ended and did not start again"
+            break
+        if technology == "flutter":
+            counters, error = play_flutter(stream, width, height, audio, limit)
+        else:
+            counters, error = play_mpv(stream, technology, width, height, audio, limit)
+        if display_running():
+            break
+        restarts += 1
+        if restarts > 1:
+            counters, error = None, "the display service (the Wayland compositor) ended during playback, twice"
+            break
+    if restarts:
+        fields["display_restarts"] = restarts
+    if error:
+        result("playback_dropped_frames", case, "frames", None, unavailable=error.strip(), **fields)
+        return
+    dropped = counters.pop("dropped")
+    fields.update(counters)
+    result("playback_dropped_frames", case, "frames", dropped, **fields)
+
+
+def sound(stream, seconds, audio):
+    """Decode a stream's audio and play it on the target's audio device."""
+    fields = stream_fields(stream)
+    fields.update(hz=stream["audio"]["hz"], player="FFmpeg " + FFMPEG_VERSION)
+    if not audio:
+        result("audio_playback", stream["id"], "seconds", None,
+               unavailable="the target has no audio device (the run has no audio driver feature)", **fields)
+        return
+    started = time.monotonic()
+    try:
+        done = subprocess.run(["ffmpeg", "-nostdin", "-hide_banner", "-v", "error", "-re", "-t", str(seconds),
+                               "-i", os.path.join(MEDIA, stream["file"]), "-map", "0:a:0", "-f", "alsa", "default"],
+                              capture_output=True, text=True, timeout=seconds * 20 + 900)
+    except subprocess.TimeoutExpired:
+        result("audio_playback", stream["id"], "seconds", None, unavailable="playing did not finish", **fields)
+        return
+    took = time.monotonic() - started
+    if done.returncode != 0:
+        result("audio_playback", stream["id"], "seconds", None, unavailable="ffmpeg ended with status %s: %s"
+               % (done.returncode, done.stderr.strip()[-300:]), **fields)
+        return
+    result("audio_playback", stream["id"], "seconds", round(took, 3), media_seconds=seconds,
+           device=audio.get("provider"), strategy=audio.get("strategy"), **fields)
+    time.sleep(0.5)     # a gap between the tones
+
+
+# ------------------------------------------------------------------ main ---
+
+def version_of(command, pattern):
+    found = re.search(pattern, output_of(command))
+    return found.group(1) if found else "unknown"
+
+
+def main():
+    parser = argparse.ArgumentParser(prog="media-decode", description=__doc__.splitlines()[0])
+    parser.add_argument("--tests", default=",".join(DEFAULT_TESTS))
+    parser.add_argument("--sound-seconds", type=float, default=3.0, help="how much of each stream the sound test plays")
+    parser.add_argument("--streams", default="", help="stream ids to use (default: all)")
+    parser.add_argument("--technologies", default=",".join(TECHNOLOGIES))
+    parser.add_argument("--full", action="store_true", help="play every video stream, not one per codec")
+    args = parser.parse_args()
+    tests = [name for name in args.tests.split(",") if name]
+    technologies = [name for name in args.technologies.split(",") if name]
+    for name in tests:
+        if name not in TESTS:
+            parser.error("unknown test: %s (known: %s)" % (name, ", ".join(TESTS)))
+    for name in technologies:
+        if name not in TECHNOLOGIES:
+            parser.error("unknown technology: %s (known: %s)" % (name, ", ".join(TECHNOLOGIES)))
+
+    with open(os.path.join(MEDIA, "manifest.json")) as handle:
+        streams = json.load(handle)["streams"]
+    wanted = [name for name in args.streams.split(",") if name]
+    unknown = [name for name in wanted if name not in {s["id"] for s in streams}]
+    if unknown:
+        parser.error("unknown stream: %s (known: %s)" % (unknown[0], ", ".join(s["id"] for s in streams)))
+    chosen = [s for s in streams if not wanted or s["id"] in wanted]
+    videos = [s for s in chosen if "video" in s]
+    sounds = [s for s in chosen if "video" not in s]
+    played = [s for s in videos if wanted or args.full or s["id"] in DEFAULT_PLAYED]
+
+    global FFMPEG_VERSION, MPV_VERSION, FLUTTER_VERSION
+    FFMPEG_VERSION = version_of(["ffmpeg", "-version"], r"ffmpeg version (\S+)")
+    MPV_VERSION = version_of(["mpv", "--version"], r"mpv v?(\S+)")
+    try:
+        with open(os.path.join(FLUTTER, "flutter-version.json")) as handle:
+            FLUTTER_VERSION = json.load(handle).get("frameworkVersion", "unknown")
+    except (OSError, ValueError):
+        FLUTTER_VERSION = "unknown"
+    try:
+        with open(AUDIO_STATE) as handle:
+            audio = json.load(handle)
+    except (OSError, ValueError):
+        audio = None
+
+    resolution = os.environ.get("EMU_DISPLAY", "1920x1080")
+    width, height = (int(part) for part in resolution.split("x"))
+    display = None
+    display_error = None
+    if "playback" in tests and played:
+        if subprocess.run(["/opt/emu/display", "start"]).returncode != 0:
+            display_error = "the display service did not start"
+        else:
+            for line in output_of(["/opt/emu/display", "env"]).splitlines():
+                for setting in line.replace("export ", "", 1).split():
+                    name, _, value = setting.partition("=")
+                    os.environ[name] = value
+            try:
+                display = json.loads(output_of(["emugfx", "info"]).strip().splitlines()[-1])
+            except (ValueError, IndexError):
+                display = None
+
+    emit("EMU-WORKLOAD", {
+        "id": "media-decode", "version": VERSION, "tests": tests, "technologies": technologies,
+        "streams": {s["id"]: s["sha256"] for s in chosen}, "played": [s["id"] for s in played],
+        "resolution": resolution, "graphics": os.environ.get("EMU_GRAPHICS", "emulated"), "display": display,
+        "audio": audio, "ffmpeg": FFMPEG_VERSION, "mpv": MPV_VERSION})
+
+    if "video" in tests:
+        for stream in videos:
+            decode_speed(stream, "video")
+    if "audio" in tests:
+        for stream in sounds:
+            decode_speed(stream, "audio")
+    if "sound" in tests:
+        for stream in sounds:
+            sound(stream, args.sound_seconds, audio)
+    if "playback" in tests:
+        for stream in played:
+            for technology in technologies:
+                if display_error:
+                    result("playback_dropped_frames", "%s/%s" % (stream["id"], technology), "frames", None,
+                           unavailable=display_error, technology=technology, **stream_fields(stream))
+                else:
+                    playback(stream, technology, width, height, display, bool(audio))
+        if not display_error:
+            subprocess.run(["/opt/emu/display", "stop"])
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

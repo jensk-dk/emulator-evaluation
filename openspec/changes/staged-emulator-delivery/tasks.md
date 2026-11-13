@@ -43,8 +43,22 @@
 
 ## 5. Stage 4: Media playback
 - [ ] 5.1 Accept MP2TS, MP4, and MSE-style fragment input and verify each media input path.
+  - Implemented as the `media-decode` workload. Verified on Linux (x86-64) in container, host-native VM, ARM64 VM and ARM32 VM modes: each video codec is decoded from MP2TS, from MP4, and from an initialisation segment and media fragments appended one after another to the running decoder; audio-only streams from MP2TS and from MP4. Not yet run on macOS or Windows.
+  - "MSE-style" here is the way the media arrives, as appended fragments. The Media Source API itself comes with the browser in stage 5.
 - [ ] 5.2 Decode MPEG-2, AVC, and HEVC video and MP2, AC-3, AAC, and HE-AAC audio; verify each codec.
+  - Verified on Linux (x86-64) in all four modes, with FFmpeg's software decoders: every frame of each video stream is decoded, and each audio codec, HE-AAC from MP4 and from MP2TS. Not yet run on macOS or Windows.
+  - The HE-AAC reference tone is a file in the repository (`target/media/heaac-1100hz.aac`): Debian and Ubuntu ship no HE-AAC encoder. It was made once with the Fraunhofer FDK AAC encoder; `target/media/build-media.sh` says how.
 - [ ] 5.3 Render decoded video through the supported graphics technologies and route audio through the host OS path; verify runtime mute and unmute.
+  - Video, verified on Linux (x86-64) by capturing the emulator's display during playback: through Wayland, OpenGL ES, Vulkan and Flutter in container, host-native VM and ARM64 VM modes; through Wayland and OpenGL ES in ARM32 VM mode.
+  - Open: Vulkan and Flutter video in ARM32 VM mode, for the reasons under 4.1 (Mesa's CPU Vulkan driver crashes on 32-bit ARM; no Flutter SDK for it).
+  - Open: in ARM32 VM mode the Wayland compositor ended during playback (the instability noted under 4.1): in both runs made, during one to three of the six playbacks through Wayland and OpenGL ES. The workload notices, starts the display again and plays the stream once more, and says so in the result; a stream whose second playback also loses the display is reported as not played. The cause is still not investigated.
+  - Open: the Flutter application shows about a third of the frames of a 25 frames/s 720p stream, with emulated and with host graphics alike. It gets decoded frames from a separate decoder and turns each into an image; a Flutter application that shows video through a texture filled by a native plugin is not built.
+  - Audio, verified on Linux (x86-64) in all four modes: the target's ALSA device plays through the launcher's host-side audio process and the host's player program. The check plays each codec's tone into a private output device of the host's sound server (PipeWire here) and finds each pitch in a recording of that device.
+  - Mute and unmute while playing, verified on Linux in container and host-native VM modes: `emu audio mute|unmute` (and `emu run --mute`); the recording at the host's sound server shows the tone, two seconds of silence, and the tone again.
+  - The audio driver feature has the three strategies of task 3.2; emulated and mocked are verified in container and host-native VM modes.
+  - Open: playing through the host OS is implemented for Linux hosts only (the host's `pacat`, `pw-cat` or `aplay`). On macOS and Windows the host-side audio process runs without a player: the sound arrives and can be muted, but is not heard. In VM mode on Windows the sound cannot take the emulated sound card's path (it needs a named pipe) and falls back to the container mode's path over the emulator's network, which has not been run.
+  - Open: sound from two target programs playing at the same time is not mixed.
+  - Open: the mute switch is a command. The toolbar button of stage 6 is to use the same switch.
 
 ## 6. Stage 5: Browser evaluation
 - [ ] 6.1 Include WPE WebKit in the Linux client OS image and verify it launches.
@@ -61,4 +75,4 @@
 
 ## Verification status
 
-Checked tasks were verified with `./emu verify` on three hosts so far: macOS on ARM64, Windows on x86-64 with Podman as the container runtime, and Linux on x86-64 (Kubuntu 24.04) with Docker. `evaluation/verification/` records each check per host, as passed, failed, or unavailable on that host. The hosts were verified at different revisions of the target image; each record names the image definition it ran. Run `./setup.sh` and `./emu verify` on an x86-64 Mac and on Ubuntu 22.04 and 26.04 to extend the coverage; tasks 2.1 and 2.2 stay open until then, and task 4.2 until host acceleration is verified in container mode as well (in VM mode it is, on Linux).
+Checked tasks were verified with `./emu verify` on three hosts so far (stage 4 on the Linux host only): macOS on ARM64, Windows on x86-64 with Podman as the container runtime, and Linux on x86-64 (Kubuntu 24.04) with Docker. `evaluation/verification/` records each check per host, as passed, failed, or unavailable on that host. The hosts were verified at different revisions of the target image; each record names the image definition it ran. Run `./setup.sh` and `./emu verify` on an x86-64 Mac and on Ubuntu 22.04 and 26.04 to extend the coverage; tasks 2.1 and 2.2 stay open until then, tasks 5.1 to 5.3 until the macOS and Windows hosts have run them and play sound, and task 4.2 until host acceleration is verified in container mode as well (in VM mode it is, on Linux).

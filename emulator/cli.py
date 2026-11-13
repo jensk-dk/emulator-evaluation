@@ -1,10 +1,12 @@
 """Command line of the startup launcher."""
 import argparse
+import json
 import statistics
 import sys
 
-from . import catalog, container, drivers as driver_features, graphics, host, image, report, results, verify, vm
+from . import catalog, container, drivers as driver_features, graphics, host, hostaudio, image, report, results, verify, vm
 from .errors import EmuError
+from .paths import BUILD_DIR
 from .run import DEFAULT_CPUS, DEFAULT_MEMORY_MB, KNOWN_OPTIONS, RunOptions, launch
 
 EPILOG = """\
@@ -38,13 +40,16 @@ def _print_summary(outcomes):
     for outcome in outcomes:
         for result in outcome.results:
             if isinstance(result.get("value"), (int, float)):
-                tests.setdefault((result["area"], result["test"], result["unit"]), []).append(result["value"])
+                # A test with several cases (one per stream, say) is listed by case.
+                name = "%s %s" % (result["test"], result["case"]) if result.get("case") else result["test"]
+                tests.setdefault((result["area"], name, result["unit"]), []).append(result["value"])
     if not tests:
         return
-    print("\n%-20s %-16s %14s  %s" % ("area", "test", "median", "unit"))
+    wide = max(16, max(len(name) for _, name, _ in tests))
+    print("\n%-20s %-*s %14s  %s" % ("area", wide, "test", "median", "unit"))
     for (area, test, unit), values in tests.items():
         spread = "  (min %.1f, max %.1f, n=%d)" % (min(values), max(values), len(values)) if len(values) > 1 else ""
-        print("%-20s %-16s %14.1f  %s%s" % (area, test, statistics.median(values), unit, spread))
+        print("%-20s %-*s %14.1f  %s%s" % (area, wide, test, statistics.median(values), unit, spread))
 
 
 def _status(code):
@@ -70,7 +75,7 @@ def cmd_run(args):
             memory_mb=args.memory, drivers=driver_features.parse(args.driver), options=_options(args.option),
             extra_args=args.emulator_arg or [], timeout=args.timeout, rebuild=args.rebuild and index == 0,
             resolution=args.resolution, graphics=args.graphics, screenshot_dir=args.screenshot,
-            window=args.window)
+            window=args.window, muted=args.mute)
         outcome = launch(opts)
         outcomes.append(outcome)
         if outcome.attached:
@@ -113,6 +118,39 @@ def cmd_run(args):
     return 0
 
 
+def _running_audio():
+    """The mute switches of the emulators running from this checkout."""
+    found = []
+    for path in sorted((BUILD_DIR / "run").glob("*/audio.json")):
+        try:
+            with open(path) as handle:
+                found.append(json.load(handle))
+        except (OSError, ValueError):
+            pass
+    return found
+
+
+def cmd_audio(args):
+    running = [item for item in _running_audio() if not args.run or item["run_id"].startswith(args.run)]
+    if not running:
+        raise EmuError("no running emulator has audio routed through the host" + (" (run %s)" % args.run if args.run else ""),
+                       hint="audio is routed there for workloads that play sound, and with --driver audio=host")
+    status = 0
+    for item in running:
+        try:
+            answer = hostaudio.control(item["control_port"], args.action)
+        except (OSError, ValueError) as error:
+            print("emu: run %s (%s): no answer from its audio process: %s" % (item["run_id"], item["workload"], error),
+                  file=sys.stderr)
+            status = 1
+            continue
+        print("run %s (%s): %s; %.1f s of sound received, %.1f s played, %.1f s muted%s" % (
+            item["run_id"], item["workload"], "muted" if answer["muted"] else "not muted",
+            answer["received_seconds"], answer["played_seconds"], answer["muted_seconds"],
+            "" if answer.get("player_error") is None else "; player: %s" % answer["player_error"]))
+    return status
+
+
 def cmd_report(args):
     return report.serve(args.port, not args.no_browser)
 
@@ -140,6 +178,9 @@ def cmd_doctor(args):
         "%.0f GiB" % (info["memory_bytes"] / 2**30) if info["memory_bytes"] else "unknown memory"))
     for found in info["gpus"]:
         print("gpu         %s" % host.gpu_text(found))
+    command, player = hostaudio.find_player(host.host_os(), None, host.tool_path())
+    print("audio       %s" % ("the target's sound is played with %s" % player if command
+                              else "the target's sound is not played on this host: %s" % player))
     problems = 0
     native = host.host_arch()
     for arch in sorted({native, "arm64", "arm32"}):
@@ -274,6 +315,8 @@ def build_parser():
                           "(default: auto)")
     run.add_argument("--window", action="store_true",
                      help="VM mode: show the emulator's display in a window. Closing the window ends the emulator")
+    run.add_argument("--mute", action="store_true",
+                     help="start with the emulator's audio muted (\"emu audio unmute\" turns it on while it runs)")
     run.add_argument("--screenshot", metavar="DIR",
                      help="save a PNG of the display to DIR each time a graphics workload has a finished frame up")
     run.add_argument("--driver", action="append", metavar="FEATURE=STRATEGY",
@@ -311,6 +354,13 @@ def build_parser():
     check.add_argument("checks", nargs="*", metavar="CHECK", help="checks to run (default: all)")
     check.add_argument("--list", action="store_true", help="list the checks")
     check.set_defaults(function=cmd_verify)
+
+    audio = commands.add_parser("audio", help="mute or unmute the audio of the running emulator",
+                                description="Acts on every emulator started from this checkout whose audio is "
+                                            "routed through the host, or on the one named with --run.")
+    audio.add_argument("action", choices=("mute", "unmute", "toggle", "status"))
+    audio.add_argument("--run", metavar="ID", help="only the run whose id starts with this")
+    audio.set_defaults(function=cmd_audio)
 
     shown = commands.add_parser("report", help="show the recorded results as charts in a browser")
     shown.add_argument("--port", type=int, default=8765, help="port to serve the page on (default: 8765)")

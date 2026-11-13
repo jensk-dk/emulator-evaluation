@@ -24,14 +24,32 @@ from .paths import ROOT
 STRATEGIES = ("emulated", "mocked", "host")
 FEATURES = {
     "hwrng": "hardware random number generator, read by target software from /dev/hwrng",
+    "audio": "sound output, played by target software on the ALSA device \"default\"",
 }
-DEFAULT_STRATEGY = "emulated"
+# Features every run has unless it says otherwise, with their strategy.
+DEFAULTS = {"hwrng": "emulated"}
+# Features a run has when its workload uses them (evaluation/workloads.json)
+# or it asks for them. Sound goes to the host: that is where it can be heard.
+ON_DEMAND = {"audio": "host"}
+AUDIO_OPTIONS = {
+    "audio-sink": "audio with the host strategy: the host output device to play on (default: the host's default)",
+    "audio-output": "audio with the host strategy: \"none\" takes the sound in without playing it on the host",
+}
+
+
+class Chosen(dict):
+    """{feature: strategy}; `declined` names the features turned off with
+    FEATURE=none, so that a workload's needs do not turn them on again."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.declined = set()
 
 
 def parse(specs):
     """Turn ["hwrng=mocked", ...] into {"hwrng": "mocked"}, applying defaults.
     The strategy "none" leaves a feature out."""
-    chosen = {feature: DEFAULT_STRATEGY for feature in FEATURES}
+    chosen = Chosen(DEFAULTS)
     for spec in specs or []:
         feature, separator, strategy = spec.partition("=")
         if not separator or feature not in FEATURES:
@@ -39,6 +57,7 @@ def parse(specs):
                            % (spec, ", ".join(sorted(FEATURES))))
         if strategy == "none":
             chosen.pop(feature, None)
+            chosen.declined.add(feature)
         elif strategy in STRATEGIES:
             chosen[feature] = strategy
         else:
@@ -52,12 +71,14 @@ class Plan:
     def __init__(self):
         self.qemu_args = []
         self.container_env = {}
+        self.kernel_settings = {}   # VM mode: emu.NAME=VALUE for the target's kernel command line
         self.host_processes = []    # dicts describing running host-side processes
+        self.audio = None           # the audio feature's host-side process, when the run has one
         self._children = []
         self._relays = []
 
-    def start_host_process(self, feature, bind, trace_path):
-        command = [sys.executable, "-m", "emulator.hostd", feature, "--bind", bind]
+    def start_host_process(self, feature, bind, trace_path, extra=()):
+        command = [sys.executable, "-m", "emulator.hostd", feature, "--bind", bind] + list(extra)
         if trace_path:
             command += ["--trace", str(trace_path)]
         child = subprocess.Popen(command, cwd=str(ROOT), stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
@@ -104,8 +125,50 @@ class Plan:
         self._children = []
 
 
-def plan_vm(drivers, run_dir):
+def _audio_arguments(options, muted):
+    extra = []
+    if options.get("audio-sink"):
+        extra += ["--sink", options["audio-sink"]]
+    if str(options.get("audio-output", "")).lower() == "none":
+        extra += ["--player", "none"]
+    if muted:
+        extra.append("--muted")
+    return extra
+
+
+def _start_audio(plan, bind, run_dir, options, muted, extra=()):
+    info = plan.start_host_process("audio", bind, os.path.join(run_dir, "audio-host.trace"),
+                                   _audio_arguments(options, muted) + list(extra))
+    plan.audio = info
+    return info
+
+
+def plan_vm(drivers, run_dir, options=None, muted=False):
     plan = Plan()
+    options = options or {}
+    audio = drivers.get("audio")
+    if audio in ("emulated", "host"):
+        # An emulated sound card; the target kernel's virtio-sound driver makes
+        # it an ALSA card. QEMU keeps the card's time whatever its backend is.
+        backend = "none,id=emu-audio"
+        if audio == "host" and hasattr(os, "mkfifo"):
+            # The card's backend is the host-side process: QEMU writes the
+            # samples, as a WAV stream, into a named pipe that process reads.
+            pipe = os.path.join(run_dir, "audio.pipe")
+            _start_audio(plan, "127.0.0.1", run_dir, options, muted, ["--pipe", pipe])
+            backend = "wav,id=emu-audio,path=%s,out.frequency=48000,out.channels=2,out.format=s16" \
+                      % str(pipe).replace(",", ",,")
+            plan.audio["path"] = "the emulated sound card's backend, through a named pipe"
+        elif audio == "host":
+            # No named pipes on this host: the target gets no sound card, and
+            # its shim device sends the samples through QEMU's network, which
+            # reaches the host's loopback address at 10.0.2.2.
+            info = _start_audio(plan, "127.0.0.1", run_dir, options, muted)
+            plan.kernel_settings["audiohost"] = "10.0.2.2:%d" % info["port"]
+            plan.audio["path"] = "the target's shim device, through the emulator's network"
+        if "audiohost" not in plan.kernel_settings:
+            plan.qemu_args += ["-audiodev", backend, "-device", "virtio-sound-pci,audiodev=emu-audio"]
+    # mocked: no sound card; the stub device inside the target takes the samples.
     strategy = drivers.get("hwrng")
     if strategy == "emulated":
         # An emulated virtio RNG device fed by QEMU's own generator; the
@@ -135,8 +198,18 @@ def _container_bind_address(runtime):
     return "0.0.0.0"
 
 
-def plan_container(drivers, runtime, run_dir, options, image_tag, platform):
+def plan_container(drivers, runtime, run_dir, options, image_tag, platform, muted=False):
     plan = Plan()
+    if drivers.get("audio") == "host":
+        bind = options.get("host-bind") or _container_bind_address(runtime)
+        info = _start_audio(plan, bind, run_dir, options, muted)
+        port = info["port"]
+        if not (options.get("host-bind") or options.get("host-address")) and not runtime.reaches_host_loopback():
+            port = plan.start_relay(runtime, image_tag, platform, run_dir, port)
+            info["relay"] = "a container on the engine's network, port %d" % port
+        plan.container_env["EMU_DRIVER_AUDIO_HOST"] = "%s:%d" % (options.get("host-address") or runtime.host_address(),
+                                                                 port)
+        plan.audio["path"] = "the target's shim device, over TCP"
     if drivers.get("hwrng") == "host":
         bind = options.get("host-bind") or _container_bind_address(runtime)
         info = plan.start_host_process("hwrng", bind, os.path.join(run_dir, "hwrng-host.trace"))

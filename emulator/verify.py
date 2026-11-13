@@ -7,10 +7,13 @@ which host.
 """
 import datetime
 import json
+import os
+import subprocess
 import tempfile
+import threading
 import time
 
-from . import catalog, container, drivers as driver_features, graphics, host, image, results, vm
+from . import catalog, container, drivers as driver_features, graphics, host, hostaudio, image, results, vm
 from .errors import EmuError
 from .paths import VERIFICATION_DIR
 from .run import RunOptions, launch
@@ -428,6 +431,328 @@ def _graphics_checks():
     return checks
 
 
+# --------------------------------------------------------------- media ---
+
+CONTAINER_NAMES = {"mp2ts": "MP2TS", "mp4": "MP4", "fragments": "MSE-style fragments"}
+VIDEO_CODECS = {"mpeg2": "MPEG-2", "avc": "AVC", "hevc": "HEVC"}
+AUDIO_CODECS = {"mp2": "MP2", "ac3": "AC-3", "aac": "AAC", "heaac": "HE-AAC"}
+TONE_HZ = {"mp2": 440, "ac3": 660, "aac": 880, "heaac": 1100}       # target/media/build-media.sh
+LOUD = 1000.0       # a window of sound at this level or above holds a test tone
+_media_runs = {}
+
+
+def _media_decoding(mode, arch):
+    """Decode every reference stream once per configuration; returns the
+    results by test and case."""
+    key = (mode, arch)
+    if key not in _media_runs:
+        _, outcome = _run(mode=mode, arch=arch, workload="media-decode", args=["--tests", "video,audio"],
+                          drivers=driver_features.parse(["audio=none"]), timeout=7200)
+        _media_runs[key] = {(r["test"], r["case"]): r for r in outcome.results}
+    return _media_runs[key]
+
+
+def _decoded(found, test, case):
+    result = found.get((test, case))
+    _require(result is not None, "the %s test reported nothing for %s" % (test, case))
+    _require(result.get("value") is not None, "%s was not decoded: %s" % (case, result.get("unavailable")))
+    return result
+
+
+def _media_input(mode, arch="native"):
+    """Media is accepted in each container, and as injected fragments."""
+    found = _media_decoding(mode, arch)
+    lines = []
+    for container_id, name in CONTAINER_NAMES.items():
+        speeds = []
+        for codec, codec_name in VIDEO_CODECS.items():
+            result = _decoded(found, "video_decode_speed", "%s-%s" % (codec, container_id))
+            if container_id == "fragments":
+                _require(result.get("fragments_appended", 0) > 0 and result.get("bytes_appended", 0) > 0,
+                         "no fragments were appended for %s" % result["case"])
+                speeds.append("%s from %d fragments appended to the decoder (%d bytes)" % (
+                    codec_name, result["fragments_appended"], result["bytes_appended"]))
+            else:
+                speeds.append("%s %d frames" % (codec_name, result["frames"]))
+        lines.append("%s accepted: %s" % (name, ", ".join(speeds)))
+    for case in ("audio-mp2-mp2ts", "audio-heaac-mp2ts", "audio-aac-mp4", "audio-heaac-mp4"):
+        _decoded(found, "audio_decode_speed", case)
+    lines.append("audio-only streams accepted in MP2TS and in MP4")
+    return lines
+
+
+def _media_codecs(mode, arch="native"):
+    """Every required video and audio codec is decoded."""
+    found = _media_decoding(mode, arch)
+    lines = []
+    for codec, name in VIDEO_CODECS.items():
+        speeds = [_decoded(found, "video_decode_speed", "%s-%s" % (codec, c)) for c in CONTAINER_NAMES]
+        lines.append("%s video: %d frames of %s decoded at %s x realtime (%s; %s)" % (
+            name, speeds[0]["frames"], speeds[0]["resolution"],
+            ", ".join("%.1f" % r["value"] for r in speeds), ", ".join(CONTAINER_NAMES.values()), speeds[0]["decoder"]))
+    for codec, name in AUDIO_CODECS.items():
+        cases = [r for (test, _), r in found.items() if test == "audio_decode_speed" and r["audio_codec"] == codec]
+        _require(cases, "no %s stream was decoded" % name)
+        for result in cases:
+            _require(result.get("value") is not None, "%s was not decoded: %s" % (result["case"],
+                                                                                   result.get("unavailable")))
+        lines.append("%s audio: decoded at %s x realtime" % (name, ", ".join("%.0f" % r["value"] for r in cases)))
+    return lines
+
+
+_video_runs = {}
+
+
+def _video(technology, mode, arch="native"):
+    """Decoded video is rendered through one graphics technology and reaches
+    the display, for each video codec."""
+    if technology == "flutter":
+        flutter = image.definition()["source"]["flutter"]
+        guest = _guest_arch(mode, arch)
+        _require(guest in flutter["architectures"],
+                 "the %s target image has no Flutter application: the Flutter SDK (%s) builds Linux applications "
+                 "for %s only" % (guest, flutter["version"], " and ".join(flutter["architectures"])))
+    key = (mode, arch)
+    if key not in _video_runs:
+        width, height = graphics.resolution("720p")
+        with tempfile.TemporaryDirectory(prefix="emu-verify-") as shots:
+            _, outcome = _run(mode=mode, arch=arch, workload="media-decode", args=["--tests", "playback"],
+                              resolution="720p", screenshot_dir=shots, screenshot_format="ppm",
+                              options={"audio-output": "none"}, timeout=7200)
+            evaluation = {}
+            host_rendered = outcome.environment["emulator"]["graphics"]["provider"] == "host"
+            for result in outcome.results:
+                screen = next((c for c in outcome.screens if c.get("case") == result["case"]), None)
+                if result.get("value") is None:
+                    problem = "%s was not played: %s" % (result["case"], result.get("unavailable"))
+                elif screen is None:
+                    problem = "%s was not captured from the display" % result["case"]
+                else:
+                    found = graphics.capture_problems(screen, width, height, allow_cut=host_rendered,
+                                                      tolerance=graphics.VIDEO_COLOR_TOLERANCE)
+                    problem = "%s: %s" % (result["case"], "; ".join(found)) if found else None
+                evaluation[result["case"]] = (problem, result)
+        _video_runs[key] = (outcome.environment["emulator"], evaluation)
+    emulator, evaluation = _video_runs[key]
+    mine = {case: item for case, item in evaluation.items() if case.endswith("/" + technology)}
+    _require(mine, "no stream was played through %s" % technology)
+    lines = []
+    for case, (problem, result) in mine.items():
+        _require(not problem, problem)
+        lines.append("%s from %s: played on %s, %d of %d frames dropped; a capture of the display shows the video%s"
+                     % (VIDEO_CODECS[result["video_codec"]], CONTAINER_NAMES[result["container"]],
+                        result.get("renderer"), result["value"], result["frames"],
+                        " (the display service ended during the first attempt and was started again)"
+                        if result.get("display_restarts") else ""))
+    return lines + ["graphics provider: %s; sound: %s" % (emulator["graphics"]["provider"],
+                                                          next(iter(mine.values()))[1].get("audio"))]
+
+
+class _HostSink:
+    """A private output device of the host's sound server, with a recording
+    of everything played on it: the check hears what the host OS was given,
+    and nothing comes out of the loudspeakers. Linux with PulseAudio or
+    PipeWire; elsewhere `reason` says why there is none."""
+
+    def __init__(self):
+        self.name = None
+        self.reason = None
+        self._module = None
+        self._recorder = None
+        self._file = None
+        pactl, parec = host.find_tool("pactl"), host.find_tool("parec")
+        if host.host_os() != "linux" or not pactl or not parec:
+            self.reason = "no recording at the host's sound server: that needs pactl and parec (PulseAudio or " \
+                          "PipeWire on a Linux host)"
+            return
+        name = "emu-verify-%d-%d" % (os.getpid(), int(time.time() * 1000) % 100000)
+        done = subprocess.run([pactl, "load-module", "module-null-sink", "sink_name=" + name,
+                               "sink_properties=device.description=" + name], capture_output=True, text=True)
+        if done.returncode != 0 or not done.stdout.strip().isdigit():
+            self.reason = "no recording at the host's sound server: it gave no private output device (%s)" \
+                          % (done.stderr.strip() or done.stdout.strip())
+            return
+        self._pactl, self._module, self.name = pactl, done.stdout.strip(), name
+        self._file = tempfile.NamedTemporaryFile(prefix="emu-verify-", suffix=".raw")
+        self._recorder = subprocess.Popen([parec, "--device=%s.monitor" % name, "--raw", "--format=s16le",
+                                           "--rate=%d" % hostaudio.RATE, "--channels=%d" % hostaudio.CHANNELS],
+                                          stdout=self._file, stderr=subprocess.DEVNULL)
+
+    def options(self):
+        return {"audio-sink": self.name} if self.name else {"audio-output": "none"}
+
+    def close(self):
+        """Stop recording; returns the (level, pitch) of each tenth of a second."""
+        windows = []
+        if self._recorder:
+            time.sleep(0.5)     # what the player still holds
+            self._recorder.terminate()
+            self._recorder.wait()
+            with open(self._file.name, "rb") as handle:
+                data = handle.read()
+            self._file.close()
+            step = hostaudio.WINDOW_BYTES
+            windows = [hostaudio.measure(data[start:start + step]) for start in range(0, len(data) - step + 1, step)]
+        if self._module:
+            subprocess.run([self._pactl, "unload-module", self._module], capture_output=True)
+        return windows
+
+
+def _trace(outcome):
+    return [json.loads(line) for line in outcome.host_traces.get("audio", "").splitlines() if line.strip()]
+
+
+def _tone_windows(windows, hz):
+    """How many windows hold a tone of this pitch."""
+    return sum(1 for level, pitch in windows if level >= LOUD and abs(pitch - hz) <= hz * 0.05)
+
+
+def _audio_host(mode, arch="native"):
+    """Decoded audio of every codec is played through the host OS."""
+    sink = _HostSink()
+    try:
+        _, outcome = _run(mode=mode, arch=arch, workload="media-decode", args=["--tests", "sound"],
+                          drivers=driver_features.parse(["audio=host"]), options=sink.options(), timeout=3600)
+    finally:
+        heard = sink.close()
+    audio = outcome.environment["emulator"].get("audio") or {}
+    _require(outcome.environment["host_processes"], "no host-side audio process ran")
+    received = [(row["level"], row["hz"]) for row in _trace(outcome)]
+    lines = []
+    for result in outcome.results:
+        _require(result.get("value") is not None, "%s was not played: %s" % (result["case"], result.get("unavailable")))
+    for codec, name in AUDIO_CODECS.items():
+        hz = TONE_HZ[codec]
+        took = [r["value"] for r in outcome.results if r["audio_codec"] == codec]
+        _require(took, "no %s stream was played" % name)
+        _require(_tone_windows(received, hz) >= 5, "the host-side process did not receive the %d Hz tone of the %s "
+                 "stream" % (hz, name))
+        line = "%s: played on the target in %s s; its %d Hz tone reached the host-side process" % (
+            name, ", ".join("%.1f" % value for value in took), hz)
+        if sink.name:
+            _require(_tone_windows(heard, hz) >= 5, "the %d Hz tone of the %s stream was not played on the host's "
+                     "output device" % (hz, name))
+            line += " and was recorded at the host's sound server"
+        lines.append(line)
+    lines.append("path: target ALSA device (%s) -> %s -> %s" % (
+        next((d.get("provider") for d in outcome.drivers if d.get("feature") == "audio"), "?"), audio.get("path"),
+        "the host's player program (%s)" % audio.get("player") if sink.name else "no host output in this check"))
+    if not sink.name:
+        raise CheckUnavailable("\n".join(lines + [sink.reason]))
+    return lines
+
+
+def _audio_mute(mode):
+    """The emulator's audio is muted and unmuted while a stream plays."""
+    sink = _HostSink()
+    switched = []
+
+    def switch(info):
+        """Once the tone is playing, mute it for two seconds."""
+        def run():
+            deadline = time.time() + 1800
+            while time.time() < deadline:
+                try:
+                    with open(info["trace"]) as handle:
+                        loud = sum(1 for line in handle if json.loads(line)["level"] >= LOUD)
+                except (OSError, ValueError):
+                    loud = 0
+                if loud >= 15:
+                    break
+                time.sleep(0.1)
+            else:
+                return
+            for command, pause in (("mute", 2.0), ("unmute", 0.0)):
+                try:
+                    switched.append((command, hostaudio.control(info["control_port"], command)["muted"]))
+                except (OSError, ValueError, KeyError) as error:
+                    switched.append((command, "failed: %s" % error))
+                time.sleep(pause)
+        threading.Thread(target=run, daemon=True).start()
+
+    try:
+        _, outcome = _run(mode=mode, workload="media-decode",
+                          args=["--tests", "sound", "--streams", "audio-aac-mp4", "--sound-seconds", "7"],
+                          drivers=driver_features.parse(["audio=host"]), options=sink.options(), on_audio=switch,
+                          timeout=3600)
+    finally:
+        heard = sink.close()
+    _require(switched == [("mute", True), ("unmute", False)], "the mute switch did not answer as expected: %r"
+             % (switched,))
+    rows = [row for row in _trace(outcome) if row["level"] >= LOUD]
+    # The sound as it arrived never stops; what is sent on does, while muted.
+    phases = []
+    for row in rows:
+        state = "silent" if row["sent_level"] < hostaudio.SILENT_RMS else "sound"
+        if not phases or phases[-1][0] != state:
+            phases.append([state, 0])
+        phases[-1][1] += 1
+    summary = ", ".join("%s for %.1f s" % (state, count / 10) for state, count in phases)
+    _require([state for state, _ in phases] == ["sound", "silent", "sound"] and all(count >= 5 for _, count in phases),
+             "the sound sent to the host was not: sound, silence while muted, sound again (it was: %s)" % summary)
+    lines = ["while the target played a %d Hz tone for %.1f s, the sound sent to the host was: %s" % (
+        TONE_HZ["aac"], len(rows) / 10, summary)]
+    if not sink.name:
+        raise CheckUnavailable("\n".join(lines + [sink.reason]))
+    # The same at the host's sound server: tone, a silent stretch, tone again.
+    loud = [index for index, (level, pitch) in enumerate(heard)
+            if level >= LOUD and abs(pitch - TONE_HZ["aac"]) <= TONE_HZ["aac"] * 0.05]
+    _require(len(loud) >= 10, "the tone was not played on the host's output device")
+    gap = max((b - a - 1 for a, b in zip(loud, loud[1:])), default=0)
+    _require(15 <= gap <= 30, "the recording at the host's sound server has no silent stretch of about two seconds "
+             "inside the tone (longest: %.1f s)" % (gap / 10))
+    lines.append("recorded at the host's sound server: the tone, %.1f s of silence, the tone again" % (gap / 10))
+    return lines
+
+
+def _audio_strategies(mode):
+    """The emulated and the mocked audio device take sound at its own pace,
+    without the host."""
+    lines = []
+    for strategy, expected in (("emulated", "kernel:" if mode == "vm" else "model:"), ("mocked", "mock:")):
+        _, outcome = _run(mode=mode, workload="media-decode",
+                          args=["--tests", "sound", "--streams", "audio-mp2-mp2ts", "--sound-seconds", "2"],
+                          drivers=driver_features.parse(["audio=" + strategy]), timeout=3600)
+        _require(not any(p.get("feature") == "audio" for p in outcome.environment["host_processes"]),
+                 "a host-side audio process ran")
+        result = outcome.results[0]
+        _require(result.get("value") is not None, "the sound was not played: %s" % result.get("unavailable"))
+        provider = result.get("device") or ""
+        _require(provider.startswith(expected), "unexpected audio device %r" % provider)
+        _require(result["value"] >= 1.8, "2 s of sound were taken in %.2f s: the device does not keep time"
+                 % result["value"])
+        lines.append("%s: 2 s of sound played in %.1f s on %s; no host-side process ran" % (
+            strategy, result["value"], provider))
+    return lines
+
+
+def _media_checks():
+    variants = (("container", "container", "native", "container mode"),
+                ("vm", "vm", "native", "a host-native VM"),
+                ("vm-arm64", "vm", "arm64", "an ARM64 VM"),
+                ("vm-arm32", "vm", "arm32", "an ARM32 VM"))
+    checks = {}
+    for suffix, mode, arch, where in variants:
+        checks["media-input-" + suffix] = (lambda m=mode, a=arch: _media_input(m, a), "5.1",
+                                           "MP2TS, MP4 and MSE-style fragments are accepted in " + where)
+        checks["media-codecs-" + suffix] = (lambda m=mode, a=arch: _media_codecs(m, a), "5.2",
+                                            "MPEG-2, AVC, HEVC, MP2, AC-3, AAC and HE-AAC are decoded in " + where)
+    for technology in NATIVE_TECHNOLOGIES + ("flutter",):
+        for suffix, mode, arch, where in variants:
+            checks["video-%s-%s" % (technology, suffix)] = (
+                lambda t=technology, m=mode, a=arch: _video(t, m, a), "5.3",
+                "decoded video is rendered through %s in %s" % (TECHNOLOGY_NAMES[technology], where))
+    for suffix, mode, arch, where in variants:
+        checks["audio-host-" + suffix] = (lambda m=mode, a=arch: _audio_host(m, a), "5.3",
+                                          "decoded audio is played through the host OS, from " + where)
+    for mode, where in (("container", "container mode"), ("vm", "VM mode")):
+        checks["audio-mute-" + mode] = (lambda m=mode: _audio_mute(m), "5.3",
+                                        "audio is muted and unmuted while it plays, in " + where)
+        checks["audio-strategies-" + mode] = (lambda m=mode: _audio_strategies(m), "3.2, 5.3",
+                                              "the emulated and mocked audio devices in " + where)
+    return checks
+
+
 # name -> (function, the task in openspec/changes/staged-emulator-delivery/tasks.md it supports, description)
 CHECKS = {
     "matrix": (check_matrix, "1.1", "the host test matrix covers every declared host combination"),
@@ -446,6 +771,7 @@ CHECKS = {
     "drivers-vm-arm64": (check_drivers_vm_arm64, "3.2", "the three driver strategies in an ARM64 VM"),
 }
 CHECKS.update(_graphics_checks())
+CHECKS.update(_media_checks())
 
 
 def _report_path():

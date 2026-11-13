@@ -4,3 +4,5 @@
 * text=auto eol=lf
 # Windows command scripts need CRLF.
 *.cmd text eol=crlf
+# Encoded media.
+*.aac binary

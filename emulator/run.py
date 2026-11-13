@@ -25,13 +25,14 @@ KNOWN_OPTIONS = {
     "host-bind": "container mode: address host-side processes listen on",
     "venus": "VM mode with host graphics: map Vulkan to the host GPU too (yes/no, default: when QEMU offers it on Linux)",
 }
+KNOWN_OPTIONS.update(driver_features.AUDIO_OPTIONS)
 
 
 class RunOptions:
     def __init__(self, mode, workload="prompt", args=(), arch="native", cpus=DEFAULT_CPUS,
                  memory_mb=DEFAULT_MEMORY_MB, drivers=None, options=None, extra_args=(), timeout=None,
                  echo=True, stdin_script=None, quiet_build=False, rebuild=False, resolution=None, graphics=None,
-                 screenshot_dir=None, screenshot_format="png", window=False):
+                 screenshot_dir=None, screenshot_format="png", window=False, muted=False, on_audio=None):
         self.mode = mode
         self.workload = workload
         self.args = list(args)
@@ -51,6 +52,8 @@ class RunOptions:
         self.screenshot_dir = screenshot_dir    # capture the display here when a workload shows a finished frame
         self.screenshot_format = screenshot_format
         self.window = window                    # show a VM's display in a window
+        self.muted = muted                      # start with the emulator's audio muted
+        self.on_audio = on_audio                # called with the audio host process's details once it runs
 
 
 class Outcome:
@@ -148,6 +151,14 @@ def launch(opts):
     run_dir = BUILD_DIR / "run" / outcome.run_id
     run_dir.mkdir(parents=True)
     interactive = opts.workload == "prompt"
+    # A workload that plays sound gets the audio feature unless the run says otherwise.
+    drivers = driver_features.Chosen(opts.drivers)
+    drivers.declined = set(getattr(opts.drivers, "declined", ()))
+    for feature, strategy in driver_features.ON_DEMAND.items():
+        if (catalog.workload(opts.workload) or {}).get(feature) and feature not in drivers \
+                and feature not in drivers.declined:
+            drivers[feature] = strategy
+    opts.drivers = drivers
     # Attach straight to the terminal for a person; capture everything else.
     attached = interactive and opts.stdin_script is None and host.stdin_is_tty() and sys.stdout.isatty()
     plan = None
@@ -166,7 +177,7 @@ def launch(opts):
             arch = host.host_arch()
             manifest = image.ensure("container", lambda: runtime, arch, quiet=opts.quiet_build, rebuild=opts.rebuild)
             plan = driver_features.plan_container(opts.drivers, runtime, str(run_dir), opts.options,
-                                                  manifest["image_tag"], manifest["platform"])
+                                                  manifest["image_tag"], manifest["platform"], opts.muted)
             env = dict(plan.container_env)
             if opts.drivers:
                 env["EMU_DRIVERS"] = ",".join("%s=%s" % item for item in sorted(opts.drivers.items()))
@@ -207,7 +218,7 @@ def launch(opts):
             data_disk = run_dir / "data.img"
             with open(data_disk, "wb") as handle:
                 handle.truncate(int(opts.options.get("data-disk-mb", DEFAULT_DATA_DISK_MB)) * 1024 * 1024)
-            plan = driver_features.plan_vm(opts.drivers, str(run_dir))
+            plan = driver_features.plan_vm(opts.drivers, str(run_dir), opts.options, opts.muted)
             terminal = None
             if attached:
                 size = shutil.get_terminal_size()
@@ -226,7 +237,8 @@ def launch(opts):
                     screens = graphics.Screens(opts.screenshot_dir, outcome.run_id, opts.screenshot_format,
                                                lambda path: capturer.capture(path, opts.screenshot_format))
             cmdline = vm.kernel_command_line(guest, opts.workload, opts.args, opts.drivers,
-                                             _flag(opts.options, "verbose-boot"), terminal, display)
+                                             _flag(opts.options, "verbose-boot"), terminal, display,
+                                             plan.kernel_settings)
             if interactive and not attached and host.host_os() == "windows":
                 console = vm.Console()
             command, binary = vm.run_command(
@@ -243,6 +255,18 @@ def launch(opts):
 
         emulator.update({"cpus": opts.cpus, "memory_mb": opts.memory_mb, "options": opts.options,
                          "extra_args": opts.extra_args})
+        if opts.drivers.get("audio"):
+            emulator["audio"] = {"strategy": opts.drivers["audio"]}
+            if plan.audio:
+                emulator["audio"].update({key: plan.audio.get(key) for key in ("player", "plays", "sink", "path")})
+                # Where `emu audio` finds this emulator's mute switch.
+                with open(run_dir / "audio.json", "w") as handle:
+                    json.dump({"run_id": outcome.run_id, "pid": os.getpid(), "workload": opts.workload,
+                               "control_port": plan.audio["control_port"]}, handle)
+                outcome.notes.append("audio through the host OS (%s)%s" % (
+                    plan.audio["source"], ", muted" if opts.muted else ""))
+                if opts.on_audio:
+                    opts.on_audio(dict(plan.audio))
         outcome.command = command
         outcome.environment = {"host": host.describe(), "emulator": emulator, "image": image_identity,
                                "drivers": dict(opts.drivers), "launcher_revision": image.git_revision()}

@@ -18,6 +18,8 @@
 # Optional, installed where the package manager offers it:
 #   QEMU OpenGL modules       VM mode maps graphics to the host GPU; without
 #                             them graphics are emulated
+#   audio player (Linux)      plays the target's sound through the host's sound
+#                             server; without one the target's sound is not heard
 #
 # Written for bash 3.2 (the version macOS ships).
 
@@ -121,6 +123,29 @@ check_graphics() {
   fi
 }
 
+# The launcher plays the target's sound through one of these programs.
+have_audio_player() { have pacat || have pw-cat || have aplay; }
+
+linux_audio_packages() {
+  if have apt-get; then echo "pulseaudio-utils"
+  elif have dnf; then echo "pulseaudio-utils"
+  elif have pacman; then echo "libpulse"
+  elif have zypper; then echo "pulseaudio-utils"
+  fi
+}
+
+check_audio() {
+  [ "$OS" = Linux ] || return 0     # playing through the host is implemented for Linux hosts so far
+  if have pacat; then ok "audio player: pacat (PulseAudio or PipeWire)"
+  elif have pw-cat; then ok "audio player: pw-cat (PipeWire)"
+  elif have aplay; then ok "audio player: aplay (ALSA)"
+  elif [ -n "$(linux_audio_packages)" ]; then
+    optional audio-player "audio player: none of pacat, pw-cat and aplay is installed; the target's sound is not heard without one"
+  else
+    note "audio player: none of pacat, pw-cat and aplay is installed; the target's sound is not heard without one"
+  fi
+}
+
 check_accel() {
   if [ "$OS" = Darwin ]; then
     if [ "$(sysctl -n kern.hv_support 2>/dev/null)" = 1 ]; then
@@ -210,6 +235,7 @@ run_checks() {
   check_python
   check_qemu
   check_graphics
+  check_audio
   check_accel
   check_container
   check_foreign_arch
@@ -371,6 +397,22 @@ install_linux() {
       as_root pacman -S --needed --noconfirm $(linux_gl_packages) || gl_status=1
     fi
     [ "$gl_status" = 0 ] || info "  Could not install QEMU's OpenGL modules; VM mode will emulate graphics."
+  fi
+
+  # Optional: a program to play the target's sound with.
+  if ! have_audio_player && [ -n "$(linux_audio_packages)" ]; then
+    local audio_status=0
+    # shellcheck disable=SC2046
+    if have apt-get; then
+      as_root env DEBIAN_FRONTEND=noninteractive apt-get install -y $(linux_audio_packages) || audio_status=1
+    elif have dnf; then
+      as_root dnf install -y $(linux_audio_packages) || audio_status=1
+    elif have pacman; then
+      as_root pacman -S --needed --noconfirm $(linux_audio_packages) || audio_status=1
+    elif have zypper; then
+      as_root zypper --non-interactive install $(linux_audio_packages) || audio_status=1
+    fi
+    [ "$audio_status" = 0 ] || info "  Could not install an audio player; the target's sound will not be heard on the host."
   fi
 
   if is_missing binfmt && have systemctl; then

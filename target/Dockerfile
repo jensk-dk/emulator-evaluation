@@ -39,6 +39,35 @@ COPY src/shaders/ /src/shaders/
 RUN mkdir -p /out \
     && gcc -O2 -Wall -Wextra -pthread -o /out/emubench /src/emubench.c -lm \
     && sh /src/build-emugfx.sh /src /out/emugfx
+# The target's sound device for the audio driver feature (an ALSA plugin).
+RUN apt-get update && apt-get install -y --no-install-recommends libasound2-dev \
+    && rm -rf /var/lib/apt/lists/*
+COPY src/emu_alsa.c /src/
+RUN mkdir -p /out/lib \
+    && gcc -O2 -Wall -Wextra -shared -fPIC -DPIC -o /out/lib/libasound_module_pcm_emu.so /src/emu_alsa.c \
+         -lasound -lpthread
+
+# -------------------------------------------------------------- media ---
+# The reference streams of the media-decode workload. They are data, the same
+# for every target architecture, so this stage runs on the building machine
+# rather than under emulation of the target's CPU.
+FROM --platform=$BUILDPLATFORM ${BASE_IMAGE} AS media
+ARG APT_SNAPSHOT=""
+RUN set -eu; \
+    if [ -n "$APT_SNAPSHOT" ]; then \
+      sed -i \
+        -e "s|^URIs: http://deb.debian.org/debian-security\$|URIs: http://snapshot.debian.org/archive/debian-security/$APT_SNAPSHOT/|" \
+        -e "s|^URIs: http://deb.debian.org/debian\$|URIs: http://snapshot.debian.org/archive/debian/$APT_SNAPSHOT/|" \
+        -e "s|^Signed-By:|Check-Valid-Until: no\nSigned-By:|" \
+        /etc/apt/sources.list.d/debian.sources; \
+    fi; \
+    echo 'Acquire::Retries "5";' > /etc/apt/apt.conf.d/80-retries; \
+    export DEBIAN_FRONTEND=noninteractive; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends ffmpeg python3; \
+    rm -rf /var/lib/apt/lists/*
+COPY media/ /src/media/
+RUN sh /src/media/build-media.sh /src/media /out/media
 
 # ------------------------------------------------------------ flutter ---
 # Builds the Flutter workload with a pinned Flutter SDK. The SDK builds Linux
@@ -101,6 +130,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       mesa-utils-bin vulkan-tools \
     && rm -rf /var/lib/apt/lists/* \
     && ln -s /opt/emu/display /usr/local/bin/emu-display
+# Media: FFmpeg's decoders with the ffmpeg program and the mpv player, and
+# ALSA, the target's audio interface.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ffmpeg mpv alsa-utils \
+    && rm -rf /var/lib/apt/lists/*
 
 # ------------------------------------------------------------- target ---
 # Container-mode image.
@@ -108,6 +142,8 @@ FROM os AS target
 COPY --from=rootfs /rootfs/ /
 COPY --from=tools /out/emubench /out/emugfx /usr/local/bin/
 COPY --from=flutter /out/flutter/ /opt/emu/flutter/
+COPY --from=tools /out/lib/ /opt/emu/lib/
+COPY --from=media /out/media/ /opt/emu/media/
 ARG IMAGE_NAME=emu-target
 ARG IMAGE_VERSION=0.0.0
 ARG DEFINITION_SHA256=unknown
@@ -144,6 +180,8 @@ FROM vmos AS vmroot
 COPY --from=rootfs /rootfs/ /
 COPY --from=tools /out/emubench /out/emugfx /usr/local/bin/
 COPY --from=flutter /out/flutter/ /opt/emu/flutter/
+COPY --from=tools /out/lib/ /opt/emu/lib/
+COPY --from=media /out/media/ /opt/emu/media/
 ARG IMAGE_NAME=emu-target
 ARG IMAGE_VERSION=0.0.0
 ARG DEFINITION_SHA256=unknown

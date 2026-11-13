@@ -73,15 +73,20 @@
     },
     {
       "id": "media-decode",
-      "version": "0.1.0",
+      "version": "1.0.0",
       "kind": "performance",
-      "status": "defined",
+      "status": "implemented",
       "stage": 4,
+      "display": true,
+      "audio": true,
+      "launch": "./emu run --mode MODE --workload media-decode --record",
+      "source": "target/rootfs/opt/emu/workloads/media-decode, target/media, target/src/emu_alsa.c, target/src/flutter_demo/lib/video.dart",
+      "version_source": {"file": "target/rootfs/opt/emu/workloads/media-decode", "pattern": "VERSION = \"([^\"]+)\""},
       "procedure": "evaluation/procedures.md#audio-and-video-decoding",
       "measurements": [
-        {"area": "audio_video_decoding", "test": "video_decode_speed", "unit": "x realtime", "method": "decode a fixed reference stream as fast as possible, per video codec (MPEG-2, AVC, HEVC) and container (MP2TS, MP4, MSE-style fragments)"},
-        {"area": "audio_video_decoding", "test": "audio_decode_speed", "unit": "x realtime", "method": "decode a fixed reference stream as fast as possible, per audio codec (MP2, AC-3, AAC, HE-AAC)"},
-        {"area": "audio_video_decoding", "test": "playback_dropped_frames", "unit": "frames", "method": "frames dropped during real-time playback of each reference stream through each graphics technology"}
+        {"area": "audio_video_decoding", "test": "video_decode_speed", "unit": "x realtime", "method": "decode a fixed reference stream (1280x720, 25 frames/s, 5 s) as fast as possible with FFmpeg on all CPUs, once per case: each video codec (MPEG-2, AVC, HEVC) in each container (MP2TS, MP4, MSE-style fragments appended to the decoder's input); media seconds decoded per second, averaged over rounds until one second of decoding is timed"},
+        {"area": "audio_video_decoding", "test": "audio_decode_speed", "unit": "x realtime", "method": "the same for 30 s audio streams, one per case: MP2 and AC-3 in MP2TS, AAC in MP4, HE-AAC in MP4 and in MP2TS"},
+        {"area": "audio_video_decoding", "test": "playback_dropped_frames", "unit": "frames", "method": "play a reference stream in real time, full screen, with its sound on the target's audio device, once per case (stream and graphics technology): frames the player did not show, as mpv counts them for Wayland, OpenGL ES and Vulkan output, and as the Flutter application counts them; by default one stream per video codec, each arriving a different way (MPEG-2 in MP2TS, AVC in MP4, HEVC as fragments)"}
       ]
     },
     {

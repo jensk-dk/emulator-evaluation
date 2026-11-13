@@ -128,9 +128,58 @@ captures as PNG files.
 
 ## Audio and video decoding
 
-Defined for stage 4. Fixed reference streams, one per codec and container, are
-decoded as fast as possible (decode speed) and played in real time (dropped
-frames). The reference streams are versioned with the workload.
+Workload `media-decode`.
+
+    ./emu run --mode container --workload media-decode --record --repeat 3
+    ./emu run --mode vm --arch native --workload media-decode --record --repeat 3
+    ./emu run --mode vm --arch arm64 --workload media-decode --record --repeat 3
+    ./emu run --mode vm --arch arm32 --workload media-decode --record --repeat 3
+
+- **Reference streams.** Built with the image by
+  [target/media/build-media.sh](../target/media/build-media.sh): 1280x720
+  video at 25 frames/s, 5 seconds, a moving test pattern; and 30-second
+  audio-only streams. Each video codec (MPEG-2, AVC, HEVC) is encoded once and
+  packed unchanged into each container (MP2TS, MP4, fragmented MP4 split into
+  an initialisation segment and one fragment per group of pictures). The
+  streams are the same on every target architecture. A result names its
+  stream and the SHA-256 of the stream's bytes; the streams are part of the
+  workload's version.
+- **Decode speed** (`video_decode_speed`, `audio_decode_speed`, one case per
+  stream). The `ffmpeg` program decodes the stream as fast as it can, on all
+  of the target's CPUs, and discards the output. The value is media seconds
+  decoded per second of the decoder's own running time (`x realtime`). A
+  stream that decodes in well under a second is decoded again until a second
+  has been timed. For the fragment cases the fragments are appended to the
+  decoder's input one after another while it runs.
+- **Dropped frames** (`playback_dropped_frames`, one case per stream and
+  graphics technology). The stream is played once in real time, full screen,
+  with its sound on the target's audio device. By default one stream per
+  video codec is played, each arriving a different way (MPEG-2 in MP2TS, AVC
+  in MP4, HEVC as fragments); `-- --full` plays all nine. The value is the
+  number of the stream's 125 frames that were not shown:
+  - Wayland, OpenGL ES and Vulkan: the mpv player's own count of frames it
+    dropped, in its output and in its decoder.
+  - Flutter: the `ffmpeg` program decodes in real time and hands the frames to
+    the Flutter application, which always draws the newest one; frames that
+    were replaced before the application could draw them are the dropped ones.
+  The two counts come from different players and are not comparable with each
+  other; compare a technology with itself across hosts and modes.
+- Fragments are appended ahead of playback: a fragment when less than two
+  seconds of media are buffered ahead of the playback position.
+- The record's `emulator.graphics` and `emulator.audio` say how graphics and
+  sound were provided. Results of playback with different graphics providers
+  must not be put side by side.
+- A sound that plays on the host is part of the run; for a measured run on a
+  shared machine use `--mute` or `--option audio-output=none`.
+
+`./emu verify` checks what the target reports against the outside: a capture
+of the emulator's display during each playback must show the stream's marker
+blocks (the four corners, and one whose colour names the video codec), and
+the sound must arrive on the host. Each audio stream is a tone whose pitch
+names its codec (MP2 440 Hz, AC-3 660 Hz, AAC 880 Hz, HE-AAC 1100 Hz). The
+checks play them into a private output device of the host's sound server,
+record that device, and look for the pitches; for mute they look for the
+silent stretch in the middle of a tone. Nothing is heard while they run.
 
 ## Web
 

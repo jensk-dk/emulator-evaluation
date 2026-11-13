@@ -16,11 +16,15 @@ This repo contains a generic device emulator for Linux-based TVs and set-top box
 
 The requirements live in the [openspec](openspec) folder. Delivery is staged
 ([tasks](openspec/changes/staged-emulator-delivery/tasks.md)); this repo
-holds the code for stages 0 to 3: the evaluation foundation, a cross-platform
-runnable baseline, VM CPU and driver fidelity, and graphics. So far they are
-verified on three hosts: macOS on ARM64, Windows on x86-64 with Podman as
-the container runtime, and Linux on x86-64 (Kubuntu 24.04) with Docker. The task list and
-`evaluation/verification/` show what has been verified, and on which hosts.
+holds the code for stages 0 to 4: the evaluation foundation, a cross-platform
+runnable baseline, VM CPU and driver fidelity, graphics, and media playback.
+Stages 0 to 3 are verified on three hosts: macOS on ARM64, Windows on x86-64
+with Podman as the container runtime, and Linux on x86-64 (Kubuntu 24.04)
+with Docker. Stage 4 is implemented and verified on the Linux host only; on
+macOS and Windows its decoding and video parts are expected to work as they
+are, and playing the target's sound through the host is still to be done
+there. The task list and `evaluation/verification/` show what has been
+verified, and on which hosts.
 
 ## Quick start
 
@@ -29,6 +33,8 @@ the container runtime, and Linux on x86-64 (Kubuntu 24.04) with Docker. The task
     ./emu run --mode vm     # the same in a host-native VM
     ./emu run --mode vm --workload graphics-demo --screenshot shots   # graphics, with display captures
     ./emu run --mode vm --workload graphics-demo --window             # graphics, with the display in a window
+    ./emu run --mode vm --workload media-decode --window              # decoding and playing video and sound
+    ./emu audio mute                                                  # from another terminal, while it plays
 
 On Windows use `setup.cmd` and `emu.cmd`. (`setup.cmd` runs `setup.ps1`
 where the PowerShell execution policy does not allow scripts, which is the
@@ -49,6 +55,7 @@ dependency and install what is missing. `--check` / `-Check` only reports.
 | Hardware virtualization | host-native VM mode | Hypervisor.framework | KVM | Windows Hypervisor Platform |
 | Container runtime | container mode, image builds | Colima + Docker CLI (Homebrew) | Podman | Podman |
 | Foreign-architecture emulation | building ARM target images | registered in the engine VM | `qemu-user-static` | registered in the engine VM |
+| Audio player (optional) | playing the target's sound on the host | not implemented yet | `pacat`, `pw-cat` or `aplay`; system package | not implemented yet |
 | QEMU OpenGL modules (optional) | mapping VM graphics to the host GPU | not in Homebrew's QEMU | system package | in winget's QEMU; used when the display is in a window (see [Display and graphics](#display-and-graphics)) |
 
 An existing Docker or Podman installation is used as it is. Where both are
@@ -102,7 +109,7 @@ creates Podman's engine, which runs in WSL 2.
     ./emu run [--mode container|vm] [--arch native|arm32|arm64] [--workload NAME]
               [--cpus N] [--memory MIB] [--resolution 720p|1080p|4k] [--graphics auto|host|emulated]
               [--window] [--driver FEATURE=STRATEGY] [--option KEY=VALUE] [--screenshot DIR]
-              [--record] [--repeat N] [-- WORKLOAD_ARGS]
+              [--mute] [--record] [--repeat N] [-- WORKLOAD_ARGS]
 
 | Mode | What runs |
 |---|---|
@@ -116,12 +123,13 @@ creates Podman's engine, which runs in WSL 2.
 ARM host. It is a diagnostic and not part of the test matrix.
 
 Workloads: `prompt` (interactive shell), `bench` (CPU, memory and I/O
-benchmarks), `driver-check` and `graphics-demo`. `./emu workloads` lists
-them, including the media and web workloads that are defined for later
-stages.
+benchmarks), `driver-check`, `graphics-demo` and `media-decode`.
+`./emu workloads` lists them, including the web workload that is defined for
+a later stage.
 
 Other commands: `./emu build`, `./emu doctor`, `./emu matrix`,
-`./emu workloads`, `./emu verify`, `./emu report`. Each has `--help`.
+`./emu workloads`, `./emu verify`, `./emu report`, `./emu audio`. Each has
+`--help`.
 
 ## Target OS image
 
@@ -137,8 +145,9 @@ environment, starts the driver-feature providers and runs one workload.
 
 For graphics the image carries the Weston Wayland compositor, Mesa's OpenGL ES
 and Vulkan drivers, and a Flutter application built with a pinned Flutter SDK.
-These are choices for the evaluation image, not statements about the real
-target's middleware.
+For media it carries FFmpeg's decoders with the `ffmpeg` program, the mpv
+player and ALSA as the audio interface. These are choices for the evaluation
+image, not statements about the real target's middleware.
 
 Two graphics technologies do not run in ARM32 mode yet. The Flutter SDK builds
 Linux applications for x86-64 and ARM64 only, so the ARM32 image has no
@@ -158,9 +167,14 @@ A driver feature can be provided three ways, in both modes
 | `mocked` | a stub behind the driver's interface returns canned data | the same stub |
 | `host` | the emulated device's backend is a host-side process that uses the host OS | a shim forwards the driver's interface to the host-side process |
 
-The first feature is `hwrng`, the hardware random number generator at
-`/dev/hwrng`. The host halves are in [emulator/drivers.py](emulator/drivers.py)
-and [emulator/hostd.py](emulator/hostd.py); the target halves in
+There are two features. `hwrng` is the hardware random number generator at
+`/dev/hwrng`; every run has it, emulated unless told otherwise. `audio` is
+sound output on the ALSA device `default`; a run has it when its workload
+plays sound or when `--driver audio=...` asks for it, and its default
+strategy is `host` (see [Media playback](#media-playback)). The host halves
+are in [emulator/drivers.py](emulator/drivers.py),
+[emulator/hostd.py](emulator/hostd.py) and
+[emulator/hostaudio.py](emulator/hostaudio.py); the target halves in
 [target/rootfs/opt/emu/drivers](target/rootfs/opt/emu/drivers).
 
 In container mode the shim reaches the host-side process over the network.
@@ -240,6 +254,75 @@ the capture is then read from QEMU's VNC server. That works on Linux, up to
 test. On the target, [`/opt/emu/display`](target/rootfs/opt/emu/display)
 (`emu-display start`) starts the compositor, for running other Wayland
 programs from the prompt.
+
+## Media playback
+
+The `media-decode` workload decodes and plays reference streams that are
+built into the image ([target/media](target/media)): 1280x720 video at 25
+frames/s with a test tone.
+
+| | Supported |
+|---|---|
+| Containers | MPEG-2 Transport Stream, MP4, and MSE-style injection: an initialisation segment and media fragments appended one after another to the decoder's input while it runs |
+| Video codecs | MPEG-2, AVC, HEVC |
+| Audio codecs | MP2, AC-3, AAC, HE-AAC |
+| Video output | through Wayland, OpenGL ES and Vulkan with the mpv player, and through the Flutter application, which draws the decoded frames itself |
+| Audio output | the target's ALSA device `default`, played through the host OS, with a mute switch |
+
+    ./emu run --mode vm --workload media-decode                  # decode speed, then playback through each technology
+    ./emu run --workload media-decode -- --tests playback --technologies gles --streams hevc-fragments
+    ./emu run --mode vm --workload prompt --driver audio=host    # a prompt with sound: try "speaker-test -t sine -l 1"
+
+Decoding is done by the target CPU in every mode (FFmpeg's software
+decoders); no video decoding is handed to the host.
+
+### Audio
+
+Target software plays on ALSA's `default` device. Where that sound goes is
+the `audio` driver feature's strategy:
+
+| Strategy | VM mode | Container mode |
+|---|---|---|
+| `host` (the default) | QEMU's emulated sound card (virtio-sound) with the target kernel's driver; the card's backend hands the samples to the launcher's host-side audio process | a shim ALSA device ([target/src/emu_alsa.c](target/src/emu_alsa.c)) sends the samples to that process over TCP |
+| `emulated` | the same sound card with no backend: the kernel's driver plays to nowhere | a software model of a sound card: the same ALSA device, playing to nowhere at the sample rate |
+| `mocked` | no sound card; a stub ALSA device discards the samples | the same stub |
+
+The host-side audio process plays the sound with the host's own player
+program (`pacat`, `pw-cat` or `aplay`, whichever is installed), so it goes
+wherever the host's sound server sends an application's sound.
+`--option audio-sink=NAME` chooses the host's output device, and
+`--option audio-output=none` takes the sound in without playing it.
+
+Mute while it runs, from another terminal:
+
+    ./emu audio mute | unmute | toggle | status
+
+`./emu run --mute` starts muted. A muted emulator keeps playing: the target
+notices nothing, and the host gets silence in place of the sound.
+
+Limits:
+
+- Playing through the host is implemented for Linux hosts. On macOS and
+  Windows the audio process starts without a player and says so; the target's
+  sound is taken in, and can be muted and inspected, but is not heard.
+- In VM mode QEMU writes the sound card's output into a named pipe. Windows
+  has none of the kind QEMU can write to, so there the launcher falls back to
+  the container mode's shim device over QEMU's network; that path has not
+  been run.
+- One player at a time: sound from two target programs playing at once is not
+  mixed.
+- ARM32 VM mode: no video through Vulkan or Flutter, for the reasons given
+  under [Target OS image](#target-os-image). The Wayland compositor also ends
+  now and then during playback there; the workload starts it again, plays the
+  stream once more, and says so in the result.
+- The Flutter application gets its video as decoded frames and turns each one
+  into an image, which is slow: at 720p it shows about a third of a 25
+  frames/s stream, also with host graphics. A Flutter application that shows
+  video the way real ones do, through a texture that a native plugin fills,
+  is not part of this.
+- mpv's OpenGL ES and Vulkan outputs use its plain rendering path
+  (`--gpu-dumb-mode`). With its default path, Mesa's CPU renderer showed a
+  black or green picture in many runs.
 
 ## Evaluation
 

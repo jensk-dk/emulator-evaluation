@@ -73,7 +73,8 @@ if [ "$$" = 1 ] && [ "${EMU_MODE:-}" != container ]; then
   fi
   EMU_DRIVERS=$(cmdline_get emu.drivers || true)
   # The emulator's display, when it has one (see /opt/emu/display).
-  for setting in display:EMU_DISPLAY graphics:EMU_GRAPHICS screenhold:EMU_SCREEN_HOLD; do
+  for setting in display:EMU_DISPLAY graphics:EMU_GRAPHICS screenhold:EMU_SCREEN_HOLD \
+                 audiohost:EMU_DRIVER_AUDIO_HOST; do
     if value=$(cmdline_get "emu.${setting%%:*}") && [ -n "$value" ]; then
       export "${setting#*:}=$value"
     fi

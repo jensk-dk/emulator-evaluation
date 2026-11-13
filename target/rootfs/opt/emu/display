@@ -3,6 +3,7 @@
 #
 #   display start        start the compositor (does nothing when it is running)
 #   display stop
+#   display status       succeeds when the compositor is running
 #   display env          shell settings for clients: eval "$(/opt/emu/display env)"
 #   display screenshot   write a PNG of what the display shows to stdout
 #
@@ -135,10 +136,11 @@ screenshot() {
 case "${1:-}" in
   start) start ;;
   stop) stop ;;
+  status) running ;;
   env) client_env ;;
   screenshot) screenshot ;;
   *)
-    echo "usage: display start|stop|env|screenshot" >&2
+    echo "usage: display start|stop|status|env|screenshot" >&2
     exit 64
     ;;
 esac

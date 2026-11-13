@@ -39,6 +39,7 @@ OPENGL_WINDOWS = ("sdl", "gtk")
 # corners, in the order top left, top right, bottom left, bottom right.
 CORNER_COLORS = ((255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 255))
 COLOR_TOLERANCE = 12
+VIDEO_COLOR_TOLERANCE = 60
 
 # Kernel GPU drivers that Mesa, the target's graphics stack, has no driver for.
 PROPRIETARY_DRIVERS = ("nvidia",)
@@ -398,8 +399,9 @@ class Screens:
 
     def on_marker(self, marker):
         entry = dict(marker)
-        path = os.path.join(str(self.directory), "%s_%s.%s" % (self.run_id, marker.get("test", "screen"),
-                                                               self.image_format))
+        name = "".join(c if c.isalnum() or c in "-_." else "-" for c in
+                       str(marker.get("case") or marker.get("test") or "screen"))
+        path = os.path.join(str(self.directory), "%s_%s.%s" % (self.run_id, name, self.image_format))
         try:
             os.makedirs(str(self.directory), exist_ok=True)
             self._capture(path)
@@ -421,8 +423,8 @@ def container_capture(runtime, name):
     return capture
 
 
-def _close(found, expected):
-    return all(abs(a - b) <= COLOR_TOLERANCE for a, b in zip(found, expected))
+def _close(found, expected, tolerance=COLOR_TOLERANCE):
+    return all(abs(a - b) <= tolerance for a, b in zip(found, expected))
 
 
 def capture_is_cut(entry, width, height):
@@ -433,11 +435,13 @@ def capture_is_cut(entry, width, height):
     return None not in found and found != (width, height) and found[0] <= width and found[1] <= height
 
 
-def capture_problems(entry, width, height, allow_cut=False):
+def capture_problems(entry, width, height, allow_cut=False, tolerance=COLOR_TOLERANCE):
     """Compare a captured display image with what the workload said it drew:
     the display size, the corner blocks and the technology's marker block.
     Returns a list of problems, empty when the capture shows that frame. With
-    `allow_cut`, a capture that is cut off is compared as far as it reaches."""
+    `allow_cut`, a capture that is cut off is compared as far as it reaches.
+    Decoded video needs a wider `tolerance` than drawn graphics: its colours
+    went through a lossy codec and a colour space conversion."""
     if entry.get("error"):
         return ["the display could not be captured: %s" % entry["error"]]
     cut = allow_cut and capture_is_cut(entry, width, height)
@@ -457,7 +461,7 @@ def capture_problems(entry, width, height, allow_cut=False):
         if x >= entry["captured_width"] or y >= entry["captured_height"]:
             continue        # beyond what a cut capture shows
         found = image.pixel(x, y)
-        if len(expected) != 3 or not _close(found, expected):
+        if len(expected) != 3 or not _close(found, expected, tolerance):
             problems.append("%s is %s, expected %s" % (name, found, expected))
     return problems
 

@@ -223,7 +223,20 @@ const TESTS = {
   seq_read: "Sequential read", seq_write: "Sequential write", rand_read_4k: "Random read, 4 KiB",
   rand_write_4k: "Random write, 4 KiB", sync_write_4k: "Synchronous write, 4 KiB",
   wayland_fps: "Wayland (CPU-drawn buffers)", gles_fps: "OpenGL ES", vulkan_fps: "Vulkan", flutter_fps: "Flutter",
+  video_decode_speed: "Video decode", audio_decode_speed: "Audio decode",
+  playback_dropped_frames: "Frames dropped in playback", audio_playback: "Audio playback",
 };
+// Tests where a smaller value is the better one.
+const LOWER_IS_BETTER = new Set(["playback_dropped_frames"]);
+// The cases of the media tests: a reference stream, or a stream and the
+// graphics technology it was played through.
+const STREAM_PARTS = { mpeg2: "MPEG-2", avc: "AVC", hevc: "HEVC", mp2: "MP2", ac3: "AC-3", aac: "AAC", heaac: "HE-AAC",
+                       mp2ts: "MP2TS", mp4: "MP4", fragments: "MSE fragments", audio: "",
+                       wayland: "Wayland", gles: "OpenGL ES", vulkan: "Vulkan", flutter: "Flutter" };
+function caseName(text) {
+  return text.split("/").map((part) => part.split("-").map((word) => word in STREAM_PARTS ? STREAM_PARTS[word] : word)
+    .filter(Boolean).join(" in ")).join(", through ");
+}
 const MODES = { "container": "Container", "vm-native": "VM, host-native", "vm-arm64": "VM, ARM64 target",
                 "vm-arm32": "VM, ARM32 target", "vm-x86_64": "VM, x86-64 target" };
 const MODE_ORDER = ["container", "vm-native", "vm-arm64", "vm-arm32", "vm-x86_64"];
@@ -355,11 +368,15 @@ function collect() {
       // A test that could not run does not name a resolution; the display does.
       const resolution = result.resolution
         || (result.area === "graphics" && record.emulator.display ? record.emulator.display.resolution : "");
-      const chartKey = [result.area, result.test, resolution].join("|");
+      if (result.test === "audio_playback") continue;      // a functional test, not a measurement
+      const chartKey = [result.area, result.test, result.case || "", resolution].join("|");
       if (!charts.has(chartKey)) {
-        charts.set(chartKey, { area: result.area, test: result.test, unit: result.unit, resolution, series: new Map() });
+        charts.set(chartKey, { area: result.area, test: result.test, case: result.case || "", unit: result.unit,
+                               resolution, series: new Map() });
       }
-      const provider = result.area === "graphics" && graphics ? graphics.provider : "";
+      // Results that depend on how graphics were provided are kept apart by it.
+      const drawn = result.area === "graphics" || result.test === "playback_dropped_frames";
+      const provider = drawn && graphics ? graphics.provider : "";
       const seriesKey = [record.emulator.variant, record.host.id, provider].join("|");
       const chart = charts.get(chartKey);
       if (!chart.series.has(seriesKey)) {
@@ -395,7 +412,7 @@ function render() {
   const modes = new Set(records.map((r) => r.emulator.variant));
   const last = records[records.length - 1].recorded_at;
   $("status").textContent = records.length + " records, " + state.source + ". Bars show the median of the runs of a "
-    + "configuration; dots show each run. Higher is better throughout.";
+    + "configuration; dots show each run. Higher is better unless a chart says otherwise.";
 
   $("tiles").replaceChildren(
     el("div", { class: "tile" }, el("b", {}, String(records.length)), el("span", {}, "result records")),
@@ -427,6 +444,7 @@ function render() {
   for (const [area, title] of areas) {
     const mine = charts.filter((chart) => chart.area === area)
       .sort((a, b) => order(Object.keys(TESTS), a.test) - order(Object.keys(TESTS), b.test)
+                      || a.case.localeCompare(b.case)
                       || a.resolution.localeCompare(b.resolution, "en", { numeric: true }));
     const cards = mine.map(card).filter(Boolean);
     if (!cards.length) continue;
@@ -434,6 +452,11 @@ function render() {
     if (area === "graphics") {
       sections.push(el("p", { class: "sub" }, "“GPU” rows had graphics mapped to the host's GPU; “CPU” rows had them emulated: "
         + "rendered by the target's CPU. Relative values compare with the emulated container on the same host."));
+    }
+    if (area === "audio_video_decoding") {
+      sections.push(el("p", { class: "sub" }, "Decode speed is media time decoded per second (higher is better). "
+        + "Dropped frames are counted over a 125-frame stream played in real time (lower is better); "
+        + "GPU and CPU say how the display's graphics were provided."));
     }
     sections.push(el("div", { class: "cards" }, cards));
   }
@@ -528,10 +551,12 @@ function card(chart) {
     attachTooltip(row, () => tooltip(chart, series));
     body.push(row);
   }
-  const title = (TESTS[chart.test] || chart.test) + (chart.resolution ? " · " + chart.resolution : "");
+  const title = (TESTS[chart.test] || chart.test) + (chart.case ? ": " + caseName(chart.case) : "")
+    + (chart.resolution ? " · " + chart.resolution : "");
   return el("div", { class: "card" },
     el("h3", {}, title),
-    el("div", { class: "unit" }, state.relative ? "% of the container on the same host" : chart.unit),
+    el("div", { class: "unit" }, (state.relative ? "% of the container on the same host" : chart.unit)
+       + (LOWER_IS_BETTER.has(chart.test) ? " · lower is better" : "")),
     body);
 }
 

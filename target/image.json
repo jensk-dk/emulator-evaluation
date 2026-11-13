@@ -1,6 +1,6 @@
 {
   "name": "emu-target-debian",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Linux client OS image that simulates the target OS in container and VM modes.",
   "source": {
     "distribution": "Debian 13 (trixie)",

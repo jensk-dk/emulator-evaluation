@@ -1,0 +1,102 @@
+#!/usr/bin/env python3
+"""Target-side provider for the "audio" driver feature.
+
+Target software plays sound on the ALSA device "default". This provider makes
+that device available using one of the three driver-feature strategies:
+
+  emulated  VM:        the target kernel's sound driver on a sound card QEMU
+                       emulates (virtio-sound).
+            container: a software model of a sound card: it takes the samples
+                       at the sample rate and plays them to nowhere (a
+                       container cannot load target kernel drivers).
+  mocked    a stub device that takes the samples at the sample rate and
+            discards them; no sound hardware is involved in either mode.
+  host      the sound is played through the host OS, and the emulator's mute
+            switch acts on it.
+            VM:        the kernel's driver on the emulated sound card, whose
+                       backend is the launcher's host-side audio process.
+            container: a shim device that sends the samples to that process
+                       over TCP ($EMU_DRIVER_AUDIO_HOST).
+
+The shim, the model and the stub are the same ALSA device type, "emu"
+(target/src/emu_alsa.c); what differs is where it sends the samples.
+
+usage: audio start {emulated|mocked|host}
+"""
+import json
+import os
+import sys
+import time
+
+STATE_DIR = "/run/emu/drivers"
+CONFIG = "/etc/asound.conf"
+PLUGIN = "/opt/emu/lib/libasound_module_pcm_emu.so"
+CARDS = "/proc/asound/cards"
+
+
+def write_config(lines):
+    with open(CONFIG, "w") as handle:
+        handle.write("# Written by /opt/emu/drivers/audio.\n" + "\n".join(lines) + "\n")
+
+
+def use_emu_device(server):
+    write_config([
+        'pcm_type.emu { lib "%s" }' % PLUGIN,
+        "pcm.emu { type emu%s }" % (' server "%s"' % server if server else ""),
+        # Any format a player asks for is converted to what the device takes.
+        'pcm.!default { type plug slave.pcm "emu" }',
+    ])
+
+
+def kernel_card():
+    """Wait for the kernel's driver to register the emulated sound card."""
+    os.system("modprobe -q virtio_snd 2>/dev/null")
+    deadline = time.monotonic() + 30
+    while time.monotonic() < deadline:
+        try:
+            with open(CARDS) as handle:
+                lines = [line.strip() for line in handle if line.strip()]
+        except OSError:
+            lines = []
+        if lines and "no soundcards" not in lines[0]:
+            name = lines[0].split("]:", 1)[-1].strip()
+            write_config(['pcm.!default { type plug slave.pcm "hw:0,0" }', "ctl.!default { type hw card 0 }"])
+            return name
+        time.sleep(0.1)
+    raise RuntimeError("the kernel has no sound card (%s)" % CARDS)
+
+
+def main():
+    if len(sys.argv) != 3 or sys.argv[1] != "start" or sys.argv[2] not in ("emulated", "mocked", "host"):
+        sys.stderr.write(__doc__)
+        return 64
+    strategy = sys.argv[2]
+    mode = os.environ.get("EMU_MODE", "container")
+    os.makedirs(STATE_DIR, exist_ok=True)
+    try:
+        if strategy == "mocked":
+            use_emu_device(None)
+            provider = "mock:discard"
+        elif mode == "vm":
+            provider = "kernel:%s" % kernel_card()
+        elif strategy == "emulated":
+            use_emu_device(None)
+            provider = "model:emu-sndcard-1 (48 kHz stereo, plays to nowhere)"
+        else:
+            address = os.environ.get("EMU_DRIVER_AUDIO_HOST")
+            if not address:
+                raise RuntimeError("EMU_DRIVER_AUDIO_HOST is not set")
+            use_emu_device(address)
+            provider = "host:%s" % address
+    except Exception as error:
+        sys.stderr.write("audio: %s\n" % error)
+        return 1
+    state = {"feature": "audio", "strategy": strategy, "mode": mode, "provider": provider, "device": "default"}
+    with open(os.path.join(STATE_DIR, "audio.json"), "w") as handle:
+        json.dump(state, handle)
+    print("EMU-DRIVER: " + json.dumps(state), flush=True)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
