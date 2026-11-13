@@ -55,18 +55,34 @@ PLAYERS = {
         ("aplay", lambda sink: ["-q", "-t", "raw", "-f", "S16_LE", "-r", str(RATE), "-c", str(CHANNELS)]
          + (["-D", sink] if sink else [])),
     ),
+    # macOS ships no such program. The launcher builds one from
+    # emulator/coreaudio_player.c; it plays through an audio queue.
+    "macos": (
+        ("emu-coreaudio", lambda sink: ["play"] + (["--device", sink] if sink else [])),
+    ),
 }
+# What only the launcher's own player (macOS) can be told: the volume, and a
+# file to write everything the host's audio output takes.
+PLAYER_SETTINGS = {"volume": "--volume", "monitor": "--monitor"}
 
 
-def find_player(system, sink, search_path=None):
+def find_player(system, sink, search_path=None, settings=None):
     """The command of the first player program this host has, or (None, why)."""
     names = [name for name, _ in PLAYERS.get(system, ())]
     for name, arguments in PLAYERS.get(system, ()):
         path = shutil.which(name, path=search_path)
         if path:
-            return [path] + arguments(sink), name
+            command = [path] + arguments(sink)
+            if system == "macos":
+                for key, option in PLAYER_SETTINGS.items():
+                    if (settings or {}).get(key) not in (None, ""):
+                        command += [option, str(settings[key])]
+            return command, name
     if not names:
         return None, "playing through the host OS is not implemented for %s hosts yet" % system
+    if system == "macos":
+        return None, "the launcher's audio player (%s) is not built; building it needs the Xcode Command Line " \
+                     "Tools" % names[0]
     return None, "none of the player programs is installed (%s)" % ", ".join(names)
 
 
@@ -155,7 +171,9 @@ class Output:
     def status(self):
         with self._lock:
             seconds = lambda count: round(count / (RATE * FRAME_BYTES), 3)
+            running = self._process is not None and self._process.poll() is None
             return {"muted": self.muted, "streams": self.streams, "player": self.player,
+                    "player_pid": self._process.pid if running else None,
                     "player_error": self.player_error, "received_seconds": seconds(self.received_bytes),
                     "played_seconds": seconds(self.played_bytes), "muted_seconds": seconds(self.muted_bytes)}
 
@@ -273,7 +291,7 @@ def control(port, command, timeout=5):
 def serve(args, system):
     """Run the process; prints its startup line and serves until interrupted."""
     command, player = (None, "none: playing was turned off") if args.player == "none" \
-        else find_player(system, args.sink, os.environ.get("PATH"))
+        else find_player(system, args.sink, os.environ.get("PATH"), {"volume": args.volume, "monitor": args.monitor})
     output = Output(command, player, args.trace, args.muted)
     try:
         pcm = _Server((args.bind, args.port), _PcmHandler, output)

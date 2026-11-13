@@ -1,4 +1,5 @@
 """Facts about the development host, and where to find its tools."""
+import hashlib
 import json
 import os
 import platform
@@ -8,6 +9,7 @@ import subprocess
 import sys
 
 from .errors import EmuError
+from .paths import BUILD_DIR, ROOT
 
 # Package managers install tools in places a minimal PATH does not include.
 _EXTRA_TOOL_DIRS = {
@@ -53,10 +55,17 @@ def host_id():
     return "%s-%s" % (host_os(), host_arch())
 
 
+def host_tool_dir():
+    """Where the launcher keeps the programs it builds for this host."""
+    return BUILD_DIR / "host"
+
+
 def tool_path():
-    """PATH extended with the directories package managers install into."""
+    """PATH extended with the directories package managers install into, and
+    with the launcher's own host programs."""
     current = os.environ.get("PATH", "").split(os.pathsep)
-    extra = [d for d in _EXTRA_TOOL_DIRS.get(host_os(), []) if os.path.isdir(d) and d not in current]
+    extra = [d for d in _EXTRA_TOOL_DIRS.get(host_os(), []) + [str(host_tool_dir())]
+             if os.path.isdir(d) and d not in current]
     return os.pathsep.join(current + extra)
 
 
@@ -70,6 +79,38 @@ def tool_env(extra=None):
 
 def find_tool(name):
     return shutil.which(name, path=tool_path())
+
+
+MACOS_AUDIO_PLAYER = "emu-coreaudio"
+
+
+def macos_audio_player():
+    """The launcher's audio player for macOS hosts, built from
+    emulator/coreaudio_player.c with the system's compiler the first time it
+    is needed and again when its source changes. Returns its path."""
+    source = ROOT / "emulator" / "coreaudio_player.c"
+    program = host_tool_dir() / MACOS_AUDIO_PLAYER
+    stamp = program.with_name(program.name + ".sha256")
+    digest = hashlib.sha256(source.read_bytes()).hexdigest()
+    try:
+        if program.is_file() and stamp.read_text().strip() == digest:
+            return str(program)
+    except OSError:
+        pass
+    compiler = find_tool("clang")
+    if not compiler:
+        raise EmuError("the audio player for macOS cannot be built: no C compiler (clang)",
+                       hint="install the Xcode Command Line Tools: xcode-select --install")
+    program.parent.mkdir(parents=True, exist_ok=True)
+    fresh = program.with_name(program.name + ".new")
+    done = subprocess.run([compiler, "-O2", "-o", str(fresh), str(source), "-framework", "AudioToolbox",
+                           "-framework", "CoreAudio", "-framework", "CoreFoundation"],
+                          capture_output=True, text=True, timeout=300)
+    if done.returncode != 0:
+        raise EmuError("the audio player for macOS did not build:\n" + done.stderr.strip()[-2000:])
+    os.replace(str(fresh), str(program))
+    stamp.write_text(digest + "\n")
+    return str(program)
 
 
 def require_tool(name, purpose):

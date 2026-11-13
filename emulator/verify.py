@@ -549,17 +549,38 @@ def _video(technology, mode, arch="native"):
 
 
 class _HostSink:
-    """A private output device of the host's sound server, with a recording
-    of everything played on it: the check hears what the host OS was given,
-    and nothing comes out of the loudspeakers. Linux with PulseAudio or
-    PipeWire; elsewhere `reason` says why there is none."""
+    """Where a check hears what the host OS was given to play, without a
+    sound from the loudspeakers. `where` names the place; `reason` says why
+    there is none on this host.
+
+    Linux, with PulseAudio or PipeWire: a private output device of the sound
+    server, and a recording of everything played on it.
+
+    macOS: the default output device, played at volume 0. The launcher's
+    player records what the system's audio queue takes for the device, which
+    happens at the device's own pace, and the system's audio server is asked
+    whether it sees the player playing."""
 
     def __init__(self):
         self.name = None
         self.reason = None
+        self.where = "the host's sound server"
+        self.activity = None        # macOS: what the audio server said about the player
         self._module = None
         self._recorder = None
         self._file = None
+        self._monitor = None
+        if host.host_os() == "macos":
+            try:
+                self._player = host.macos_audio_player()
+            except EmuError as error:
+                self.reason = "no recording at the host's audio output: %s" % error
+                return
+            handle, self._monitor = tempfile.mkstemp(prefix="emu-verify-", suffix=".raw")
+            os.close(handle)
+            self.name = "the default output device, at volume 0"
+            self.where = "the host's audio output"
+            return
         pactl, parec = host.find_tool("pactl"), host.find_tool("parec")
         if host.host_os() != "linux" or not pactl or not parec:
             self.reason = "no recording at the host's sound server: that needs pactl and parec (PulseAudio or " \
@@ -579,11 +600,41 @@ class _HostSink:
                                           stdout=self._file, stderr=subprocess.DEVNULL)
 
     def options(self):
+        if self._monitor:
+            return {"audio-volume": "0", "audio-monitor": self._monitor}
         return {"audio-sink": self.name} if self.name else {"audio-output": "none"}
+
+    def watch(self, info):
+        """macOS: while the sound plays, ask the system's audio server what it
+        sees of the player process. Called with the audio process's details."""
+        if not self._monitor:
+            return
+
+        def run():
+            deadline = time.time() + 1800
+            while time.time() < deadline:
+                time.sleep(0.5)
+                try:
+                    pid = hostaudio.control(info["control_port"], "status").get("player_pid")
+                except (OSError, ValueError):
+                    return          # the audio process has ended
+                if not pid:
+                    continue
+                try:
+                    done = subprocess.run([self._player, "activity", str(pid)], capture_output=True, text=True,
+                                          timeout=20)
+                    found = json.loads(done.stdout)
+                except (OSError, ValueError, subprocess.SubprocessError):
+                    continue
+                self.activity = found
+                if found.get("playing") or found.get("known") is None:
+                    return
+        threading.Thread(target=run, daemon=True).start()
 
     def close(self):
         """Stop recording; returns the (level, pitch) of each tenth of a second."""
         windows = []
+        data = b""
         if self._recorder:
             time.sleep(0.5)     # what the player still holds
             self._recorder.terminate()
@@ -591,11 +642,49 @@ class _HostSink:
             with open(self._file.name, "rb") as handle:
                 data = handle.read()
             self._file.close()
-            step = hostaudio.WINDOW_BYTES
-            windows = [hostaudio.measure(data[start:start + step]) for start in range(0, len(data) - step + 1, step)]
+        if self._monitor:
+            # The player ends when the audio process does, and then writes its summary.
+            deadline = time.time() + 5
+            while not os.path.exists(self._monitor + ".json") and time.time() < deadline:
+                time.sleep(0.1)
+            try:
+                with open(self._monitor, "rb") as handle:
+                    data = handle.read()
+                with open(self._monitor + ".json") as handle:
+                    self.summary = json.load(handle)
+            except (OSError, ValueError):
+                self.summary = {}
+            for path in (self._monitor, self._monitor + ".json"):
+                try:
+                    os.unlink(path)
+                except OSError:
+                    pass
+        step = hostaudio.WINDOW_BYTES
+        windows = [hostaudio.measure(data[start:start + step]) for start in range(0, len(data) - step + 1, step)]
         if self._module:
             subprocess.run([self._pactl, "unload-module", self._module], capture_output=True)
         return windows
+
+    def evidence(self):
+        """macOS: what the output device and the audio server said, as lines
+        for the check's report; problems raise CheckFailed."""
+        if not self._monitor:
+            return []
+        summary = getattr(self, "summary", {})
+        _require(summary.get("started"), "the host's output device did not start playing")
+        _require(summary.get("device_clock_seconds", 0) >= 0.8 * summary.get("sound_seconds", 0) > 0,
+                 "the host's output device did not play the sound it was given (%.1f s played of %.1f s)"
+                 % (summary.get("device_clock_seconds", 0), summary.get("sound_seconds", 0)))
+        lines = ["host output device: %s, at volume %d; it played for %.1f s by its own clock, %.1f s of that the "
+                 "target's sound" % (summary.get("device"), summary.get("volume", 0),
+                                     summary["device_clock_seconds"], summary["sound_seconds"])]
+        if self.activity and self.activity.get("known"):
+            _require(self.activity.get("playing"), "the host's audio server did not see the player playing")
+            lines.append("the host's audio server reported the player process as playing on: %s"
+                         % ", ".join(self.activity.get("devices") or ["(no device named)"]))
+        elif self.activity:
+            lines.append("the host's audio server gave no process report (%s)" % self.activity.get("reason"))
+        return lines
 
 
 def _trace(outcome):
@@ -612,7 +701,8 @@ def _audio_host(mode, arch="native"):
     sink = _HostSink()
     try:
         _, outcome = _run(mode=mode, arch=arch, workload="media-decode", args=["--tests", "sound"],
-                          drivers=driver_features.parse(["audio=host"]), options=sink.options(), timeout=3600)
+                          drivers=driver_features.parse(["audio=host"]), options=sink.options(),
+                          on_audio=sink.watch, timeout=3600)
     finally:
         heard = sink.close()
     audio = outcome.environment["emulator"].get("audio") or {}
@@ -632,14 +722,14 @@ def _audio_host(mode, arch="native"):
         if sink.name:
             _require(_tone_windows(heard, hz) >= 5, "the %d Hz tone of the %s stream was not played on the host's "
                      "output device" % (hz, name))
-            line += " and was recorded at the host's sound server"
+            line += " and was recorded at %s" % sink.where
         lines.append(line)
     lines.append("path: target ALSA device (%s) -> %s -> %s" % (
         next((d.get("provider") for d in outcome.drivers if d.get("feature") == "audio"), "?"), audio.get("path"),
         "the host's player program (%s)" % audio.get("player") if sink.name else "no host output in this check"))
     if not sink.name:
         raise CheckUnavailable("\n".join(lines + [sink.reason]))
-    return lines
+    return lines + sink.evidence()
 
 
 def _audio_mute(mode):
@@ -699,10 +789,10 @@ def _audio_mute(mode):
             if level >= LOUD and abs(pitch - TONE_HZ["aac"]) <= TONE_HZ["aac"] * 0.05]
     _require(len(loud) >= 10, "the tone was not played on the host's output device")
     gap = max((b - a - 1 for a, b in zip(loud, loud[1:])), default=0)
-    _require(15 <= gap <= 30, "the recording at the host's sound server has no silent stretch of about two seconds "
-             "inside the tone (longest: %.1f s)" % (gap / 10))
-    lines.append("recorded at the host's sound server: the tone, %.1f s of silence, the tone again" % (gap / 10))
-    return lines
+    _require(15 <= gap <= 30, "the recording at %s has no silent stretch of about two seconds "
+             "inside the tone (longest: %.1f s)" % (sink.where, gap / 10))
+    lines.append("recorded at %s: the tone, %.1f s of silence, the tone again" % (sink.where, gap / 10))
+    return lines + sink.evidence()
 
 
 def _audio_strategies(mode):

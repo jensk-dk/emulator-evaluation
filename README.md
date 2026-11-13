@@ -20,11 +20,11 @@ holds the code for stages 0 to 4: the evaluation foundation, a cross-platform
 runnable baseline, VM CPU and driver fidelity, graphics, and media playback.
 Stages 0 to 3 are verified on three hosts: macOS on ARM64, Windows on x86-64
 with Podman as the container runtime, and Linux on x86-64 (Kubuntu 24.04)
-with Docker. Stage 4 is implemented and verified on the Linux host only; on
-macOS and Windows its decoding and video parts are expected to work as they
-are, and playing the target's sound through the host is still to be done
-there. The task list and `evaluation/verification/` show what has been
-verified, and on which hosts.
+with Docker. Stage 4 is verified on the Linux and macOS hosts; on Windows its
+decoding and video parts are expected to work as they are, and playing the
+target's sound through the host is still to be done there. macOS has no host
+graphics acceleration, which the Linux host has in VM mode. The task list and
+`evaluation/verification/` show what has been verified, and on which hosts.
 
 ## Quick start
 
@@ -55,7 +55,7 @@ dependency and install what is missing. `--check` / `-Check` only reports.
 | Hardware virtualization | host-native VM mode | Hypervisor.framework | KVM | Windows Hypervisor Platform |
 | Container runtime | container mode, image builds | Colima + Docker CLI (Homebrew) | Podman | Podman |
 | Foreign-architecture emulation | building ARM target images | registered in the engine VM | `qemu-user-static` | registered in the engine VM |
-| Audio player (optional) | playing the target's sound on the host | not implemented yet | `pacat`, `pw-cat` or `aplay`; system package | not implemented yet |
+| Audio player (optional) | playing the target's sound on the host | built by the launcher with the Command Line Tools' compiler | `pacat`, `pw-cat` or `aplay`; system package | not implemented yet |
 | QEMU OpenGL modules (optional) | mapping VM graphics to the host GPU | not in Homebrew's QEMU | system package | in winget's QEMU; used when the display is in a window (see [Display and graphics](#display-and-graphics)) |
 
 An existing Docker or Podman installation is used as it is. Where both are
@@ -204,14 +204,18 @@ why. `--graphics host` fails rather than silently emulating.
 Without `--window` a VM's display is not shown anywhere; `--screenshot`
 captures it. `--window` shows it in QEMU's SDL window, or in QEMU's Cocoa or
 GTK window where the build has no SDL. Closing the window ends the emulator.
-The SDL window has been run on Windows and on Linux (X11). The windowed display of the later
-stage (full screen, scaling, toolbar) is not part of this.
-sudo apt update && sudo apt install claude-desktop
+The SDL window has been run on Windows and on Linux (X11), the Cocoa window
+on macOS. The windowed display of the later stage (full screen, scaling,
+toolbar) is not part of this.
+
 What the verified hosts offer; `./emu doctor` shows it for any host:
 
-- macOS on ARM64: no host acceleration. Homebrew's QEMU is built without the
-  GPU-accelerated display device, and the container engine's virtual machine
-  has no GPU.sudo apt update && sudo apt install claude-desktop
+- macOS on ARM64: no host acceleration, in either mode. Homebrew's QEMU is
+  built without the GPU-accelerated display device, and QEMU itself has no
+  OpenGL display for macOS: the builds that have one are patched forks in
+  third-party Homebrew taps, which this project does not install. The
+  container engine's virtual machine has no GPU. `--window` shows the
+  emulated display in QEMU's Cocoa window, and such a display can be captured.
 - Linux on x86-64 (Kubuntu 24.04, QEMU 8.2.2, NVIDIA GPU with NVIDIA's own
   driver), VM mode: host acceleration, with and without a window. QEMU maps
   OpenGL ES to the host GPU; `./emu verify` covers this path here, by a capture
@@ -287,11 +291,16 @@ the `audio` driver feature's strategy:
 | `emulated` | the same sound card with no backend: the kernel's driver plays to nowhere | a software model of a sound card: the same ALSA device, playing to nowhere at the sample rate |
 | `mocked` | no sound card; a stub ALSA device discards the samples | the same stub |
 
-The host-side audio process plays the sound with the host's own player
-program (`pacat`, `pw-cat` or `aplay`, whichever is installed), so it goes
-wherever the host's sound server sends an application's sound.
+The host-side audio process plays the sound with a player program, so it
+goes wherever the host's sound system sends an application's sound. On Linux
+that is the host's own `pacat`, `pw-cat` or `aplay`, whichever is installed.
+macOS has no such program, so the launcher builds one the first time it is
+needed ([emulator/coreaudio_player.c](emulator/coreaudio_player.c), into
+`build/host/`); it plays through a Core Audio queue.
 `--option audio-sink=NAME` chooses the host's output device, and
-`--option audio-output=none` takes the sound in without playing it.
+`--option audio-output=none` takes the sound in without playing it. On macOS
+`--option audio-volume=0..100` sets the volume, and `build/host/emu-coreaudio
+devices` lists the output devices.
 
 Mute while it runs, from another terminal:
 
@@ -302,9 +311,11 @@ notices nothing, and the host gets silence in place of the sound.
 
 Limits:
 
-- Playing through the host is implemented for Linux hosts. On macOS and
+- Playing through the host is implemented for Linux and macOS hosts. On
   Windows the audio process starts without a player and says so; the target's
   sound is taken in, and can be muted and inspected, but is not heard.
+- On macOS the checks play at volume 0 and record what the system's audio
+  queue takes for the output device; nobody has listened to it there yet.
 - In VM mode QEMU writes the sound card's output into a named pipe. Windows
   has none of the kind QEMU can write to, so there the launcher falls back to
   the container mode's shim device over QEMU's network; that path has not
@@ -375,4 +386,6 @@ do it without a window:
 `--virtual-time-budget` gives the page time to read the records before it is
 printed. The PDF shows all hosts with measured values, the page's defaults.
 This was run with Chrome on Linux; on macOS and Windows the browser's own
-print dialog does the same.
+print dialog does the same. The snapshot in the repository was made on the
+Linux host before the macOS media results were recorded, so it does not show
+those; the page does.

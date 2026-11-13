@@ -34,6 +34,9 @@ ON_DEMAND = {"audio": "host"}
 AUDIO_OPTIONS = {
     "audio-sink": "audio with the host strategy: the host output device to play on (default: the host's default)",
     "audio-output": "audio with the host strategy: \"none\" takes the sound in without playing it on the host",
+    "audio-volume": "audio with the host strategy, macOS hosts: the volume to play at, from 0 to 100 (default: 100)",
+    "audio-monitor": "audio with the host strategy, macOS hosts: also write the samples the host's audio output "
+                     "takes to this file (raw, 16-bit stereo at 48 kHz)",
 }
 
 
@@ -131,12 +134,23 @@ def _audio_arguments(options, muted):
         extra += ["--sink", options["audio-sink"]]
     if str(options.get("audio-output", "")).lower() == "none":
         extra += ["--player", "none"]
+    for name in ("volume", "monitor"):
+        if options.get("audio-" + name) not in (None, ""):
+            if host.host_os() != "macos":
+                raise EmuError("--option audio-%s is for macOS hosts, where the launcher plays with its own player"
+                               % name)
+            extra += ["--" + name, str(options["audio-" + name])]
     if muted:
         extra.append("--muted")
     return extra
 
 
 def _start_audio(plan, bind, run_dir, options, muted, extra=()):
+    if host.host_os() == "macos" and str(options.get("audio-output", "")).lower() != "none":
+        try:
+            host.macos_audio_player()       # built on first use
+        except EmuError:
+            pass                            # the host-side process says that there is no player, and why
     info = plan.start_host_process("audio", bind, os.path.join(run_dir, "audio-host.trace"),
                                    _audio_arguments(options, muted) + list(extra))
     plan.audio = info

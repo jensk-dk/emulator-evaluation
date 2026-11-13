@@ -177,9 +177,20 @@ of the emulator's display during each playback must show the stream's marker
 blocks (the four corners, and one whose colour names the video codec), and
 the sound must arrive on the host. Each audio stream is a tone whose pitch
 names its codec (MP2 440 Hz, AC-3 660 Hz, AAC 880 Hz, HE-AAC 1100 Hz). The
-checks play them into a private output device of the host's sound server,
-record that device, and look for the pitches; for mute they look for the
-silent stretch in the middle of a tone. Nothing is heard while they run.
+checks look for the pitches in a recording made on the host; for mute they
+look for the silent stretch in the middle of a tone. Nothing is heard while
+they run. Where the recording is made depends on the host:
+
+- Linux: the tones are played into a private output device of the host's
+  sound server (PulseAudio or PipeWire), and that device is recorded.
+- macOS: there is no private output device without installing an audio
+  driver. The tones are played on the default output device at volume 0. The
+  launcher's player records what the system's audio queue takes for the
+  device, which the queue does at the device's own pace, and reports how long
+  the device played by its own clock. The check also asks the system's audio
+  server whether it sees the player process playing, and on which device.
+  This shows that the host's audio output took the sound; it is not a
+  recording of what left the device.
 
 ## Web
 

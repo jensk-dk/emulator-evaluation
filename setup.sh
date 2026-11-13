@@ -18,8 +18,10 @@
 # Optional, installed where the package manager offers it:
 #   QEMU OpenGL modules       VM mode maps graphics to the host GPU; without
 #                             them graphics are emulated
-#   audio player (Linux)      plays the target's sound through the host's sound
-#                             server; without one the target's sound is not heard
+#   audio player              plays the target's sound through the host's sound
+#                             system; without one the target's sound is not heard.
+#                             Linux: pacat, pw-cat or aplay. macOS: the launcher
+#                             builds its own with the Command Line Tools' compiler
 #
 # Written for bash 3.2 (the version macOS ships).
 
@@ -135,7 +137,17 @@ linux_audio_packages() {
 }
 
 check_audio() {
-  [ "$OS" = Linux ] || return 0     # playing through the host is implemented for Linux hosts so far
+  if [ "$OS" = Darwin ]; then
+    # macOS has no program that plays raw samples; the launcher builds one
+    # (emulator/coreaudio_player.c) the first time it plays sound.
+    if xcode-select -p >/dev/null 2>&1 && have clang; then
+      ok "audio player: built by the launcher (emu-coreaudio, with the Command Line Tools' compiler)"
+    else
+      note "audio player: the launcher cannot build its player without the Xcode Command Line Tools; the target's sound is not heard without it"
+    fi
+    return 0
+  fi
+  [ "$OS" = Linux ] || return 0
   if have pacat; then ok "audio player: pacat (PulseAudio or PipeWire)"
   elif have pw-cat; then ok "audio player: pw-cat (PipeWire)"
   elif have aplay; then ok "audio player: aplay (ALSA)"

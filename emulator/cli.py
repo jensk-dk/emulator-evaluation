@@ -178,6 +178,11 @@ def cmd_doctor(args):
         "%.0f GiB" % (info["memory_bytes"] / 2**30) if info["memory_bytes"] else "unknown memory"))
     for found in info["gpus"]:
         print("gpu         %s" % host.gpu_text(found))
+    if host.host_os() == "macos":
+        try:
+            host.macos_audio_player()       # the launcher's own player, built on first use
+        except EmuError:
+            pass
     command, player = hostaudio.find_player(host.host_os(), None, host.tool_path())
     print("audio       %s" % ("the target's sound is played with %s" % player if command
                               else "the target's sound is not played on this host: %s" % player))
