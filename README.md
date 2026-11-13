@@ -1,6 +1,8 @@
 # emulator-evaluation
 
 <picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/emu-logo-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="docs/emu-logo.svg">
   <img alt="Emu Device Emulator" src="docs/emu-logo.svg" width="150" height="150">
 </picture>
 
