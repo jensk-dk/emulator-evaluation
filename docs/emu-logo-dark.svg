@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Emu on a CRT TV logo (dark theme)">
+  <rect width="512" height="512" fill="#000"/>
+
+  <!-- antenna -->
+  <g fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round">
+    <path d="M256 112 L172 30"/>
+    <path d="M256 112 L340 30"/>
+  </g>
+  <circle cx="172" cy="30" r="9" fill="#fff"/>
+  <circle cx="340" cy="30" r="9" fill="#fff"/>
+  <path d="M226 104 A30 22 0 0 1 286 104 Z" fill="#fff"/>
+
+  <!-- TV outline and feet -->
+  <g fill="none" stroke="#fff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="40" y="114" width="432" height="336" rx="34" stroke-width="24"/>
+    <path d="M110 452 L98 482"/>
+    <path d="M402 452 L414 482"/>
+  </g>
+
+  <!-- emu -->
+  <g transform="translate(74 93) scale(0.7)">
+    <g fill="none" stroke="#fff" stroke-width="13" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M200 345 L190 408 L198 462 L240 467"/>
+      <path d="M265 345 L282 405 L268 462 L312 467"/>
+    </g>
+    <path fill="#fff" d="M100 340
+      C85 260 150 185 245 185
+      C285 185 310 197 322 178
+      C335 150 338 122 340 100
+      C342 75 365 62 385 72
+      L428 90
+      L388 99
+      C375 104 368 112 366 125
+      C362 165 368 205 372 240
+      C378 300 330 352 250 356
+      C190 359 150 350 130 366
+      C116 374 104 362 100 340 Z"/>
+    <circle cx="377" cy="83" r="5" fill="#000"/>
+  </g>
+</svg>
