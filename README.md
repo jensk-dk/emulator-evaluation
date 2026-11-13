@@ -47,6 +47,8 @@ takes a few minutes. Later runs start in seconds.
 
 `setup.sh` (Linux, macOS) and `setup.ps1` (Windows) check for every host
 dependency and install what is missing. `--check` / `-Check` only reports.
+`--uninstall` / `-Uninstall` removes what they installed (see
+[Removing what setup installed](#removing-what-setup-installed)).
 
 | Dependency | Used for | macOS | Linux | Windows |
 |---|---|---|---|---|
@@ -66,6 +68,85 @@ launcher and `setup.ps1` read it.
 The launcher starts a stopped container engine itself. On macOS, restarting
 Colima drops the ARM32 build emulation; `./setup.sh` restores it, and it is
 only needed to rebuild the ARM32 image.
+
+### Removing what setup installed
+
+The setup scripts keep a record of what they install on a host: only of what
+was not there before they put it there. `./setup.sh --uninstall`
+(`setup.cmd -Uninstall` on Windows) lists what the record has, asks, and
+removes it. With `--check` (`-Check`) it only lists.
+
+- Packages are removed with the package manager that installed them. A
+  package that something installed later has come to need stays, and the
+  script says so.
+- The record has every package an installation added: the packages the script
+  asked for, and the packages that came with them as dependencies. Of those
+  that came with them, each goes that nothing else uses. No other package
+  goes, also not one that was installed as a dependency and that nothing
+  needed before setup ran.
+- On Linux the package manager is first asked what it would remove, and
+  anything that is not in the record is held back. Homebrew is told not to
+  remove unused dependencies on its own, as it does on every uninstall, and
+  is asked which of the recorded ones nothing needs.
+- A virtual machine the script created for the container engine (Colima's on
+  macOS, Podman's machine on Windows) is deleted with every container, image
+  and volume in it. On Linux the same goes for Podman's storage, where the
+  script installed Podman. The target images the launcher built are among
+  those.
+- The experimental QEMU on macOS is removed with the rest, with its tap and
+  Homebrew's trust in it.
+- Where the script installed Homebrew itself, Homebrew was installed for this
+  project, and all that is installed with it counts as this project's, also
+  what was installed with it later by hand. The uninstall then removes
+  Homebrew with its own uninstaller, and every package with it. The list
+  names the packages that the script did not install before it asks.
+  Homebrew's uninstaller asks for an administrator's password, so this needs
+  a terminal; without one the script stops before it removes anything. A
+  Homebrew that was there before setup stays, and only the recorded packages
+  go.
+- Some things are listed with the command that removes them, and left in
+  place, because other software can have come to use them and removing them
+  takes root rights. On macOS: the Xcode Command Line Tools that Homebrew's
+  installer adds, and the developer directory that installer selects. On
+  Windows: the Windows Hypervisor Platform feature and WSL 2.
+- This repository is not touched, nor `build/` in it.
+
+The record is `~/.local/state/emulator-evaluation/setup-installed` (under
+`$XDG_STATE_HOME` where that is set; on Windows
+`%LOCALAPPDATA%\emulator-evaluation\setup-installed`). It is a text file with
+one line for each thing. A host that was set up before the scripts kept a
+record has none, and there `--uninstall` finds nothing to remove.
+
+How far this has been run:
+
+- macOS: the script installed the experimental QEMU and removed it again,
+  with its tap and the trust in it. It deleted a second Colima virtual
+  machine made for the purpose, removed the ARM build emulation and its image
+  from the container engine, and left a package in place that another one
+  needs. With the experimental QEMU went the 16 Homebrew packages that came
+  with it, and the 30 that Homebrew's QEMU and Colima use stayed. With two
+  small packages that stood in for the script's own, a dependency from before
+  setup stayed, which Homebrew's own uninstall would have removed. Removing
+  Homebrew itself has not been run: on the Mac this was written on, the
+  script installed Homebrew, and removing it takes the whole setup. Its steps
+  were run with stand-ins that remove nothing, and Homebrew's uninstaller in
+  its dry-run mode.
+- Linux: in containers only, not on a Linux host. With apt in Ubuntu 24.04
+  the script installed 334 packages and recorded each. The uninstall then ran
+  with packages in place that the script did not install: three unused
+  dependencies from before setup, and two packages installed after setup that
+  need packages of the script. It left all of those, held `python3` back
+  while one of them needed it, and removed the rest. Eleven of the packages
+  that came with the script's own stayed: seven that the later package uses,
+  and four that packages from before recommend (apt keeps those). It also
+  removed Podman's storage, of which Podman leaves the empty directories.
+- With dnf in Fedora, zypper in openSUSE Tumbleweed and pacman in Arch Linux
+  (x86-64, emulated) the same was run with a few small packages that stood in
+  for the script's own, recorded by the script's own functions. Before this
+  change, dnf removed an unused dependency from before setup, as apt did. The
+  group memberships and the Docker service have not been run.
+- Windows: not run on Windows. The script's logic passed with stand-ins for
+  winget, Podman and WSL, in PowerShell 7 on Linux.
 
 ### Linux
 
@@ -299,7 +380,9 @@ Two things can stop the option:
 - Homebrew's own `virglrenderer` has the same name as the tap's. Where that
   one is installed, the option stops and does not replace it.
 
-To remove the build again (Homebrew does not uninstall a pinned package):
+`./setup.sh --uninstall` removes the build with everything else the script
+installed (see [Removing what setup installed](#removing-what-setup-installed)).
+To remove only the build (Homebrew does not uninstall a pinned package):
 
     brew unpin qemu-virgl virglrenderer libepoxy-angle libangle gn
     brew uninstall qemu-virgl virglrenderer libepoxy-angle libangle gn

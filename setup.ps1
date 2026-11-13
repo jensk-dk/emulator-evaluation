@@ -9,6 +9,13 @@
     .\setup.ps1           check, then install what is missing (asks first)
     .\setup.ps1 -Yes      same, without asking
     .\setup.ps1 -Check    check only; exit 1 if anything is missing
+    .\setup.ps1 -Uninstall
+                          remove what this script installed on this host (asks
+                          first; with -Check it only lists what that is)
+
+  The script keeps a record of what it installs: only of what was not there
+  before. -Uninstall removes what the record lists and nothing else. The
+  record is %LOCALAPPDATA%\emulator-evaluation\setup-installed.
 
   setup.cmd runs this script where the PowerShell execution policy does not
   allow scripts, which is the default on Windows: setup.cmd -Check
@@ -36,7 +43,8 @@
 [CmdletBinding()]
 param(
   [switch]$Check,
-  [switch]$Yes
+  [switch]$Yes,
+  [switch]$Uninstall
 )
 
 $ErrorActionPreference = 'Stop'
@@ -128,6 +136,44 @@ function Get-HostArch {
 
 function Get-NativeQemu {
   if ((Get-HostArch) -eq 'arm64') { 'qemu-system-aarch64' } else { 'qemu-system-x86_64' }
+}
+
+# ----------------------------------------------------------------- record ---
+
+# What this script installed on this host: a line "KIND VALUE" for each thing
+# that was not there before the script put it there. -Uninstall goes by it.
+$script:Record = $env:EMU_SETUP_RECORD
+if (-not $script:Record) { $script:Record = Join-Path "$env:LOCALAPPDATA" 'emulator-evaluation\setup-installed' }
+
+# The entries of the record, in the order they were recorded.
+function Get-Recorded {
+  if (-not (Test-Path $script:Record)) { return @() }
+  @(Get-Content $script:Record | Where-Object { $_ -and $_ -notmatch '^#' })
+}
+
+function Add-Record {
+  param([string]$Kind, [string]$Value = '-')
+  $entry = "$Kind $Value"
+  try {
+    if (-not (Test-Path $script:Record)) {
+      $null = New-Item -ItemType Directory -Force -Path (Split-Path $script:Record)
+      Set-Content -Path $script:Record -Encoding ASCII -Value '# What setup.ps1 installed on this host. setup.cmd -Uninstall removes it.'
+    }
+    if (@(Get-Recorded) -notcontains $entry) { Add-Content -Path $script:Record -Encoding ASCII -Value $entry }
+  } catch {
+    Write-Warn "could not write to $($script:Record) that this script installed: $entry"
+  }
+}
+
+function Remove-Record {
+  param([string]$Kind, [string]$Value = '-')
+  $rest = @(Get-Content $script:Record | Where-Object { $_ -ne "$Kind $Value" })
+  Set-Content -Path $script:Record -Encoding ASCII -Value $rest
+}
+
+# Whether winget has a package installed.
+function Test-WingetPackage($id) {
+  Test-Run winget @('list', '--exact', '--id', $id, '--accept-source-agreements', '--disable-interactivity')
 }
 
 # ----------------------------------------------------------------- checks ---
@@ -298,7 +344,12 @@ function Invoke-Step {
 }
 
 function Install-WingetPackage($id) {
-  Invoke-Step winget @('install', '--exact', '--id', $id, '--source', 'winget', '--accept-source-agreements', '--accept-package-agreements', '--disable-interactivity')
+  $had = Test-WingetPackage $id
+  try {
+    Invoke-Step winget @('install', '--exact', '--id', $id, '--source', 'winget', '--accept-source-agreements', '--accept-package-agreements', '--disable-interactivity')
+  } finally {
+    if (-not $had -and (Test-WingetPackage $id)) { Add-Record 'winget' $id }
+  }
 }
 
 function Install-Missing {
@@ -318,6 +369,7 @@ function Install-Missing {
     if (Test-Admin) {
       Write-Host '  + Enable-WindowsOptionalFeature HypervisorPlatform'
       $result = Enable-WindowsOptionalFeature -Online -FeatureName HypervisorPlatform -All -NoRestart
+      Add-Record 'feature' 'HypervisorPlatform'
       if ($result.RestartNeeded) { $script:RestartNeeded = $true }
     } else {
       Write-Host '  ! Enabling the Windows Hypervisor Platform needs an elevated PowerShell; run setup as Administrator.'
@@ -332,6 +384,7 @@ function Install-Missing {
     if (-not (Test-Run wsl @('--status'))) {
       if (Test-Admin) {
         Invoke-Step wsl @('--install', '--no-distribution')
+        Add-Record 'wsl'
         $script:RestartNeeded = $true
       } else {
         Write-Host '  ! Installing WSL 2 needs an elevated PowerShell; run setup as Administrator.'
@@ -348,7 +401,10 @@ function Install-Missing {
         $machines = Get-Output podman @('machine', 'list', '--format', '{{.Name}}')
         # A rootful engine, as Docker's is: it can pin a container to whole
         # CPUs, which the launcher does so the target sees the CPUs it is given.
-        if (-not $machines) { Invoke-Step podman @('machine', 'init', '--rootful') }
+        if (-not $machines) {
+          Add-Record 'podman-machine' 'podman-machine-default'
+          Invoke-Step podman @('machine', 'init', '--rootful')
+        }
         Invoke-Step podman @('machine', 'start')
       }
       $script:ContainerCli = 'podman'
@@ -370,6 +426,9 @@ function Install-Missing {
 
     if ($script:ContainerCli -and @(Get-ForeignArchGaps).Count -gt 0) {
       $binfmt = @('run', '--rm', '--privileged', 'docker.io/tonistiigi/binfmt')
+      if (-not (Test-EngineImage $script:ContainerCli 'docker.io/tonistiigi/binfmt')) {
+        Add-Record 'engine-image' "$($script:ContainerCli) docker.io/tonistiigi/binfmt"
+      }
       # A dead registration is in the way of a new one, so clear them first.
       foreach ($action in @(@('--uninstall', 'qemu-arm,qemu-aarch64'), @('--install', 'arm,arm64'))) {
         if ($script:ContainerCli -eq 'podman') {
@@ -380,11 +439,186 @@ function Install-Missing {
           Invoke-Step $script:ContainerCli ($binfmt + $action)
         }
       }
+      Add-Record 'binfmt' $script:ContainerCli
     }
   }
 }
 
+# -------------------------------------------------------------- uninstall ---
+
+# The kinds of entry in the record that this script removes, in the order to
+# remove them: what uses a thing goes before the thing.
+$script:RemoveOrder = @('binfmt', 'engine-image', 'podman-machine', 'winget')
+# The kinds it lists and leaves: removing them takes an elevated PowerShell and
+# a restart, and other software may have come to use them.
+$script:LeaveOrder = @('feature', 'wsl')
+
+# The arguments that run a container CLI command as root in the engine: for
+# Podman inside its machine, as the installation does it.
+function Get-RootEngineArguments {
+  param([string]$Cli, [string[]]$Arguments)
+  if ($Cli -eq 'podman') { return @('machine', 'ssh', "sudo podman $($Arguments -join ' ')") }
+  return $Arguments
+}
+
+function Test-EngineImage($cli, $image) {
+  Test-Run $cli (Get-RootEngineArguments $cli @('image', 'inspect', $image))
+}
+
+function Get-PodmanMachines {
+  @((Get-Output podman @('machine', 'list', '--format', '{{.Name}}')) -split "`n" |
+    ForEach-Object { $_.Trim().TrimEnd('*') } | Where-Object { $_ })
+}
+
+# The entries of some kinds, as objects, in the order to remove them.
+function Get-Entries([string[]]$kinds) {
+  foreach ($kind in $kinds) {
+    $values = @(Get-Recorded | Where-Object { $_ -like "$kind *" } | ForEach-Object { $_.Substring($kind.Length + 1) })
+    # Of packages, the one recorded last goes first.
+    if ($kind -eq 'winget') { [array]::Reverse($values) }
+    foreach ($value in $values) { New-Object psobject -Property @{ Kind = $kind; Value = $value } }
+  }
+}
+
+# Whether what an entry of the record names is still there. $null: the
+# container engine that would know does not answer.
+function Test-EntryPresent($entry) {
+  $value = $entry.Value
+  switch ($entry.Kind) {
+    'winget'         { return (Test-Command winget) -and (Test-WingetPackage $value) }
+    'podman-machine' { return (Test-Command podman) -and (@(Get-PodmanMachines) -contains $value) }
+    'feature'        { return Test-Feature $value }
+    'wsl'            { return (Test-Command wsl) -and (Test-Run wsl @('--status')) }
+    'binfmt' {
+      if (-not (Test-Command $value)) { return $false }
+      if (-not (Test-Engine $value 20)) { return $null }
+      return $true
+    }
+    'engine-image' {
+      $cli, $image = $value -split ' ', 2
+      if (-not (Test-Command $cli)) { return $false }
+      if (-not (Test-Engine $cli 20)) { return $null }
+      return Test-EngineImage $cli $image
+    }
+  }
+  return $false
+}
+
+function Get-EntryText($entry) {
+  $value = $entry.Value
+  switch ($entry.Kind) {
+    'winget'         { return "the winget package $value" }
+    'podman-machine' { return "the Podman machine `"$value`", with every container, image and volume in it" }
+    'binfmt'         { return "the emulation of other CPU architectures registered in the container engine ($value)" }
+    'engine-image'   { return "the container image $(($value -split ' ', 2)[1])" }
+  }
+}
+
+# Removes what an entry names. Returns whether the entry is settled.
+function Remove-Entry($entry) {
+  $value = $entry.Value
+  $present = Test-EntryPresent $entry
+  if ($present -eq $false) { return $true }
+  if ($null -eq $present) {
+    # Inside an engine that does not answer. Registered emulation is in the
+    # memory of the engine's kernel and goes when that restarts.
+    if ($entry.Kind -eq 'binfmt') {
+      Write-Host "  The container engine does not answer; the registered emulation goes when it restarts (wsl --shutdown)."
+      return $true
+    }
+    if (@(Get-Recorded | Where-Object { $_ -like 'podman-machine *' }).Count -gt 0) { return $true }   # it goes with the machine
+    Write-Host "  ! The container engine does not answer, so this stays: $(Get-EntryText $entry)."
+    return $false
+  }
+  try {
+    switch ($entry.Kind) {
+      'binfmt' {
+        Invoke-Step $value (Get-RootEngineArguments $value @('run', '--rm', '--privileged', 'docker.io/tonistiigi/binfmt', '--uninstall', 'qemu-arm,qemu-aarch64'))
+      }
+      'engine-image' {
+        $cli, $image = $value -split ' ', 2
+        Invoke-Step $cli (Get-RootEngineArguments $cli @('rmi', $image))
+      }
+      'podman-machine' { Invoke-Step podman @('machine', 'rm', '--force', $value) }
+      'winget'         { Invoke-Step winget @('uninstall', '--exact', '--id', $value, '--accept-source-agreements', '--disable-interactivity') }
+    }
+  } catch {
+    Write-Host "  ! $_"
+    return $false
+  }
+  return $true
+}
+
+function Write-Left($entry) {
+  switch ($entry.Kind) {
+    'feature' {
+      Write-Host "  - The Windows feature $($entry.Value), which this script enabled. To disable it, in an"
+      Write-Host '    elevated PowerShell, followed by a restart:'
+      Write-Host "      Disable-WindowsOptionalFeature -Online -FeatureName $($entry.Value)"
+    }
+    'wsl' {
+      Write-Host '  - WSL 2, which this script installed. To remove it, in an elevated PowerShell:'
+      Write-Host '      wsl --uninstall'
+    }
+  }
+}
+
+function Invoke-Uninstall {
+  if (@(Get-Recorded).Count -eq 0) {
+    Write-Host 'Nothing to remove: this script has no record of installing anything on this host.'
+    Write-Host "(It keeps the record in $($script:Record).)"
+    exit 0
+  }
+  Update-Path
+  Write-Host "By its record ($($script:Record)), this script installed:"
+  $toRemove = 0
+  foreach ($entry in @(Get-Entries $script:RemoveOrder)) {
+    $present = Test-EntryPresent $entry
+    if ($present -eq $false) { Write-Host "  - $(Get-EntryText $entry): gone already" }
+    else { Write-Host "  - $(Get-EntryText $entry)"; $toRemove++ }
+  }
+  $left = @(Get-Entries $script:LeaveOrder | Where-Object { Test-EntryPresent $_ })
+  if ($left.Count -gt 0) {
+    Write-Host "`nLeft in place, for you to remove: that takes an elevated PowerShell and a restart, and other software may use them by now."
+    foreach ($entry in $left) { Write-Left $entry }
+  }
+  if ($Check) {
+    Write-Host "`nNothing was removed. setup.cmd -Uninstall removes it."
+    exit 0
+  }
+
+  if ($toRemove -gt 0 -and -not $Yes) {
+    if (-not [Environment]::UserInteractive) { Write-Host "`nNot running interactively; re-run with -Yes to go ahead."; exit 1 }
+    $reply = Read-Host "`nRemove all of this? [y/N]"
+    if ($reply -notmatch '^(y|yes)$') { exit 1 }
+  }
+  Write-Host ''
+  $notRemoved = 0
+  foreach ($entry in @(Get-Entries $script:RemoveOrder)) {
+    if (Remove-Entry $entry) { Remove-Record $entry.Kind $entry.Value } else { $notRemoved++ }
+  }
+  # What is left for the user stays in the record until it is gone.
+  foreach ($entry in @(Get-Entries $script:LeaveOrder)) {
+    if (-not (Test-EntryPresent $entry)) { Remove-Record $entry.Kind $entry.Value }
+  }
+  # A record with nothing left in it goes too.
+  if (@(Get-Recorded).Count -eq 0) {
+    Remove-Item $script:Record
+    $directory = Split-Path $script:Record
+    if (@(Get-ChildItem -Force $directory).Count -eq 0) { Remove-Item $directory }
+  }
+  if ($notRemoved -gt 0) {
+    Write-Host "`nNot everything could be removed; see above. What is left stays in the record."
+    exit 1
+  }
+  Write-Host "`nRemoved what this script installed. This repository is untouched, with what the launcher built in it (build\)."
+  exit 0
+}
+
 # ------------------------------------------------------------------- main ---
+
+if ($Uninstall) { Invoke-Uninstall }
+
 
 Write-Host 'Checking host dependencies'
 Invoke-Checks
