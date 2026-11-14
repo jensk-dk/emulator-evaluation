@@ -24,8 +24,8 @@ Stages 0 to 4 are verified on three hosts: macOS on ARM64, Windows on x86-64
 with Podman as the container runtime, and Linux on x86-64 (Kubuntu 24.04)
 with Docker. Stage 5, the WPE WebKit browser with its web workload, is
 implemented and so far run on the Windows host only: there the browser
-launches in every mode the image is built for, and the workload's
-measurements are not recorded yet. macOS has no host
+launches in every mode the image is built for, its checks pass, and the
+workload's measurements are recorded. macOS has no host
 graphics acceleration, which the Linux host has in VM mode. The task list and
 `evaluation/verification/` show what has been verified, and on which hosts.
 
