@@ -11,8 +11,9 @@ target has no sound hardware, the target's device opens a TCP connection. In
 VM mode the emulated sound card's backend writes them, as a WAV stream, into
 a named pipe this process reads (--pipe).
 
-It plays through the host's own player program, so the sound goes wherever
-the host's sound server sends an application's sound. A control connection
+It plays through a player program, so the sound goes wherever the host's
+sound server sends an application's sound: the host's own program on Linux,
+the launcher's own on macOS and Windows, which ship none. A control connection
 (one JSON object per line, answered the same way) mutes and unmutes:
 
     {"command": "mute"}   {"command": "unmute"}   {"command": "toggle"}
@@ -60,10 +61,26 @@ PLAYERS = {
     "macos": (
         ("emu-coreaudio", lambda sink: ["play"] + (["--device", sink] if sink else [])),
     ),
+    # Nor does Windows. The launcher's player there is a module of its own
+    # (emulator/winmm_player.py), run by this Python; it plays through the
+    # system's wave output.
+    "windows": (
+        ("emu-winmm", lambda sink: ["play"] + (["--device", sink] if sink else [])),
+    ),
 }
-# What only the launcher's own player (macOS) can be told: the volume, and a
-# file to write everything the host's audio output takes.
+WINDOWS_PLAYER = "emu-winmm"
+# The hosts where the player is the launcher's own. Only that one can be told
+# the volume, and a file to write everything the host's audio output takes.
+OWN_PLAYER_HOSTS = ("macos", "windows")
 PLAYER_SETTINGS = {"volume": "--volume", "monitor": "--monitor"}
+
+
+def _windows_output_devices():
+    try:
+        import ctypes
+        return ctypes.WinDLL("winmm").waveOutGetNumDevs()
+    except (OSError, AttributeError):
+        return 0
 
 
 def find_player(system, sink, search_path=None, settings=None):
@@ -71,9 +88,15 @@ def find_player(system, sink, search_path=None, settings=None):
     names = [name for name, _ in PLAYERS.get(system, ())]
     for name, arguments in PLAYERS.get(system, ()):
         path = shutil.which(name, path=search_path)
-        if path:
-            command = [path] + arguments(sink)
-            if system == "macos":
+        if name == WINDOWS_PLAYER:
+            if not _windows_output_devices():
+                return None, "Windows has no audio output device to play on"
+            command = [sys.executable, "-m", "emulator.winmm_player"]
+        elif path:
+            command = [path]
+        if name == WINDOWS_PLAYER or path:
+            command += arguments(sink)
+            if system in OWN_PLAYER_HOSTS:
                 for key, option in PLAYER_SETTINGS.items():
                     if (settings or {}).get(key) not in (None, ""):
                         command += [option, str(settings[key])]
@@ -249,12 +272,54 @@ class _Server(socketserver.ThreadingTCPServer):
 WAV_HEADER_BYTES = 44
 
 
-def read_pipe(path, output):
+class _WindowsPipe:
+    """The reading end of a Windows named pipe, which this process makes. open() waits for the emulator to open the pipe to write."""
+
+    def __init__(self, path):
+        import _winapi
+        self._api = _winapi
+        self._handle = _winapi.CreateNamedPipe(
+            path, _winapi.PIPE_ACCESS_INBOUND,
+            0x8,        # a stream of bytes, read with waiting (0), from local clients only (0x8)
+            1, 65536, 65536, 0, _winapi.NULL)
+
+    def open(self):
+        try:
+            self._api.ConnectNamedPipe(self._handle)
+        except OSError as error:
+            if error.winerror != 535:       # 535: the emulator opened it already
+                raise
+        return self
+
+    def read(self, count):
+        try:
+            return self._api.ReadFile(self._handle, count)[0]
+        except BrokenPipeError:
+            return b""                      # the emulator closed its end
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exception):
+        import ctypes
+        ctypes.WinDLL("kernel32").DisconnectNamedPipe(ctypes.c_void_p(self._handle))
+
+
+def make_pipe(path):
+    """Make the named pipe; returns what read_pipe opens it with."""
+    if os.name == "nt":
+        pipe = _WindowsPipe(path)
+        return pipe.open
+    os.mkfifo(path, 0o600)
+    return lambda: open(path, "rb", buffering=0)
+
+
+def read_pipe(opener, output):
     """Take in what the emulator writes into the named pipe: a WAV header,
     then samples, each time it opens the pipe."""
     while True:
         try:
-            with open(path, "rb", buffering=0) as pipe:     # waits for the emulator to open it
+            with opener() as pipe:      # waits for the emulator to open it
                 header = b""
                 while len(header) < WAV_HEADER_BYTES:
                     chunk = pipe.read(WAV_HEADER_BYTES - len(header))
@@ -302,11 +367,11 @@ def serve(args, system):
     threading.Thread(target=commands.serve_forever, daemon=True).start()
     if args.pipe:
         try:
-            os.mkfifo(args.pipe, 0o600)
-        except (OSError, AttributeError) as error:
+            opener = make_pipe(args.pipe)
+        except (OSError, AttributeError, ImportError) as error:
             print(json.dumps({"error": "cannot make the named pipe %s: %s" % (args.pipe, error)}), flush=True)
             return 1
-        threading.Thread(target=read_pipe, args=(args.pipe, output), daemon=True).start()
+        threading.Thread(target=read_pipe, args=(opener, output), daemon=True).start()
     print(json.dumps({
         "feature": "audio", "bind": args.bind, "port": pcm.server_address[1],
         "control_port": commands.server_address[1], "pid": os.getpid(), "pipe": args.pipe,

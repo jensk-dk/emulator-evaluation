@@ -1,0 +1,234 @@
+{
+  "schema_version": 1,
+  "run_id": "20261114T152432Z-80af18",
+  "recorded_at": "2026-11-14T15:25:06Z",
+  "host": {
+    "id": "windows-x86_64",
+    "os": "windows",
+    "os_version": "10.0.26300",
+    "arch": "x86_64",
+    "cpu_model": "Intel(R) Core(TM) i7-10700K CPU @ 3.80GHz",
+    "cpus": 16,
+    "memory_bytes": 34253012992,
+    "gpus": [
+      {
+        "model": "NVIDIA GeForce RTX 4070",
+        "driver_version": "32.0.16.1088"
+      }
+    ],
+    "python": "3.13.1"
+  },
+  "emulator": {
+    "mode": "container",
+    "variant": "container",
+    "guest_arch": "x86_64",
+    "runtime": "podman client 5.8.9, engine 5.8.10",
+    "engine": {
+      "cpus": 16,
+      "memory_bytes": 16714493952,
+      "kernel": "6.6.87.2-microsoft-standard-WSL2",
+      "os": "fedora",
+      "rootless": false,
+      "cgroup_controllers": [
+        "cpuset",
+        "cpu",
+        "io",
+        "memory",
+        "hugetlb",
+        "pids",
+        "rdma"
+      ]
+    },
+    "display": {
+      "resolution": "1920x1080"
+    },
+    "graphics": {
+      "requested": "auto",
+      "provider": "emulated",
+      "reason": "no compatible host graphics acceleration: the container engine has no GPU render node (/dev/dri); the engine runs in a virtual machine that offers none",
+      "device": "headless compositor output, rendering by the target CPU"
+    },
+    "cpus": 4,
+    "memory_mb": 2048,
+    "options": {},
+    "extra_args": []
+  },
+  "image": {
+    "name": "emu-target-debian",
+    "version": "0.3.0",
+    "kind": "container",
+    "arch": "x86_64",
+    "source": {
+      "distribution": "Debian 13 (trixie)",
+      "base_image": "docker.io/library/debian:trixie-slim",
+      "base_image_digest": "sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2",
+      "apt_snapshot": "20261104T212339Z",
+      "flutter": {
+        "version": "3.47.9",
+        "revision": "c197ca5199e9ee5661e865596c9c07294dfab51c",
+        "repository": "https://github.com/flutter/flutter.git",
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ]
+      }
+    },
+    "definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098",
+    "build_revision": "28f2a35926a922c82b6f595f6ff0f94f795c0a0a-dirty",
+    "built_at": "2026-11-14T13:28:41Z",
+    "image_id": "b8bfd5c22d9e69297f638abfaed1f5779153ffa8ccd2e0c19529c9edb4a65051",
+    "reported_by_target": {
+      "name": "emu-target-debian",
+      "version": "0.3.0",
+      "definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098",
+      "base_image": "docker.io/library/debian:trixie-slim@sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2",
+      "apt_snapshot": "20261104T212339Z",
+      "debian_version": "13.7",
+      "architecture": "amd64",
+      "packages_sha256": "6f1e3b06d1361ffcaa4f909e08906109756055a979d0232f15b0995b96e31d34"
+    }
+  },
+  "target": {
+    "mode": "container",
+    "machine": "x86_64",
+    "kernel": "6.6.87.2-microsoft-standard-WSL2",
+    "cpus": 4
+  },
+  "workload": {
+    "id": "graphics-demo",
+    "version": "1.0.0",
+    "seconds_per_test": 5.0,
+    "tests": [
+      "wayland",
+      "gles",
+      "vulkan",
+      "flutter"
+    ],
+    "resolution": "1920x1080",
+    "graphics": "emulated",
+    "display": {
+      "width": 1920,
+      "height": 1080,
+      "presentation_feedback": true,
+      "gles": {
+        "renderer": "llvmpipe (LLVM 19.1.7, 256 bits)",
+        "version": "OpenGL ES 3.2 Mesa 25.0.7-2+deb13u1",
+        "accelerated": false
+      },
+      "vulkan": [
+        {
+          "name": "llvmpipe (LLVM 19.1.7, 256 bits)",
+          "type": "CPU",
+          "accelerated": false
+        }
+      ]
+    },
+    "arguments": []
+  },
+  "drivers": {
+    "hwrng": "emulated"
+  },
+  "launcher_revision": "28f2a35926a922c82b6f595f6ff0f94f795c0a0a-dirty",
+  "boot_seconds": 1.775,
+  "duration_seconds": 27.3,
+  "exit_code": 0,
+  "results": [
+    {
+      "area": "graphics",
+      "test": "wayland_fps",
+      "technology": "wayland",
+      "unit": "frames/s",
+      "value": 707.48,
+      "resolution": "1920x1080",
+      "frames": 3538,
+      "seconds": 5.001,
+      "frame_time_ms": {
+        "mean": 1.413,
+        "p50": 1.311,
+        "p99": 3.264,
+        "max": 6.894
+      },
+      "first_frame_seconds": 0.005,
+      "displayed_fps": 52.19,
+      "renderer": "cpu",
+      "api": "wl_shm XRGB8888",
+      "accelerated": false
+    },
+    {
+      "area": "graphics",
+      "test": "gles_fps",
+      "technology": "gles",
+      "unit": "frames/s",
+      "value": 58.09,
+      "resolution": "1920x1080",
+      "frames": 292,
+      "seconds": 5.027,
+      "frame_time_ms": {
+        "mean": 17.214,
+        "p50": 8.74,
+        "p99": 36.327,
+        "max": 36.661
+      },
+      "first_frame_seconds": 0.227,
+      "displayed_fps": 19.3,
+      "renderer": "llvmpipe (LLVM 19.1.7, 256 bits)",
+      "api": "OpenGL ES 3.2 Mesa 25.0.7-2+deb13u1",
+      "accelerated": false
+    },
+    {
+      "area": "graphics",
+      "test": "vulkan_fps",
+      "technology": "vulkan",
+      "unit": "frames/s",
+      "value": 147.68,
+      "resolution": "1920x1080",
+      "frames": 739,
+      "seconds": 5.004,
+      "frame_time_ms": {
+        "mean": 6.771,
+        "p50": 6.606,
+        "p99": 8.36,
+        "max": 10.813
+      },
+      "first_frame_seconds": 0.143,
+      "displayed_fps": 48.16,
+      "renderer": "llvmpipe (LLVM 19.1.7, 256 bits) (CPU)",
+      "api": "Vulkan 1.4.305",
+      "accelerated": false,
+      "present_mode": "mailbox"
+    },
+    {
+      "area": "graphics",
+      "test": "flutter_fps",
+      "technology": "flutter",
+      "unit": "frames/s",
+      "value": 8.83,
+      "resolution": "1920x1080",
+      "frames": 54,
+      "seconds": 6.115,
+      "frame_time_ms": {
+        "mean": 113.25,
+        "p50": 112.89,
+        "p99": 259.027,
+        "max": 259.027
+      },
+      "build_time_ms": {
+        "mean": 1.497,
+        "p50": 1.38,
+        "p99": 3.205,
+        "max": 3.205
+      },
+      "raster_time_ms": {
+        "mean": 112.885,
+        "p50": 112.861,
+        "p99": 240.889,
+        "max": 240.889
+      },
+      "first_frame_seconds": 1.826,
+      "paced_by_display": true,
+      "renderer": "llvmpipe (LLVM 19.1.7, 256 bits)",
+      "api": "Flutter 3.47.9, Dart 3.13.7",
+      "accelerated": false
+    }
+  ]
+}

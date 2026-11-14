@@ -9,13 +9,14 @@ import datetime
 import json
 import os
 import subprocess
+import sys
 import tempfile
 import threading
 import time
 
 from . import catalog, container, drivers as driver_features, graphics, host, hostaudio, image, results, vm
 from .errors import EmuError
-from .paths import VERIFICATION_DIR
+from .paths import ROOT, VERIFICATION_DIR
 from .run import RunOptions, launch
 
 MOCK_PATTERN_HEX = b"MOCKED-HWRNG-V1.".hex()
@@ -565,17 +566,24 @@ class _HostSink:
         self.name = None
         self.reason = None
         self.where = "the host's sound server"
-        self.activity = None        # macOS: what the audio server said about the player
+        self.activity = None        # macOS and Windows: what the audio server said about the player
         self._module = None
         self._recorder = None
         self._file = None
         self._monitor = None
-        if host.host_os() == "macos":
-            try:
-                self._player = host.macos_audio_player()
-            except EmuError as error:
-                self.reason = "no recording at the host's audio output: %s" % error
-                return
+        if host.host_os() in hostaudio.OWN_PLAYER_HOSTS:
+            if host.host_os() == "macos":
+                try:
+                    self._player = [host.macos_audio_player()]
+                except EmuError as error:
+                    self.reason = "no recording at the host's audio output: %s" % error
+                    return
+            else:
+                self._player = [sys.executable, "-m", "emulator.winmm_player"]
+                found, why = hostaudio.find_player("windows", None)
+                if not found:
+                    self.reason = "no recording at the host's audio output: %s" % why
+                    return
             handle, self._monitor = tempfile.mkstemp(prefix="emu-verify-", suffix=".raw")
             os.close(handle)
             self.name = "the default output device, at volume 0"
@@ -605,7 +613,7 @@ class _HostSink:
         return {"audio-sink": self.name} if self.name else {"audio-output": "none"}
 
     def watch(self, info):
-        """macOS: while the sound plays, ask the system's audio server what it
+        """macOS and Windows: while the sound plays, ask the system's audio server what it
         sees of the player process. Called with the audio process's details."""
         if not self._monitor:
             return
@@ -621,8 +629,9 @@ class _HostSink:
                 if not pid:
                     continue
                 try:
-                    done = subprocess.run([self._player, "activity", str(pid)], capture_output=True, text=True,
-                                          timeout=20)
+                    done = subprocess.run(self._player + ["activity", str(pid)], capture_output=True, text=True,
+                                          timeout=20, cwd=str(ROOT),
+                                          env=host.tool_env({"PYTHONPATH": str(ROOT), "PYTHONDONTWRITEBYTECODE": "1"}))
                     found = json.loads(done.stdout)
                 except (OSError, ValueError, subprocess.SubprocessError):
                     continue
@@ -666,7 +675,7 @@ class _HostSink:
         return windows
 
     def evidence(self):
-        """macOS: what the output device and the audio server said, as lines
+        """macOS and Windows: what the output device and the audio server said, as lines
         for the check's report; problems raise CheckFailed."""
         if not self._monitor:
             return []

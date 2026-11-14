@@ -17,7 +17,7 @@ import os
 import subprocess
 import sys
 
-from . import host, relay
+from . import host, hostaudio, relay
 from .errors import EmuError
 from .paths import ROOT
 
@@ -34,8 +34,9 @@ ON_DEMAND = {"audio": "host"}
 AUDIO_OPTIONS = {
     "audio-sink": "audio with the host strategy: the host output device to play on (default: the host's default)",
     "audio-output": "audio with the host strategy: \"none\" takes the sound in without playing it on the host",
-    "audio-volume": "audio with the host strategy, macOS hosts: the volume to play at, from 0 to 100 (default: 100)",
-    "audio-monitor": "audio with the host strategy, macOS hosts: also write the samples the host's audio output "
+    "audio-volume": "audio with the host strategy, macOS and Windows hosts: the volume to play at, from 0 to 100 "
+                    "(default: 100 on macOS, the application's volume in the mixer on Windows)",
+    "audio-monitor": "audio with the host strategy, macOS and Windows hosts: also write the samples the host's audio output "
                      "takes to this file (raw, 16-bit stereo at 48 kHz)",
 }
 
@@ -136,9 +137,9 @@ def _audio_arguments(options, muted):
         extra += ["--player", "none"]
     for name in ("volume", "monitor"):
         if options.get("audio-" + name) not in (None, ""):
-            if host.host_os() != "macos":
-                raise EmuError("--option audio-%s is for macOS hosts, where the launcher plays with its own player"
-                               % name)
+            if host.host_os() not in hostaudio.OWN_PLAYER_HOSTS:
+                raise EmuError("--option audio-%s is for macOS and Windows hosts, where the launcher plays with "
+                               "its own player" % name)
             extra += ["--" + name, str(options["audio-" + name])]
     if muted:
         extra.append("--muted")
@@ -165,10 +166,13 @@ def plan_vm(drivers, run_dir, options=None, muted=False):
         # An emulated sound card; the target kernel's virtio-sound driver makes
         # it an ALSA card. QEMU keeps the card's time whatever its backend is.
         backend = "none,id=emu-audio"
-        if audio == "host" and hasattr(os, "mkfifo"):
+        if audio == "host" and (hasattr(os, "mkfifo") or os.name == "nt"):
             # The card's backend is the host-side process: QEMU writes the
             # samples, as a WAV stream, into a named pipe that process reads.
+            # Windows keeps its named pipes in a place of their own.
             pipe = os.path.join(run_dir, "audio.pipe")
+            if os.name == "nt":
+                pipe = "\\\\.\\pipe\\emu-audio-%s-%d" % (os.path.basename(run_dir), os.getpid())
             _start_audio(plan, "127.0.0.1", run_dir, options, muted, ["--pipe", pipe])
             backend = "wav,id=emu-audio,path=%s,out.frequency=48000,out.channels=2,out.format=s16" \
                       % str(pipe).replace(",", ",,")

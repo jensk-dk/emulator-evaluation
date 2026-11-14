@@ -89,8 +89,8 @@ def main(argv=None):
                         help="audio: none takes the sound in without playing it")
     parser.add_argument("--muted", action="store_true", help="audio: start muted")
     parser.add_argument("--pipe", help="audio: also take samples from this named pipe, which is created")
-    parser.add_argument("--volume", help="audio, macOS hosts: the volume to play at, from 0 to 100")
-    parser.add_argument("--monitor", help="audio, macOS hosts: also write what the host's audio output takes "
+    parser.add_argument("--volume", help="audio, macOS and Windows hosts: the volume to play at, from 0 to 100")
+    parser.add_argument("--monitor", help="audio, macOS and Windows hosts: also write what the host's audio output takes "
                                           "to this file, as raw samples")
     args = parser.parse_args(argv)
     if args.feature == "audio":

@@ -20,11 +20,9 @@ The requirements live in the [openspec](openspec) folder. Delivery is staged
 ([tasks](openspec/changes/staged-emulator-delivery/tasks.md)); this repo
 holds the code for stages 0 to 4: the evaluation foundation, a cross-platform
 runnable baseline, VM CPU and driver fidelity, graphics, and media playback.
-Stages 0 to 3 are verified on three hosts: macOS on ARM64, Windows on x86-64
+Stages 0 to 4 are verified on three hosts: macOS on ARM64, Windows on x86-64
 with Podman as the container runtime, and Linux on x86-64 (Kubuntu 24.04)
-with Docker. Stage 4 is verified on the Linux and macOS hosts; on Windows its
-decoding and video parts are expected to work as they are, and playing the
-target's sound through the host is still to be done there. macOS has no host
+with Docker. macOS has no host
 graphics acceleration, which the Linux host has in VM mode. The task list and
 `evaluation/verification/` show what has been verified, and on which hosts.
 
@@ -59,7 +57,7 @@ dependency and install what is missing. `--check` / `-Check` only reports.
 | Hardware virtualization | host-native VM mode | Hypervisor.framework | KVM | Windows Hypervisor Platform |
 | Container runtime | container mode, image builds | Colima + Docker CLI (Homebrew) | Podman | Podman |
 | Foreign-architecture emulation | building ARM target images | registered in the engine VM | `qemu-user-static` | registered in the engine VM |
-| Audio player (optional) | playing the target's sound on the host | built by the launcher with the Command Line Tools' compiler | `pacat`, `pw-cat` or `aplay`; system package | not implemented yet |
+| Audio player (optional) | playing the target's sound on the host | built by the launcher with the Command Line Tools' compiler | `pacat`, `pw-cat` or `aplay`; system package | the launcher's own, run by Python; nothing to install |
 | QEMU OpenGL modules (optional) | mapping VM graphics to the host GPU | not in Homebrew's QEMU; an experimental build has them, installed only with `./setup.sh --experimental-qemu` (see [Experimental: host graphics on macOS](#experimental-host-graphics-on-macos)) | system package | in winget's QEMU; used when the display is in a window (see [Display and graphics](#display-and-graphics)) |
 
 An existing Docker or Podman installation is used as it is. Where both are
@@ -155,8 +153,22 @@ How far this has been run:
   has them before setup. In all four, no package from before setup went.
   Podman's storage could not be reset inside a container; the script says so
   and goes on.
-- Windows: not run on Windows. The script's logic passed with stand-ins for
-  winget, Podman and WSL, in PowerShell 7 on Linux.
+- Windows: run on the Windows host (x86-64) for what can go without taking
+  the host's setup down. That setup predates the record, so the record began
+  empty. Setup registered the ARM build emulation and recorded it;
+  `setup.cmd -Uninstall` listed it, asked, removed the registration and
+  deleted the record with its directory; setup then registered it again. This
+  was run in Windows PowerShell 5.1, which `setup.cmd` uses, and setup also in
+  PowerShell 7. With a record written for the purpose the uninstall removed
+  the emulation's container image from the engine and settled entries whose
+  package or machine was gone already, and its listing (`-Check`) told the
+  host's real winget packages and Podman machine from ones that do not exist.
+  Running it showed a fault, now corrected: where there was no answer to the
+  question (`setup.cmd -Uninstall < NUL`), the script went on as if the
+  answer were yes. No answer is a no now, also for the installation.
+  Not run on Windows: removing a winget package and removing the Podman
+  machine. Those passed only with stand-ins for winget, Podman and WSL, in
+  PowerShell 7 on Linux.
 
 ### Linux
 
@@ -492,11 +504,21 @@ goes wherever the host's sound system sends an application's sound. On Linux
 that is the host's own `pacat`, `pw-cat` or `aplay`, whichever is installed.
 macOS has no such program, so the launcher builds one the first time it is
 needed ([emulator/coreaudio_player.c](emulator/coreaudio_player.c), into
-`build/host/`); it plays through a Core Audio queue.
+`build/host/`); it plays through a Core Audio queue. Windows has none either;
+there the player is a module of the launcher
+([emulator/winmm_player.py](emulator/winmm_player.py)) that plays through the
+system's wave output and needs nothing but Python.
 `--option audio-sink=NAME` chooses the host's output device, and
 `--option audio-output=none` takes the sound in without playing it. On macOS
-`--option audio-volume=0..100` sets the volume, and `build/host/emu-coreaudio
-devices` lists the output devices.
+and Windows `--option audio-volume=0..100` sets the volume. The output
+devices are listed by `build/host/emu-coreaudio devices` on macOS and by
+`py -3 -m emulator.winmm_player devices` on Windows, where a device is named
+by its number or its name.
+
+On Windows the volume is the application's volume in the Windows mixer, which
+Windows remembers for the program that set it: the Python interpreter. The
+player puts back the volume it found when it ends, and one that was stopped
+before it could leaves a note in `build/host/` from which the next one does.
 
 Mute while it runs, from another terminal:
 
@@ -507,15 +529,14 @@ notices nothing, and the host gets silence in place of the sound.
 
 Limits:
 
-- Playing through the host is implemented for Linux and macOS hosts. On
-  Windows the audio process starts without a player and says so; the target's
-  sound is taken in, and can be muted and inspected, but is not heard.
-- On macOS the checks play at volume 0 and record what the system's audio
-  queue takes for the output device; nobody has listened to it there yet.
-- In VM mode QEMU writes the sound card's output into a named pipe. Windows
-  has none of the kind QEMU can write to, so there the launcher falls back to
-  the container mode's shim device over QEMU's network; that path has not
-  been run.
+- On macOS and Windows the checks play at volume 0 and record what the
+  system's audio output takes for the device; nobody has listened to it on
+  either yet.
+- In VM mode QEMU writes the sound card's output into a named pipe: a FIFO in
+  the run's directory on Linux and macOS, a pipe in Windows' own pipe
+  namespace (`\\.\pipe\emu-audio-...`) on Windows. A host with neither
+  would fall back to the container mode's shim device over QEMU's network;
+  that path has not been run.
 - One player at a time: sound from two target programs playing at once is not
   mixed.
 - ARM32 VM mode: no video through Vulkan or Flutter, for the reasons given
@@ -581,7 +602,7 @@ do it without a window:
 
 `--virtual-time-budget` gives the page time to read the records before it is
 printed. The PDF shows all hosts with measured values, the page's defaults.
-This was run with Chrome on Linux; on macOS and Windows the browser's own
-print dialog does the same. The snapshot in the repository was made on the
-Linux host before the macOS media results were recorded, so it does not show
-those; the page does.
+This was run with Chrome on Linux and on Windows (there with `emu.cmd` and
+Chrome's `chrome.exe`); on macOS the browser's own print dialog does the
+same. The snapshot in the repository was made on the Windows host on
+2026-11-14, with the CPU, graphics and media results of all three hosts.

@@ -27,6 +27,12 @@
     container runtime         container mode and target image builds
     foreign-arch emulation    building ARM32/ARM64 target images
 
+  Nothing to install, only reported:
+    audio player              plays the target's sound through the Windows
+                              audio service. The launcher has its own, which
+                              needs Python alone; without an audio output
+                              device the target's sound is not heard
+
   The container runtime is Podman unless Docker is installed already. Where
   both are, Docker is used when its engine answers; set the environment
   variable EMU_CONTAINER_RUNTIME to podman or docker to choose. A Podman
@@ -108,6 +114,20 @@ function Test-Engine {
     return $false
   }
   $process.ExitCode -eq 0
+}
+
+# Asks before a step; only y or yes is a yes. Where there is nobody to ask,
+# the answer is no. Read-Host returns nothing at all when its input has ended
+# (setup.cmd -Uninstall < NUL), and nothing neither matches a pattern nor
+# fails to match one, so the answer is made a string first.
+function Confirm-Step($question, $otherwise) {
+  $reply = $null
+  if ([Environment]::UserInteractive) { $reply = Read-Host "$question [y/N]" }
+  if ("$reply".Trim() -match '^(y|yes)$') { return $true }
+  if (-not [Environment]::UserInteractive -or ($null -eq $reply -and [Console]::IsInputRedirected)) {
+    Write-Host "Not running interactively; $otherwise."
+  }
+  return $false
 }
 
 function Get-FirstLine($text) { @("$text" -split "`n")[0].Trim() }
@@ -229,6 +249,25 @@ function Test-GraphicsNote {
   }
 }
 
+# The launcher plays the target's sound with a player of its own
+# (emulator\winmm_player.py), through the system's wave output. That takes an
+# audio output device, which a host can be without (a server, a remote
+# session). There is nothing to install for it, so this is a note.
+function Test-AudioNote {
+  $devices = 0
+  try {
+    if (-not ('EmuSetup.Wave' -as [type])) {
+      Add-Type -Namespace EmuSetup -Name Wave -MemberDefinition '[DllImport("winmm.dll")] public static extern uint waveOutGetNumDevs();'
+    }
+    $devices = [int][EmuSetup.Wave]::waveOutGetNumDevs()
+  } catch { }
+  if ($devices -gt 0) {
+    Write-Ok "audio player: the launcher's own (Windows wave output; $devices output device$(if ($devices -ne 1) { 's' }))"
+  } else {
+    Write-Host "  [note]  audio player: Windows has no audio output device; the target's sound is not heard without one"
+  }
+}
+
 # Whether the Windows Hypervisor Platform can run a VM right now: $true,
 # $false, or $null when the platform's API could not be asked. This is the
 # question QEMU asks. The state of the optional Windows feature does not
@@ -329,6 +368,7 @@ function Invoke-Checks {
   Test-PythonDep
   Test-QemuDep
   Test-GraphicsNote
+  Test-AudioNote
   Test-AccelDep
   Test-ContainerDep
   Test-ForeignArchDep
@@ -588,9 +628,8 @@ function Invoke-Uninstall {
   }
 
   if ($toRemove -gt 0 -and -not $Yes) {
-    if (-not [Environment]::UserInteractive) { Write-Host "`nNot running interactively; re-run with -Yes to go ahead."; exit 1 }
-    $reply = Read-Host "`nRemove all of this? [y/N]"
-    if ($reply -notmatch '^(y|yes)$') { exit 1 }
+    Write-Host ''
+    if (-not (Confirm-Step 'Remove all of this?' 're-run with -Yes to go ahead')) { exit 1 }
   }
   Write-Host ''
   $notRemoved = 0
@@ -636,9 +675,7 @@ if ($Check) {
 Write-Host "`nMissing: $($script:Missing -join ' ')"
 Write-Host 'These are installed with winget; the container runtime is Podman unless Docker is already installed.'
 if (-not $Yes) {
-  if (-not [Environment]::UserInteractive) { Write-Host 'Not running interactively; re-run with -Yes to install.'; exit 1 }
-  $reply = Read-Host 'Install the missing dependencies? [y/N]'
-  if ($reply -notmatch '^(y|yes)$') { exit 1 }
+  if (-not (Confirm-Step 'Install the missing dependencies?' 're-run with -Yes to install')) { exit 1 }
 }
 
 Write-Host ''

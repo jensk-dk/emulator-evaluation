@@ -191,6 +191,13 @@ they run. Where the recording is made depends on the host:
   server whether it sees the player process playing, and on which device.
   This shows that the host's audio output took the sound; it is not a
   recording of what left the device.
+- Windows: the same as on macOS, with the launcher's player for Windows. The
+  tones are played on the default output device with the player's volume in
+  the Windows mixer at 0 (the player puts the volume back afterwards). The
+  player records what the wave output takes for the device, at the device's
+  pace, and reports the device's own count of the samples it played. The
+  check also asks the Windows audio service whether it has a session of the
+  player process that is playing, and on which device.
 
 ## Web
 
