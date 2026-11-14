@@ -108,6 +108,15 @@ client_env() {
   echo "export XDG_RUNTIME_DIR=/run/emu/xdg"
   echo "export WAYLAND_DISPLAY=$WAYLAND_DISPLAY"
   echo "export GDK_BACKEND=wayland NO_AT_BRIDGE=1 GSETTINGS_BACKEND=memory"
+  if [ "$graphics" = host ]; then
+    # GTK asks for a desktop OpenGL context and does not go on to OpenGL ES
+    # when it gets none; a GTK program that draws with OpenGL, such as the
+    # Flutter embedder, then shows nothing. A host that maps only OpenGL ES to
+    # its GPU gives none (QEMU on macOS, through ANGLE): there GTK is told to
+    # use OpenGL ES. emugfx says 1 for "none", and 2 where it cannot tell.
+    emugfx desktop-gl > /dev/null 2>&1
+    [ $? = 1 ] && echo "export GDK_GL=gles"
+  fi
   if [ "$graphics" != host ]; then
     # Emulated graphics: OpenGL ES and Vulkan are rendered by the CPU even
     # if a GPU happens to be visible.

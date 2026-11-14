@@ -9,6 +9,8 @@
  *   emugfx gles      OpenGL ES 2.0 through EGL
  *   emugfx vulkan    Vulkan through the Wayland window-system integration
  *   emugfx info      the OpenGL ES renderer and Vulkan device of the display
+ *   emugfx desktop-gl   whether the display gives a desktop OpenGL context, as
+ *                    GTK asks for one; the exit status says (see below)
  *
  * The animation advances by frame number, not by time, so every run draws
  * the same sequence of frames however fast it goes. Frames are submitted as
@@ -1242,12 +1244,65 @@ static void run_info(void)
     fflush(stdout);
 }
 
+/*
+ * Whether EGL on the Wayland display gives a desktop OpenGL context of the
+ * kind GTK 3 asks for: OpenGL 3.2 core, and failing that a 3.0 compatibility
+ * context. GTK does not go on to OpenGL ES by itself when it gets neither,
+ * and a GTK program that draws with OpenGL, such as the Flutter embedder,
+ * then shows nothing. A host that maps only OpenGL ES to its GPU gives
+ * neither (QEMU on macOS, through ANGLE).
+ *
+ * Exit status: 0 it does, 1 it does not, 2 EGL did not start on the display.
+ */
+static int run_desktop_gl(void)
+{
+    struct wl_display *wayland = wl_display_connect(NULL);
+    if (!wayland) {
+        printf("desktop OpenGL: unknown, no Wayland display\n");
+        return 2;
+    }
+    EGLDisplay display = eglGetDisplay((EGLNativeDisplayType)wayland);
+    if (display == EGL_NO_DISPLAY || !eglInitialize(display, NULL, NULL)) {
+        printf("desktop OpenGL: unknown, EGL did not initialise (error 0x%x)\n", eglGetError());
+        return 2;
+    }
+    static const EGLint config_attributes[] = {EGL_SURFACE_TYPE, EGL_WINDOW_BIT, EGL_RENDERABLE_TYPE,
+                                               EGL_OPENGL_BIT, EGL_RED_SIZE, 8, EGL_GREEN_SIZE, 8,
+                                               EGL_BLUE_SIZE, 8, EGL_NONE};
+    static const EGLint core[] = {EGL_CONTEXT_MAJOR_VERSION, 3, EGL_CONTEXT_MINOR_VERSION, 2,
+                                  EGL_CONTEXT_OPENGL_PROFILE_MASK, EGL_CONTEXT_OPENGL_CORE_PROFILE_BIT, EGL_NONE};
+    static const EGLint compatibility[] = {EGL_CONTEXT_MAJOR_VERSION, 3, EGL_CONTEXT_MINOR_VERSION, 0,
+                                           EGL_CONTEXT_OPENGL_PROFILE_MASK,
+                                           EGL_CONTEXT_OPENGL_COMPATIBILITY_PROFILE_BIT, EGL_NONE};
+    EGLConfig config;
+    EGLint count = 0;
+    if (!eglBindAPI(EGL_OPENGL_API)) {
+        printf("desktop OpenGL: no, EGL has no OpenGL API here (error 0x%x)\n", eglGetError());
+        return 1;
+    }
+    if (!eglChooseConfig(display, config_attributes, &config, 1, &count) || count < 1) {
+        printf("desktop OpenGL: no, EGL offers no OpenGL window configuration\n");
+        return 1;
+    }
+    if (eglCreateContext(display, config, EGL_NO_CONTEXT, core) != EGL_NO_CONTEXT) {
+        printf("desktop OpenGL: yes, 3.2 core\n");
+        return 0;
+    }
+    if (eglCreateContext(display, config, EGL_NO_CONTEXT, compatibility) != EGL_NO_CONTEXT) {
+        printf("desktop OpenGL: yes, 3.0 compatibility\n");
+        return 0;
+    }
+    printf("desktop OpenGL: no, EGL creates neither a 3.2 core nor a 3.0 compatibility context (error 0x%x)\n",
+           eglGetError());
+    return 1;
+}
+
 int main(int argc, char **argv)
 {
     process_start = now();
     setvbuf(stdout, NULL, _IOLBF, 0);
     if (argc < 2) {
-        fprintf(stderr, "usage: emugfx wayland|gles|vulkan|info [--seconds S] [--hold S]\n");
+        fprintf(stderr, "usage: emugfx wayland|gles|vulkan|info|desktop-gl [--seconds S] [--hold S]\n");
         return 64;
     }
     for (int i = 2; i < argc; i++) {
@@ -1271,6 +1326,8 @@ int main(int argc, char **argv)
         run_vulkan();
     else if (!strcmp(test_name, "info"))
         run_info();
+    else if (!strcmp(test_name, "desktop-gl"))
+        return run_desktop_gl();
     else {
         fprintf(stderr, "emugfx: unknown test %s\n", test_name);
         return 64;

@@ -404,16 +404,26 @@ What was seen, in single runs that were not recorded as results:
   reports `virgl (ANGLE (Apple, Apple M6, OpenGL 4.1 Metal))`), for
   host-native, simulated ARM64 and simulated ARM32 targets. QEMU ends cleanly.
   Vulkan stays on the target CPU.
+- This build maps OpenGL ES only: the target gets no desktop OpenGL context.
+  GTK asks for one and does not go on to OpenGL ES by itself, so the Flutter
+  application first drew nothing there: its window stayed black, while the
+  test reported 60 frames/s for frames that were never shown. The target's
+  display service now tells GTK to use OpenGL ES where the display gives no
+  desktop OpenGL (`emugfx desktop-gl` says which), and the Flutter test
+  reports itself unavailable when its window is not shown. With that, the
+  target's own screenshot shows the Flutter frame full screen, and so does
+  the QEMU window, which was looked at by eye.
 - Frames per second at 1080p, host graphics against emulated:
 
   | Test | Host-native | ARM64 | ARM32 |
   |---|---|---|---|
-  | OpenGL ES | 100 against 143 | 205 against 2.8 | 104 against 1.5 |
-  | Flutter | 60 against 17 | 32 against 0.5 | no Flutter |
+  | OpenGL ES | 87 to 100 against 143 | 205 against 2.8 | 104 against 1.5 |
+  | Flutter | 60 against 17 | 28 against 0.5 | no Flutter |
 
-  On a host-native target the OpenGL ES test stays at about 100 frames/s at
-  every resolution; at 4K that is against 35 emulated, and Flutter stays at 60
-  against 5.
+  On a host-native target the OpenGL ES test stayed at about 100 frames/s at
+  every resolution in one session, and gave 87 and 90 in two later runs at
+  1080p. At 4K, 100 is against 35 emulated, and Flutter is at 58 against 5.
+  The Flutter numbers are from after the change above.
 - Video playback through OpenGL ES on simulated targets: an ARM64 target
   dropped 0 of 125 frames of the MPEG-2 stream and 19 of the AVC stream
   (against 106 and 108 emulated); an ARM32 target 1 and 0 (against 105 and

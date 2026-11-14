@@ -57,6 +57,40 @@ print("EMU-RESULT: " + json.dumps({"area": "graphics", "test": sys.argv[1] + "_f
 PY
 }
 
+# Passes on what the Flutter application prints, but not a frame rate for
+# frames that were not shown. Where GTK gives the application no OpenGL
+# context its window never appears, yet it runs its animation and counts the
+# frames. $1 is the file with what the application wrote to standard error.
+flutter_shown() {
+  python3 -u -c '
+import json, sys
+errors_file, display = sys.argv[1], sys.argv[2]
+reason = None
+for line in sys.stdin:
+    if line.startswith("EMU-RESULT: "):
+        try:
+            result = json.loads(line[len("EMU-RESULT: "):])
+        except ValueError:
+            result = {}
+        try:
+            errors = open(errors_file, errors="replace").read()
+        except OSError:
+            errors = ""
+        if "Failed to create OpenGL context" in errors:
+            reason = "GTK gave the Flutter application no OpenGL context, so its window was not shown"
+        elif result.get("resolution") not in (None, display):
+            reason = "the Flutter window was %s on a %s display, so it was not shown full screen" % (
+                result["resolution"], display)
+        if reason:
+            line = "EMU-RESULT: " + json.dumps({"area": "graphics", "test": "flutter_fps", "technology": "flutter",
+                                                "unit": "frames/s", "value": None, "unavailable": reason}) + "\n"
+    elif line.startswith("EMU-SCREEN: ") and reason:
+        continue
+    sys.stdout.write(line)
+    sys.stdout.flush()
+' "$1" "${EMU_DISPLAY:-1920x1080}"
+}
+
 announce() {
   python3 - "$VERSION" "$seconds" "$tests" "${EMU_DISPLAY:-1920x1080}" "${EMU_GRAPHICS:-emulated}" "$1" << 'PY'
 import json, sys
@@ -108,7 +142,7 @@ PY
     )"
     EMU_GFX_SECONDS=$seconds EMU_GFX_HOLD=$hold EMU_GFX_RENDERER=$renderer EMU_GFX_ACCELERATED=$accelerated \
       EMU_FLUTTER_VERSION=$flutter_version \
-      timeout "$limit" /opt/emu/flutter/emu_flutter_demo 2> "$err" | tee "$out"
+      timeout "$limit" /opt/emu/flutter/emu_flutter_demo 2> "$err" | flutter_shown "$err" | tee "$out"
     status=${PIPESTATUS[0]}
   else
     timeout "$limit" emugfx "$test" --seconds "$seconds" --hold "$hold" 2> "$err" | tee "$out"

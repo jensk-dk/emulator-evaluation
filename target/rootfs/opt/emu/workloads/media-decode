@@ -390,9 +390,12 @@ def play_flutter(stream, width, height, audio, limit):
                        EMU_VIDEO_HEIGHT=str(video["height"]), EMU_VIDEO_FRAMES=str(video["frames"]),
                        EMU_GFX_HOLD=os.environ.get("EMU_SCREEN_HOLD", "0"))
     application = decoding = injector = None
+    errors = os.path.join(directory, "errors")
+    failure = None
     try:
-        application = subprocess.Popen([os.path.join(FLUTTER, "emu_flutter_demo")], env=environment,
-                                       stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        with open(errors, "wb") as handle:
+            application = subprocess.Popen([os.path.join(FLUTTER, "emu_flutter_demo")], env=environment,
+                                           stdout=subprocess.PIPE, stderr=handle)
         decoding = subprocess.Popen(decoder, stdin=subprocess.PIPE if injected else subprocess.DEVNULL,
                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         if injected:
@@ -405,6 +408,12 @@ def play_flutter(stream, width, height, audio, limit):
             for raw in application.stdout:
                 line = raw.decode(errors="replace").strip()
                 if line.startswith("EMU-VIDEO: "):
+                    # Without an OpenGL context from GTK the application's
+                    # window never appears, yet it counts the frames it drew.
+                    with open(errors, errors="replace") as handle:
+                        if "Failed to create OpenGL context" in handle.read():
+                            failure = "GTK gave the Flutter application no OpenGL context, so its window was not shown"
+                            continue
                     counters = json.loads(line[len("EMU-VIDEO: "):])
                     counters["player"] = "Flutter %s with frames from FFmpeg %s" % (FLUTTER_VERSION, FFMPEG_VERSION)
                     if injector:
@@ -414,6 +423,8 @@ def play_flutter(stream, width, height, audio, limit):
             application.wait()
         finally:
             watchdog.cancel()
+        if failure:
+            return None, failure
         if counters is None:
             return None, "the Flutter application ended with status %s without a result" % application.returncode
         return counters, None
