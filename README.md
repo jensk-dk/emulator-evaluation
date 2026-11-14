@@ -22,7 +22,10 @@ holds the code for stages 0 to 4: the evaluation foundation, a cross-platform
 runnable baseline, VM CPU and driver fidelity, graphics, and media playback.
 Stages 0 to 4 are verified on three hosts: macOS on ARM64, Windows on x86-64
 with Podman as the container runtime, and Linux on x86-64 (Kubuntu 24.04)
-with Docker. macOS has no host
+with Docker. Stage 5, the WPE WebKit browser with its web workload, is
+implemented and so far run on the Windows host only: there the browser
+launches in every mode the image is built for, and the workload's
+measurements are not recorded yet. macOS has no host
 graphics acceleration, which the Linux host has in VM mode. The task list and
 `evaluation/verification/` show what has been verified, and on which hosts.
 
@@ -227,9 +230,8 @@ creates Podman's engine, which runs in WSL 2.
 ARM host. It is a diagnostic and not part of the test matrix.
 
 Workloads: `prompt` (interactive shell), `bench` (CPU, memory and I/O
-benchmarks), `driver-check`, `graphics-demo` and `media-decode`.
-`./emu workloads` lists them, including the web workload that is defined for
-a later stage.
+benchmarks), `driver-check`, `graphics-demo`, `media-decode` and `web-bench`
+(the WPE WebKit browser). `./emu workloads` lists them.
 
 Other commands: `./emu build`, `./emu doctor`, `./emu matrix`,
 `./emu workloads`, `./emu verify`, `./emu report`, `./emu audio`. Each has
@@ -250,8 +252,10 @@ environment, starts the driver-feature providers and runs one workload.
 For graphics the image carries the Weston Wayland compositor, Mesa's OpenGL ES
 and Vulkan drivers, and a Flutter application built with a pinned Flutter SDK.
 For media it carries FFmpeg's decoders with the `ffmpeg` program, the mpv
-player and ALSA as the audio interface. These are choices for the evaluation
-image, not statements about the real target's middleware.
+player and ALSA as the audio interface. For the web it carries the WPE WebKit
+browser engine with Cog, its launcher, and the GStreamer plugins WebKit plays
+media with. These are choices for the evaluation image, not statements about
+the real target's middleware.
 
 Two graphics technologies do not run in ARM32 mode yet. The Flutter SDK builds
 Linux applications for x86-64 and ARM64 only, so the ARM32 image has no
@@ -551,6 +555,33 @@ Limits:
 - mpv's OpenGL ES and Vulkan outputs use its plain rendering path
   (`--gpu-dumb-mode`). With its default path, Mesa's CPU renderer showed a
   black or green picture in many runs.
+
+## Web browser
+
+The image has WPE WebKit (Debian's 2.48, with Cog 0.18 as its launcher). The
+`web-bench` workload starts it as a Wayland client, full screen on the
+target's display, on pages of its own
+([target/rootfs/opt/emu/web](target/rootfs/opt/emu/web)) that it serves over
+the target's loopback interface:
+
+| Test | What it does |
+|---|---|
+| `launch` | the browser starts, loads a page and runs its script |
+| `render` | a fixed animated page for a fixed time: frames per second |
+| `mse` | the fragmented reference streams (MPEG-2, AVC, HEVC) played through Media Source Extensions, with sound: frames dropped |
+
+    ./emu run --mode vm --workload web-bench --window          # the three tests, with the display in a window
+    ./emu run --workload web-bench -- --tests launch            # only start the browser
+    ./emu run --workload web-bench -- --tests mse --streams avc-fragments
+
+- WebKit's process sandbox is off in the target: it needs kernel features a
+  container does not give. The browser loads only the workload's own pages.
+- WebKit starts media with sound only after a click, unless its embedder
+  allows a page more, and Cog has no option for that. The workload loads a
+  small library into Cog that gives its pages that permission
+  ([target/src/emu_web_autoplay.c](target/src/emu_web_autoplay.c)).
+- Graphics are the display's: with emulated graphics the browser draws with
+  Mesa's CPU renderer, like every other OpenGL ES program in the target.
 
 ## Evaluation
 

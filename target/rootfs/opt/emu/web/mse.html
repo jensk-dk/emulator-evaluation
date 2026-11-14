@@ -1,0 +1,141 @@
+<!doctype html>
+<!-- web-bench, test "mse": a reference stream played through Media Source
+     Extensions. The page gets the stream's initialisation segment and media
+     fragments from the workload and appends them to a source buffer, keeping
+     a bounded amount of media ahead of the playback position; the browser
+     demultiplexes, decodes and shows them, full screen, with their sound. -->
+<html>
+<head>
+<meta charset="utf-8">
+<title>emu web-bench: MSE playback</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
+  video { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; object-fit: fill; background: #000; }
+</style>
+<script src="common.js"></script>
+</head>
+<body>
+<video id="video" playsinline></video>
+<script>
+const BUFFER_AHEAD_SECONDS = 2.0;
+const video = document.getElementById("video");
+
+async function bytes(url) {
+  const reply = await fetch(url);
+  if (!reply.ok) throw new Error("no " + url + " (" + reply.status + ")");
+  return reply.arrayBuffer();
+}
+
+function appended(buffer, data) {
+  return new Promise((resolve, reject) => {
+    buffer.addEventListener("updateend", resolve, { once: true });
+    buffer.addEventListener("error", () => reject(new Error("the source buffer refused a fragment")), { once: true });
+    buffer.appendBuffer(data);
+  });
+}
+
+function ahead() {
+  const ranges = video.buffered;
+  return ranges.length ? ranges.end(ranges.length - 1) - video.currentTime : 0;
+}
+
+function pause(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
+
+async function main() {
+  const stream = await (await fetch("/stream?id=" + encodeURIComponent(parameter("stream", "")))).json();
+  if (!("MediaSource" in window)) return failure("the browser has no Media Source Extensions");
+  if (!MediaSource.isTypeSupported(stream.type)) return failure("the browser does not play " + stream.type);
+  if (parameter("muted", "0") === "1") video.muted = true;
+
+  const source = new MediaSource();
+  video.src = URL.createObjectURL(source);
+  await new Promise((resolve) => source.addEventListener("sourceopen", resolve, { once: true }));
+  const buffer = source.addSourceBuffer(stream.type);
+  video.addEventListener("error", () => failure("the video element reported: "
+    + (video.error ? video.error.code + " " + (video.error.message || "") : "an error")));
+
+  let started = null, stalls = 0, fragments = 0, total = 0, captured = parameter("capture", "0") !== "1";
+  let capturing = false, unmute = false;
+  let sound = video.muted ? "off: the target has no audio device" : "on";
+  video.addEventListener("playing", () => {
+    if (started === null) started = performance.now();
+    if (unmute) {
+      // Started without sound because the browser allowed nothing else:
+      // the sound is turned on now that the stream plays.
+      unmute = false;
+      video.muted = false;
+      sound = "on, after a start without sound (the browser's autoplay policy)";
+    }
+  });
+  video.addEventListener("pause", () => {
+    // A browser that does not allow the sound either pauses the stream.
+    if (capturing || video.ended || video.muted) return;
+    video.muted = true;
+    sound = "off: the browser's autoplay policy allows this page no sound";
+    video.play();
+  });
+  video.addEventListener("waiting", () => { if (started !== null) stalls++; });
+  // The browser's frame counters, followed through the playback: the browser
+  // may begin them again (WPE WebKit does after a pause), and what it had
+  // counted until then is kept.
+  const counted = { total: 0, dropped: 0, corrupted: 0, lastTotal: 0, lastDropped: 0, lastCorrupted: 0 };
+  function count() {
+    const quality = video.getVideoPlaybackQuality();
+    if (quality.totalVideoFrames < counted.lastTotal) {
+      counted.total += counted.lastTotal;
+      counted.dropped += counted.lastDropped;
+      counted.corrupted += counted.lastCorrupted;
+    }
+    counted.lastTotal = quality.totalVideoFrames;
+    counted.lastDropped = quality.droppedVideoFrames;
+    counted.lastCorrupted = quality.corruptedVideoFrames;
+  }
+  video.addEventListener("timeupdate", async () => {
+    count();
+    if (captured || video.currentTime < stream.seconds * 0.6) return;
+    // For a capture of the display the stream is paused on a frame in its
+    // second half. (Not in a measured run.)
+    captured = capturing = true;
+    video.pause();
+    count();
+    await pause(500);
+    await capture({ marker: stream.marker, width: innerWidth, height: innerHeight });
+    capturing = false;
+    video.play();
+  });
+  video.addEventListener("ended", () => {
+    count();
+    const found = browser();
+    Object.assign(found, {
+      total_video_frames: counted.total + counted.lastTotal,
+      dropped_video_frames: counted.dropped + counted.lastDropped,
+      corrupted_video_frames: counted.corrupted + counted.lastCorrupted, stalls,
+      seconds: Math.round(performance.now() - started) / 1000, media_seconds: video.duration,
+      video_size: video.videoWidth + "x" + video.videoHeight, fragments_appended: fragments, bytes_appended: total,
+      type: stream.type, sound });
+    report(found);
+  });
+
+  const init = await bytes(stream.base + stream.init);
+  await appended(buffer, init);
+  total += init.byteLength;
+  video.play().catch((error) => {
+    if (error.name !== "NotAllowedError" || video.muted) return failure("playback did not start: " + error);
+    // The browser starts no stream with sound on its own: start without.
+    video.muted = unmute = true;
+    video.play().catch((again) => failure("playback did not start: " + again));
+  });
+  for (const name of stream.media) {
+    while (ahead() >= BUFFER_AHEAD_SECONDS && fragments > 0) await pause(50);
+    const data = await bytes(stream.base + name);
+    await appended(buffer, data);
+    total += data.byteLength;
+    fragments++;
+  }
+  source.endOfStream();
+}
+
+main().catch((error) => failure(error.message || error));
+</script>
+</body>
+</html>

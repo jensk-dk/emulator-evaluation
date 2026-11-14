@@ -201,5 +201,57 @@ they run. Where the recording is made depends on the host:
 
 ## Web
 
-Defined for stage 5. WPE WebKit plays a reference stream through MSE and
-renders a fixed animated page.
+Workload `web-bench`. The browser is WPE WebKit, started by its launcher Cog
+as a Wayland client, full screen on the target's display.
+
+    ./emu run --mode container --workload web-bench --record --repeat 3
+    ./emu run --mode vm --arch native --workload web-bench --record --repeat 3
+    ./emu run --mode vm --arch arm64 --workload web-bench --record --repeat 3
+    ./emu run --mode vm --arch arm32 --workload web-bench --record --repeat 3
+
+- **Pages.** The workload's own, in
+  [target/rootfs/opt/emu/web](../target/rootfs/opt/emu/web). The workload
+  serves them to the browser over the target's loopback interface, and a page
+  reports what it measured back to the workload. The browser is started anew
+  for each test and each stream.
+- **Launch** (`web_launch`, a functional test). The browser starts, loads a
+  page and runs its script; the page reports the browser's user agent, the
+  size of its viewport and whether it has Media Source Extensions. The value
+  is the time from starting the browser to the page's report.
+- **Rendering** (`web_render_fps`). A fixed animated page
+  ([render.html](../target/rootfs/opt/emu/web/render.html)): a rotating
+  background, 64 blended shapes and a grid of 24 text elements, all of them
+  page elements, moved once per animation frame for 5 seconds
+  (`-- --seconds S`) at the display resolution (`--resolution`). The browser
+  draws one frame per display refresh, so the frame rate is bounded by the
+  60 Hz display, as the Flutter test's is. Reported with percentiles of the
+  time between frames.
+- **MSE playback** (`mse_playback_dropped_frames`). The fragmented streams of
+  the media-decode workload, one per video codec (MPEG-2 with MP2, AVC with
+  AAC, HEVC with AC-3; `-- --streams` selects). A page
+  ([mse.html](../target/rootfs/opt/emu/web/mse.html)) appends a stream's
+  initialisation segment and its media fragments to a Media Source buffer,
+  keeping two seconds ahead of the playback position, and the browser plays
+  them in real time, full screen, with their sound on the target's audio
+  device. The value is the stream's frames that the browser did not show:
+  all 125, less those the browser counted at its video output and did not
+  drop there (`getVideoPlaybackQuality()`). The browser's own count of
+  dropped frames is not the value, because it covers only frames that got as
+  far as the output: under CPU emulation the decoder skips most of a stream
+  before that, and the browser then reports a few dropped frames of the few
+  it counted. The result has both of the browser's counts, the times
+  playback stalled, and whether the sound was on. A
+  stream the browser does not play is reported with `"value": null` and the
+  browser's reason.
+- **What is changed about the browser.** Two things, both because the target
+  runs it unattended: WebKit's process sandbox is off (it needs kernel
+  features a container does not give, and the browser loads nothing but the
+  workload's pages), and those pages may start media with sound, which WebKit
+  otherwise allows only after a click
+  ([target/src/emu_web_autoplay.c](../target/src/emu_web_autoplay.c)).
+- **Graphics provider.** As for the graphics workload: results with emulated
+  and with host graphics are kept apart.
+
+`./emu verify` captures the display for each test, as for the graphics and
+media workloads: the pages draw the same marker blocks, and a played stream
+is paused on a frame for the capture (not in a measured run).

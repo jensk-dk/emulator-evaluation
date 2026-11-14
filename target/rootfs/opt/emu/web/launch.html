@@ -1,0 +1,29 @@
+<!doctype html>
+<!-- web-bench, test "launch": the browser starts, loads a page and runs its script. -->
+<html>
+<head>
+<meta charset="utf-8">
+<title>emu web-bench: launch</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #20242c; color: #e8e8e8; font: 32px sans-serif; overflow: hidden; }
+  p { position: absolute; top: 45%; width: 100%; text-align: center; margin: 0; }
+</style>
+<script src="common.js"></script>
+</head>
+<body>
+<p>WPE WebKit is running.</p>
+<script>
+const MARKER = [255, 200, 0];
+window.addEventListener("load", () => {
+  markers(MARKER);
+  // Two frames on, the page has been drawn.
+  requestAnimationFrame(() => requestAnimationFrame(async () => {
+    const found = browser();
+    found.load_ms = Math.round(performance.now());
+    await capture({ marker: MARKER, width: innerWidth, height: innerHeight });
+    report(found);
+  }));
+});
+</script>
+</body>
+</html>

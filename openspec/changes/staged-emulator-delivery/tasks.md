@@ -72,7 +72,11 @@
 
 ## 6. Stage 5: Browser evaluation
 - [ ] 6.1 Include WPE WebKit in the Linux client OS image and verify it launches.
+  - Implemented: the image (0.4.0) has Debian's WPE WebKit 2.48 with Cog, its launcher, and the GStreamer plugins WebKit plays media with; the `web-bench` workload starts the browser as a Wayland client, full screen on the target's display. Verified on Windows (x86-64) in container, host-native VM, ARM64 VM and ARM32 VM modes (`./emu verify web-launch-...`): the browser starts, loads a page and runs its script, and a capture of the emulator's display shows the page. Not yet run on the Linux and macOS hosts, whose images are to be rebuilt first.
+  - WebKit's process sandbox is off in the target: it needs kernel features a container does not give.
 - [ ] 6.2 Run web-performance workloads in WPE WebKit, including MSE playback, and verify playback results are recorded.
+  - Implemented as the `web-bench` workload: a fixed animated page (`web_render_fps`), and the fragmented reference streams of stage 4 played through Media Source Extensions with their sound (`mse_playback_dropped_frames`), with checks for both (`./emu verify web-render-... web-mse-...`). Not verified and not measured on any host yet. Tried once by hand while it was written, in a container on the Windows host: the page rendered, and MPEG-2, AVC and HEVC each played through MSE with sound, the browser counting all 125 frames.
+  - WebKit starts media with sound only after a click unless its embedder allows a page more, and Cog has no option for that; the workload loads a small library into Cog that gives its pages that permission (`target/src/emu_web_autoplay.c`).
 
 ## 7. Stage 6: Windowed display UX
 - [ ] 7.1 Implement windowed and full-screen modes with a hotkey to switch between them and verify both transitions.

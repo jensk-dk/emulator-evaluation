@@ -1054,6 +1054,178 @@
       "seconds": 127.7,
       "revision": "28f2a35926a922c82b6f595f6ff0f94f795c0a0a-dirty",
       "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+    },
+    "web-launch-container": {
+      "status": "pass",
+      "task": "6.1",
+      "description": "WPE WebKit launches in container mode",
+      "details": [
+        "WPE WebKit 2.48.3 (Cog 0.18.4) started, loaded a page and ran its script in 5.0 s; a capture of the display shows the page, full screen at 1280x720",
+        "Media Source Extensions: available; drawn on llvmpipe (LLVM 19.1.7, 256 bits)",
+        "graphics provider: emulated"
+      ],
+      "checked_at": "2026-11-14T21:37:49Z",
+      "seconds": 17.7,
+      "revision": "4aea92c6f779a2f37f61814cb69e908f13b8d62d-dirty",
+      "image_definition_sha256": "568576c3c68c3aada843764f5322f34183e25f2c31bbc45f252d0988f14d5227"
+    },
+    "web-launch-vm": {
+      "status": "pass",
+      "task": "6.1",
+      "description": "WPE WebKit launches in a host-native VM",
+      "details": [
+        "WPE WebKit 2.48.3 (Cog 0.18.4) started, loaded a page and ran its script in 5.3 s; a capture of the display shows the page, full screen at 1280x720",
+        "Media Source Extensions: available; drawn on llvmpipe (LLVM 19.1.7, 256 bits)",
+        "graphics provider: emulated"
+      ],
+      "checked_at": "2026-11-14T21:38:05Z",
+      "seconds": 16.4,
+      "revision": "4aea92c6f779a2f37f61814cb69e908f13b8d62d-dirty",
+      "image_definition_sha256": "568576c3c68c3aada843764f5322f34183e25f2c31bbc45f252d0988f14d5227"
+    },
+    "web-launch-vm-arm64": {
+      "status": "pass",
+      "task": "6.1",
+      "description": "WPE WebKit launches in an ARM64 VM",
+      "details": [
+        "WPE WebKit 2.48.3 (Cog 0.18.4) started, loaded a page and ran its script in 23.3 s; a capture of the display shows the page, full screen at 1280x720",
+        "Media Source Extensions: available; drawn on llvmpipe (LLVM 19.1.7, 128 bits)",
+        "graphics provider: emulated"
+      ],
+      "checked_at": "2026-11-14T21:39:08Z",
+      "seconds": 62.4,
+      "revision": "4aea92c6f779a2f37f61814cb69e908f13b8d62d-dirty",
+      "image_definition_sha256": "568576c3c68c3aada843764f5322f34183e25f2c31bbc45f252d0988f14d5227"
+    },
+    "web-launch-vm-arm32": {
+      "status": "pass",
+      "task": "6.1",
+      "description": "WPE WebKit launches in an ARM32 VM",
+      "details": [
+        "WPE WebKit 2.48.3 (Cog 0.18.4) started, loaded a page and ran its script in 25.0 s; a capture of the display shows the page, full screen at 1280x720",
+        "Media Source Extensions: available; drawn on llvmpipe (LLVM 19.1.7, 128 bits)",
+        "graphics provider: emulated"
+      ],
+      "checked_at": "2026-11-14T21:40:53Z",
+      "seconds": 104.5,
+      "revision": "4aea92c6f779a2f37f61814cb69e908f13b8d62d-dirty",
+      "image_definition_sha256": "568576c3c68c3aada843764f5322f34183e25f2c31bbc45f252d0988f14d5227"
+    },
+    "web-render-container": {
+      "status": "pass",
+      "task": "6.2",
+      "description": "WPE WebKit renders the animated page in container mode",
+      "details": [
+        "the animated page at 1280x720: 48.2 frames/s in WPE WebKit 2.48.3 (Cog 0.18.4) on llvmpipe (LLVM 19.1.7, 256 bits); a capture of the display shows it",
+        "time between frames p99 174.0 ms",
+        "graphics provider: emulated"
+      ],
+      "checked_at": "2026-11-14T21:41:43Z",
+      "seconds": 49.9,
+      "revision": "4aea92c6f779a2f37f61814cb69e908f13b8d62d-dirty",
+      "image_definition_sha256": "568576c3c68c3aada843764f5322f34183e25f2c31bbc45f252d0988f14d5227"
+    },
+    "web-mse-container": {
+      "status": "pass",
+      "task": "6.2",
+      "description": "WPE WebKit plays the reference streams through MSE in container mode",
+      "details": [
+        "MPEG-2 through MSE: 11 fragments appended, 12 of 125 frames not shown (the browser dropped 2 of the 115 that reached its output), sound on; a capture of the display shows the video",
+        "AVC through MSE: 5 fragments appended, 11 of 125 frames not shown (the browser dropped 2 of the 116 that reached its output), sound on; a capture of the display shows the video",
+        "HEVC through MSE: 5 fragments appended, 12 of 125 frames not shown (the browser dropped 2 of the 115 that reached its output), sound on; a capture of the display shows the video",
+        "played by WPE WebKit 2.48.3 (Cog 0.18.4); graphics provider: emulated"
+      ],
+      "checked_at": "2026-11-14T21:41:43Z",
+      "seconds": 0.0,
+      "revision": "4aea92c6f779a2f37f61814cb69e908f13b8d62d-dirty",
+      "image_definition_sha256": "568576c3c68c3aada843764f5322f34183e25f2c31bbc45f252d0988f14d5227"
+    },
+    "web-render-vm": {
+      "status": "pass",
+      "task": "6.2",
+      "description": "WPE WebKit renders the animated page in a host-native VM",
+      "details": [
+        "the animated page at 1280x720: 39.5 frames/s in WPE WebKit 2.48.3 (Cog 0.18.4) on llvmpipe (LLVM 19.1.7, 256 bits); a capture of the display shows it",
+        "time between frames p99 315.0 ms",
+        "graphics provider: emulated"
+      ],
+      "checked_at": "2026-11-14T21:42:33Z",
+      "seconds": 50.6,
+      "revision": "4aea92c6f779a2f37f61814cb69e908f13b8d62d-dirty",
+      "image_definition_sha256": "568576c3c68c3aada843764f5322f34183e25f2c31bbc45f252d0988f14d5227"
+    },
+    "web-mse-vm": {
+      "status": "pass",
+      "task": "6.2",
+      "description": "WPE WebKit plays the reference streams through MSE in a host-native VM",
+      "details": [
+        "MPEG-2 through MSE: 11 fragments appended, 0 of 125 frames not shown (the browser dropped 0 of the 125 that reached its output), sound on; a capture of the display shows the video",
+        "AVC through MSE: 5 fragments appended, 0 of 125 frames not shown (the browser dropped 0 of the 125 that reached its output), sound on; a capture of the display shows the video",
+        "HEVC through MSE: 5 fragments appended, 0 of 125 frames not shown (the browser dropped 0 of the 125 that reached its output), sound on; a capture of the display shows the video",
+        "played by WPE WebKit 2.48.3 (Cog 0.18.4); graphics provider: emulated"
+      ],
+      "checked_at": "2026-11-14T21:42:33Z",
+      "seconds": 0.0,
+      "revision": "4aea92c6f779a2f37f61814cb69e908f13b8d62d-dirty",
+      "image_definition_sha256": "568576c3c68c3aada843764f5322f34183e25f2c31bbc45f252d0988f14d5227"
+    },
+    "web-render-vm-arm64": {
+      "status": "pass",
+      "task": "6.2",
+      "description": "WPE WebKit renders the animated page in an ARM64 VM",
+      "details": [
+        "the animated page at 1280x720: 0.2 frames/s in WPE WebKit 2.48.3 (Cog 0.18.4) on llvmpipe (LLVM 19.1.7, 128 bits); a capture of the display shows it",
+        "time between frames p99 6013.0 ms",
+        "graphics provider: emulated"
+      ],
+      "checked_at": "2026-11-14T21:45:18Z",
+      "seconds": 164.6,
+      "revision": "4aea92c6f779a2f37f61814cb69e908f13b8d62d-dirty",
+      "image_definition_sha256": "568576c3c68c3aada843764f5322f34183e25f2c31bbc45f252d0988f14d5227"
+    },
+    "web-mse-vm-arm64": {
+      "status": "pass",
+      "task": "6.2",
+      "description": "WPE WebKit plays the reference streams through MSE in an ARM64 VM",
+      "details": [
+        "MPEG-2 through MSE: 11 fragments appended, 14 of 125 frames not shown (the browser dropped 0 of the 111 that reached its output), sound on; a capture of the display shows the video",
+        "AVC through MSE: 5 fragments appended, 25 of 125 frames not shown (the browser dropped 0 of the 100 that reached its output), sound on; a capture of the display shows the video",
+        "HEVC through MSE: 5 fragments appended, 104 of 125 frames not shown (the browser dropped 4 of the 25 that reached its output), sound on; a capture of the display shows the video",
+        "played by WPE WebKit 2.48.3 (Cog 0.18.4); graphics provider: emulated"
+      ],
+      "checked_at": "2026-11-14T21:45:18Z",
+      "seconds": 0.0,
+      "revision": "4aea92c6f779a2f37f61814cb69e908f13b8d62d-dirty",
+      "image_definition_sha256": "568576c3c68c3aada843764f5322f34183e25f2c31bbc45f252d0988f14d5227"
+    },
+    "web-render-vm-arm32": {
+      "status": "pass",
+      "task": "6.2",
+      "description": "WPE WebKit renders the animated page in an ARM32 VM",
+      "details": [
+        "the animated page at 1280x720: 0.1 frames/s in WPE WebKit 2.48.3 (Cog 0.18.4) on llvmpipe (LLVM 19.1.7, 128 bits); a capture of the display shows it",
+        "time between frames p99 10764.0 ms",
+        "graphics provider: emulated"
+      ],
+      "checked_at": "2026-11-14T21:49:29Z",
+      "seconds": 250.4,
+      "revision": "4aea92c6f779a2f37f61814cb69e908f13b8d62d-dirty",
+      "image_definition_sha256": "568576c3c68c3aada843764f5322f34183e25f2c31bbc45f252d0988f14d5227"
+    },
+    "web-mse-vm-arm32": {
+      "status": "pass",
+      "task": "6.2",
+      "description": "WPE WebKit plays the reference streams through MSE in an ARM32 VM",
+      "details": [
+        "MPEG-2 through MSE: 11 fragments appended, 61 of 125 frames not shown (the browser dropped 0 of the 64 that reached its output), sound on; a capture of the display shows the video (the display service ended during the first attempt and was started again)",
+        "AVC through MSE: 5 fragments appended, 125 of 125 frames not shown (the browser dropped 4 of the 4 that reached its output), sound on; a capture of the display shows the video",
+        "HEVC through MSE: 5 fragments appended, 125 of 125 frames not shown (the browser dropped 3 of the 1 that reached its output), sound on; a capture of the display shows the video",
+        "played by WPE WebKit 2.48.3 (Cog 0.18.4); graphics provider: emulated"
+      ],
+      "checked_at": "2026-11-14T21:49:29Z",
+      "seconds": 0.0,
+      "revision": "4aea92c6f779a2f37f61814cb69e908f13b8d62d-dirty",
+      "image_definition_sha256": "568576c3c68c3aada843764f5322f34183e25f2c31bbc45f252d0988f14d5227"
     }
   }
 }

@@ -46,6 +46,13 @@ COPY src/emu_alsa.c /src/
 RUN mkdir -p /out/lib \
     && gcc -O2 -Wall -Wextra -shared -fPIC -DPIC -o /out/lib/libasound_module_pcm_emu.so /src/emu_alsa.c \
          -lasound -lpthread
+# Loaded into the browser's launcher by the web-bench workload, so that its
+# pages may start media with sound.
+RUN apt-get update && apt-get install -y --no-install-recommends libwpewebkit-2.0-dev \
+    && rm -rf /var/lib/apt/lists/*
+COPY src/emu_web_autoplay.c /src/
+RUN gcc -O2 -Wall -Wextra -shared -fPIC -o /out/lib/libemu_web_autoplay.so /src/emu_web_autoplay.c \
+         $(pkgconf --cflags --libs wpe-webkit-2.0) -ldl
 
 # -------------------------------------------------------------- media ---
 # The reference streams of the media-decode workload. They are data, the same
@@ -134,6 +141,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # ALSA, the target's audio interface.
 RUN apt-get update && apt-get install -y --no-install-recommends \
       ffmpeg mpv alsa-utils \
+    && rm -rf /var/lib/apt/lists/*
+# Web: the WPE WebKit browser engine with Cog, its launcher, and the GStreamer
+# plugins WebKit plays media with (MP4 demultiplexing, FFmpeg's decoders, ALSA
+# output).
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      cog libwpewebkit-2.0-1 \
+      gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-libav gstreamer1.0-alsa \
     && rm -rf /var/lib/apt/lists/*
 
 # ------------------------------------------------------------- target ---

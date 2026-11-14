@@ -852,6 +852,114 @@ def _media_checks():
     return checks
 
 
+# ----------------------------------------------------------------- web ---
+
+_web_runs = {}
+
+
+def _web(mode, arch, tests):
+    """Run the web workload once per configuration and set of tests, at 720p;
+    returns (emulator record, workload announcement, {(test, case): (problem
+    with its display capture or None, result)})."""
+    key = (mode, arch, tests)
+    if key not in _web_runs:
+        width, height = graphics.resolution("720p")
+        with tempfile.TemporaryDirectory(prefix="emu-verify-") as shots:
+            _, outcome = _run(mode=mode, arch=arch, workload="web-bench", args=["--tests", tests, "--seconds", "2"],
+                              resolution="720p", screenshot_dir=shots, screenshot_format="ppm",
+                              options={"audio-output": "none"}, timeout=7200)
+            host_rendered = outcome.environment["emulator"]["graphics"]["provider"] == "host"
+            evaluation = {}
+            for result in outcome.results:
+                name = result.get("case") or result["test"]
+                screen = next((c for c in outcome.screens if c.get("test") == result["test"]
+                               and c.get("case") == result.get("case")), None)
+                if result.get("value") is None:
+                    problem = None      # reported by the check, with the workload's reason
+                elif screen is None:
+                    problem = "%s was not captured from the display" % name
+                else:
+                    video = result["test"] == "mse_playback_dropped_frames"
+                    found = graphics.capture_problems(
+                        screen, width, height, allow_cut=host_rendered,
+                        tolerance=graphics.VIDEO_COLOR_TOLERANCE if video else graphics.COLOR_TOLERANCE)
+                    problem = "%s: %s" % (name, "; ".join(found)) if found else None
+                evaluation[(result["test"], result.get("case"))] = (problem, result)
+        _web_runs[key] = (outcome.environment["emulator"], outcome.workload or {}, evaluation)
+    return _web_runs[key]
+
+
+def _web_result(evaluation, test, case=None):
+    _require((test, case) in evaluation, "the web workload reported nothing for %s" % (case or test))
+    problem, result = evaluation[(test, case)]
+    _require(result.get("value") is not None, "%s is unavailable: %s" % (case or test, result.get("unavailable")))
+    _require(not problem, problem)
+    return result
+
+
+def _web_launch(mode, arch="native"):
+    """WPE WebKit starts in the target, loads a page and shows it."""
+    emulator, _, evaluation = _web(mode, arch, "launch")
+    result = _web_result(evaluation, "web_launch")
+    _require("AppleWebKit" in (result.get("user_agent") or ""), "the page did not run in WebKit: %r"
+             % result.get("user_agent"))
+    _require(result.get("viewport") == result.get("resolution"), "the page was %s on a %s display"
+             % (result.get("viewport"), result.get("resolution")))
+    return ["%s started, loaded a page and ran its script in %.1f s; a capture of the display shows the page, "
+            "full screen at %s" % (result.get("browser"), result["value"], result.get("resolution")),
+            "Media Source Extensions: %s; drawn on %s" % ("available" if result.get("media_source") else "missing",
+                                                          result.get("renderer")),
+            "graphics provider: %s" % emulator["graphics"]["provider"]]
+
+
+def _web_render(mode, arch="native"):
+    """The animated page is rendered and reaches the display."""
+    emulator, _, evaluation = _web(mode, arch, "render,mse")
+    result = _web_result(evaluation, "web_render_fps")
+    return ["the animated page at %s: %.1f frames/s in %s on %s; a capture of the display shows it" % (
+        result.get("resolution"), result["value"], result.get("browser"), result.get("renderer")),
+        "time between frames p99 %.1f ms" % result["frame_time_ms"]["p99"],
+        "graphics provider: %s" % emulator["graphics"]["provider"]]
+
+
+def _web_mse(mode, arch="native"):
+    """Reference streams are played through MSE and the results recorded."""
+    emulator, _, evaluation = _web(mode, arch, "render,mse")
+    cases = [case for test, case in evaluation if test == "mse_playback_dropped_frames"]
+    _require(cases, "no stream was played through MSE")
+    lines = []
+    for case in cases:
+        result = _web_result(evaluation, "mse_playback_dropped_frames", case)
+        _require(result.get("fragments_appended", 0) > 0, "no fragments were appended for %s" % case)
+        _require(result.get("total_video_frames", 0) > 0, "the browser counted no video frames for %s" % case)
+        lines.append("%s through MSE: %d fragments appended, %d of %d frames not shown (the browser dropped %d of "
+                     "the %d that reached its output), sound %s; a capture of the display shows the video%s" % (
+                         VIDEO_CODECS[result["video_codec"]], result["fragments_appended"], result["value"],
+                         result["frames"], result.get("dropped_video_frames") or 0, result["total_video_frames"],
+                         result.get("sound"),
+                         " (the display service ended during the first attempt and was started again)"
+                         if result.get("display_restarts") else ""))
+    result = evaluation[("mse_playback_dropped_frames", cases[0])][1]
+    return lines + ["played by %s; graphics provider: %s" % (result.get("browser"), emulator["graphics"]["provider"])]
+
+
+def _web_checks():
+    variants = (("container", "container", "native", "container mode"),
+                ("vm", "vm", "native", "a host-native VM"),
+                ("vm-arm64", "vm", "arm64", "an ARM64 VM"),
+                ("vm-arm32", "vm", "arm32", "an ARM32 VM"))
+    checks = {}
+    for suffix, mode, arch, where in variants:
+        checks["web-launch-" + suffix] = (lambda m=mode, a=arch: _web_launch(m, a), "6.1",
+                                          "WPE WebKit launches in " + where)
+    for suffix, mode, arch, where in variants:
+        checks["web-render-" + suffix] = (lambda m=mode, a=arch: _web_render(m, a), "6.2",
+                                          "WPE WebKit renders the animated page in " + where)
+        checks["web-mse-" + suffix] = (lambda m=mode, a=arch: _web_mse(m, a), "6.2",
+                                       "WPE WebKit plays the reference streams through MSE in " + where)
+    return checks
+
+
 # name -> (function, the task in openspec/changes/staged-emulator-delivery/tasks.md it supports, description)
 CHECKS = {
     "matrix": (check_matrix, "1.1", "the host test matrix covers every declared host combination"),
@@ -871,6 +979,7 @@ CHECKS = {
 }
 CHECKS.update(_graphics_checks())
 CHECKS.update(_media_checks())
+CHECKS.update(_web_checks())
 
 
 def _report_path():

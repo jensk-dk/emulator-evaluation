@@ -1,0 +1,402 @@
+#!/usr/bin/env python3
+"""Workload "web-bench": web evaluation in WPE WebKit.
+
+    web-bench [--tests launch,render,mse] [--seconds S] [--streams ID,...]
+
+The browser is WPE WebKit, started by its launcher Cog as a Wayland client,
+full screen on the target's display. Its pages are the workload's own
+(/opt/emu/web), served to it by this program over the target's loopback
+interface; a page reports what it measured back to this program.
+
+  launch   a functional test: the browser starts, loads a page and runs its
+           script. Reports web_launch, with the time from starting the
+           browser to the page's report.
+  render   web_render_fps: a fixed animated page (render.html) for a fixed
+           time at the display's resolution.
+  mse      mse_playback_dropped_frames: reference streams played through
+           Media Source Extensions (mse.html), in real time, full screen, with
+           their sound on the target's audio device. By default the three
+           fragmented streams of the media-decode workload, one per video
+           codec; a stream the browser does not play is reported unavailable,
+           with the browser's reason. The value is the stream's frames that
+           the browser did not show: all of them, less those the browser
+           counted at its video output and did not drop there.
+
+See evaluation/workloads.json and evaluation/procedures.md#web. Each test
+prints one EMU-RESULT line per case. With EMU_SCREEN_HOLD set, a page keeps a
+frame on the display and an EMU-SCREEN line tells the launcher to capture it.
+
+WebKit's process sandbox is turned off: it needs kernel features a container
+does not give, and the browser loads nothing but this workload's own pages.
+Those pages may start media with sound, which WebKit otherwise allows only
+after a click (target/src/emu_web_autoplay.c).
+"""
+import argparse
+import http.server
+import json
+import os
+import queue
+import re
+import shutil
+import signal
+import subprocess
+import sys
+import tempfile
+import threading
+import time
+import urllib.parse
+
+VERSION = "1.0.0"
+WEB = "/opt/emu/web"
+MEDIA = "/opt/emu/media"
+AUDIO_STATE = "/run/emu/drivers/audio.json"
+# Lets a page start media with sound (target/src/emu_web_autoplay.c).
+AUTOPLAY = "/opt/emu/lib/libemu_web_autoplay.so"
+TESTS = ("launch", "render", "mse")
+DEFAULT_STREAMS = ("mpeg2-fragments", "avc-fragments", "hevc-fragments")
+# What the page asks the browser for, per stream: the MP4 container with the
+# stream's video and audio codecs.
+MSE_TYPES = {
+    "mpeg2": 'video/mp4; codecs="mp4v.61, mp4a.6b"',
+    "avc": 'video/mp4; codecs="avc1.64001f, mp4a.40.2"',
+    "hevc": 'video/mp4; codecs="hvc1.1.6.L93.B0, ac-3"',
+}
+CONTENT_TYPES = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8",
+                 ".mp4": "video/mp4", ".m4s": "video/iso.segment"}
+
+
+def emit(marker, data):
+    print("%s: %s" % (marker, json.dumps(data)), flush=True)
+
+
+def output_of(command, timeout=900):
+    try:
+        done = subprocess.run(command, capture_output=True, text=True, timeout=timeout)
+        return done.stdout + done.stderr
+    except (OSError, subprocess.SubprocessError):
+        return ""
+
+
+# ---------------------------------------------------------------- server ---
+
+class Server(http.server.ThreadingHTTPServer):
+    daemon_threads = True
+
+    def __init__(self, streams):
+        super().__init__(("127.0.0.1", 0), Handler)
+        self.streams = streams
+        self.reports = queue.Queue()        # (kind, data) from the page that is running
+        self.screen = None                  # what an EMU-SCREEN line of the running test says
+        self.hold = float(os.environ.get("EMU_SCREEN_HOLD", "0") or 0)
+        threading.Thread(target=self.serve_forever, daemon=True).start()
+
+    def handle_error(self, request, client_address):
+        pass        # a browser that is being stopped drops its connections
+
+    @property
+    def address(self):
+        return "http://127.0.0.1:%d" % self.server_address[1]
+
+
+class Handler(http.server.BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
+
+    def log_message(self, *arguments):
+        pass
+
+    def _send(self, status, body=b"", content_type="application/json"):
+        self.send_response(status)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_GET(self):
+        url = urllib.parse.urlsplit(self.path)
+        if url.path == "/stream":
+            wanted = urllib.parse.parse_qs(url.query).get("id", [""])[0]
+            stream = self.server.streams.get(wanted)
+            if not stream:
+                return self._send(404)
+            fragments = stream["fragments"]
+            return self._send(200, json.dumps({
+                "id": stream["id"], "type": MSE_TYPES.get(stream["video"]["codec"], "video/mp4"),
+                "base": "/media/%s/" % fragments["directory"], "init": fragments["init"], "media": fragments["media"],
+                "seconds": stream["seconds"], "marker": stream["video"]["marker"]}).encode())
+        root, name = (MEDIA, url.path[len("/media/"):]) if url.path.startswith("/media/") else (WEB, url.path[1:])
+        path = os.path.normpath(os.path.join(root, name))
+        if not path.startswith(root + os.sep) or not os.path.isfile(path):
+            return self._send(404)
+        with open(path, "rb") as handle:
+            body = handle.read()
+        self._send(200, body, CONTENT_TYPES.get(os.path.splitext(path)[1], "application/octet-stream"))
+
+    def do_POST(self):
+        try:
+            data = json.loads(self.rfile.read(int(self.headers.get("Content-Length", "0"))) or b"{}")
+        except ValueError:
+            return self._send(400)
+        if self.path == "/screen":
+            # The page keeps its frame up until this is answered.
+            if self.server.hold > 0 and self.server.screen is not None:
+                emit("EMU-SCREEN", dict(self.server.screen, **data))
+                time.sleep(self.server.hold)
+        elif self.path in ("/result", "/failure"):
+            self.server.reports.put((self.path[1:], data))
+        else:
+            return self._send(404)
+        self._send(200, b"{}")
+
+
+# --------------------------------------------------------------- browser ---
+
+def browser_environment():
+    environment = dict(os.environ, WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS="1", HOME="/tmp/emu-web-home",
+                       XDG_CACHE_HOME="/tmp/emu-web-home/cache", XDG_DATA_HOME="/tmp/emu-web-home/data")
+    os.makedirs(environment["HOME"], exist_ok=True)
+    if os.path.exists(AUTOPLAY):
+        environment["LD_PRELOAD"] = AUTOPLAY
+    return environment
+
+
+def run_page(server, url, screen, limit):
+    """Start the browser on a page and wait for the page's report. Returns
+    (report or None, error or None, seconds from start to the report)."""
+    while not server.reports.empty():
+        server.reports.get()
+    server.screen = screen
+    directory = tempfile.mkdtemp(prefix="emu-web.")
+    log = os.path.join(directory, "browser.log")
+    started = time.monotonic()
+    try:
+        with open(log, "wb") as handle:
+            browser = subprocess.Popen(
+                ["cog", "--platform=wl", "--webprocess-failure=exit", "--media-playback-requires-user-gesture=false",
+                 "--enable-mediasource=true", "--enable-webgl=true", url],
+                stdin=subprocess.DEVNULL, stdout=handle, stderr=subprocess.STDOUT, env=browser_environment(),
+                start_new_session=True)
+    except OSError as error:
+        shutil.rmtree(directory, ignore_errors=True)
+        return None, "the browser did not start: %s" % error, 0.0
+    report = error = None
+    try:
+        while report is None and error is None:
+            try:
+                kind, data = server.reports.get(timeout=0.2)
+                if kind == "result":
+                    report = data
+                else:
+                    error = data.get("reason") or "the page reported a failure"
+            except queue.Empty:
+                if browser.poll() is not None:
+                    error = "the browser ended with status %s: %s" % (browser.returncode, log_tail(log))
+                elif time.monotonic() - started > limit:
+                    error = "the page did not report in %d seconds: %s" % (limit, log_tail(log))
+        return report, error, time.monotonic() - started
+    finally:
+        server.screen = None
+        # Cog and the processes WebKit started for it.
+        for sign in (signal.SIGTERM, signal.SIGKILL):
+            try:
+                os.killpg(browser.pid, sign)
+            except OSError:
+                break
+            try:
+                browser.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                continue
+            time.sleep(0.3)
+        shutil.rmtree(directory, ignore_errors=True)
+
+
+def log_tail(path):
+    try:
+        with open(path, errors="replace") as handle:
+            lines = [line.strip() for line in handle if line.strip() and "Load" not in line]
+    except OSError:
+        lines = []
+    return " ".join(lines[-3:])[-300:]
+
+
+def display_running():
+    return subprocess.run(["/opt/emu/display", "status"]).returncode == 0
+
+
+def with_display(run):
+    """Run a test that needs the display for all of it: when the compositor
+    has ended, it is started again and the test is run once more. Returns
+    (report, error, seconds, restarts)."""
+    restarts = 0
+    while True:
+        if not display_running() and subprocess.run(["/opt/emu/display", "start"]).returncode != 0:
+            return None, "the display service ended and did not start again", 0.0, restarts
+        report, error, seconds = run()
+        if display_running():
+            return report, error, seconds, restarts
+        restarts += 1
+        if restarts > 1:
+            return None, "the display service (the Wayland compositor) ended during the test, twice", 0.0, restarts
+
+
+def common_fields(report, display, resolution):
+    """What every result says about the browser and what drew for it."""
+    gles = (display or {}).get("gles") or {}
+    fields = {"technology": "web", "resolution": resolution, "browser": BROWSER,
+              "renderer": gles.get("renderer"), "accelerated": bool(gles.get("accelerated"))}
+    if report:
+        graphics = report.get("graphics") or {}
+        fields.update(user_agent=report.get("user_agent"), viewport=report.get("viewport"),
+                      webgl_renderer=graphics.get("renderer") if graphics.get("webgl") else None)
+    return fields
+
+
+# ----------------------------------------------------------------- tests ---
+
+def launch(server, display, resolution):
+    screen = {"test": "web_launch", "technology": "web", "kind": "page"}
+    report, error, seconds, restarts = with_display(
+        lambda: run_page(server, server.address + "/launch.html", screen, 1800))
+    fields = common_fields(report, display, resolution)
+    if restarts:
+        fields["display_restarts"] = restarts
+    data = {"area": "web", "test": "web_launch", "unit": "seconds"}
+    if error:
+        emit("EMU-RESULT", dict(data, value=None, unavailable=error, **fields))
+        return
+    fields.update(media_source=report.get("media_source"), page_load_ms=report.get("load_ms"))
+    emit("EMU-RESULT", dict(data, value=round(seconds, 3), **fields))
+
+
+def render(server, display, resolution, seconds):
+    screen = {"test": "web_render_fps", "technology": "web", "kind": "page"}
+    limit = seconds * 20 + 1800      # generous: under CPU emulation the browser is slow to start
+    report, error, _, restarts = with_display(
+        lambda: run_page(server, "%s/render.html?seconds=%s" % (server.address, seconds), screen, limit))
+    fields = common_fields(report, display, resolution)
+    if restarts:
+        fields["display_restarts"] = restarts
+    data = {"area": "graphics", "test": "web_render_fps", "unit": "frames/s"}
+    if not error and report.get("viewport") != resolution:
+        error = "the page was %s on a %s display, so it was not shown full screen" % (report.get("viewport"), resolution)
+    if error:
+        emit("EMU-RESULT", dict(data, value=None, unavailable=error, **fields))
+        return
+    fields.update(frames=report.get("frames"), seconds=report.get("seconds"), frame_time_ms=report.get("frame_time_ms"),
+                  shapes=report.get("shapes"), labels=report.get("labels"))
+    emit("EMU-RESULT", dict(data, value=report.get("value"), **fields))
+
+
+def mse(server, display, resolution, stream, audio):
+    case = stream["id"]
+    screen = {"test": "mse_playback_dropped_frames", "case": case, "technology": "web", "stream": case,
+              "kind": "video"}
+    url = "%s/mse.html?stream=%s&muted=%d&capture=%d" % (server.address, case, 0 if audio else 1,
+                                                       1 if server.hold > 0 else 0)
+    limit = stream["seconds"] * 20 + 1800
+    report, error, _, restarts = with_display(lambda: run_page(server, url, screen, limit))
+    fields = common_fields(report, display, resolution)
+    fields.update(stream=case, container=stream["container"], stream_sha256=stream["sha256"],
+                  video_codec=stream["video"]["codec"], audio_codec=stream["audio"]["codec"],
+                  frames=stream["video"]["frames"], media_seconds=stream["seconds"],
+                  type=MSE_TYPES.get(stream["video"]["codec"]),
+                  audio="the target's audio device" if audio else "none: the target has no audio device")
+    if restarts:
+        fields["display_restarts"] = restarts
+    data = {"area": "audio_video_decoding", "test": "mse_playback_dropped_frames", "case": case, "unit": "frames"}
+    if error:
+        emit("EMU-RESULT", dict(data, value=None, unavailable=error.strip(), **fields))
+        return
+    for name in ("total_video_frames", "dropped_video_frames", "corrupted_video_frames", "stalls", "seconds",
+                 "video_size", "fragments_appended", "bytes_appended", "sound"):
+        fields[name] = report.get(name)
+    # The browser counts the frames that reached its video output, and how
+    # many of those it dropped there. Under load most of a stream's frames
+    # never get that far: the decoder skips them. A frame counts as dropped
+    # here if the browser did not show it, wherever it was lost.
+    shown = max(0, (report.get("total_video_frames") or 0) - (report.get("dropped_video_frames") or 0))
+    fields["shown_frames"] = min(shown, stream["video"]["frames"])
+    emit("EMU-RESULT", dict(data, value=stream["video"]["frames"] - fields["shown_frames"], **fields))
+
+
+# ------------------------------------------------------------------ main ---
+
+def versions():
+    """(Cog's version, WPE WebKit's version), as installed."""
+    cog = re.search(r"(\d+\.\d+(?:\.\d+)?)", output_of(["cog", "--version"]))
+    webkit = re.search(r"Version: (\S+)", output_of(["dpkg-query", "-s", "libwpewebkit-2.0-1"]))
+    return (cog.group(1) if cog else "unknown"), (webkit.group(1).split("-")[0] if webkit else "unknown")
+
+
+def main():
+    parser = argparse.ArgumentParser(prog="web-bench", description=__doc__.splitlines()[0])
+    parser.add_argument("--tests", default=",".join(TESTS))
+    parser.add_argument("--seconds", type=float, default=5.0, help="how long the render test animates")
+    parser.add_argument("--streams", default=",".join(DEFAULT_STREAMS), help="streams the mse test plays")
+    args = parser.parse_args()
+    tests = [name for name in args.tests.split(",") if name]
+    for name in tests:
+        if name not in TESTS:
+            parser.error("unknown test: %s (known: %s)" % (name, ", ".join(TESTS)))
+    with open(os.path.join(MEDIA, "manifest.json")) as handle:
+        streams = {s["id"]: s for s in json.load(handle)["streams"] if "fragments" in s}
+    wanted = [name for name in args.streams.split(",") if name]
+    for name in wanted:
+        if name not in streams:
+            parser.error("unknown stream: %s (known: %s)" % (name, ", ".join(streams)))
+
+    global BROWSER
+    cog, webkit = versions()
+    BROWSER = "WPE WebKit %s (Cog %s)" % (webkit, cog)
+    try:
+        with open(AUDIO_STATE) as handle:
+            audio = json.load(handle)
+    except (OSError, ValueError):
+        audio = None
+    resolution = os.environ.get("EMU_DISPLAY", "1920x1080")
+    display = None
+    display_error = None
+    if subprocess.run(["/opt/emu/display", "start"]).returncode != 0:
+        display_error = "the display service did not start"
+    else:
+        for line in output_of(["/opt/emu/display", "env"]).splitlines():
+            for setting in line.replace("export ", "", 1).split():
+                name, _, value = setting.partition("=")
+                os.environ[name] = value
+        try:
+            display = json.loads(output_of(["emugfx", "info"]).strip().splitlines()[-1])
+        except (ValueError, IndexError):
+            display = None
+
+    emit("EMU-WORKLOAD", {
+        "id": "web-bench", "version": VERSION, "tests": tests, "seconds_per_test": args.seconds,
+        "streams": {name: streams[name]["sha256"] for name in wanted} if "mse" in tests else {},
+        "resolution": resolution, "graphics": os.environ.get("EMU_GRAPHICS", "emulated"), "display": display,
+        "audio": audio, "browser": BROWSER, "wpe_webkit": webkit, "cog": cog})
+
+    if display_error:
+        unavailable = {"value": None, "unavailable": display_error, "technology": "web"}
+        if "launch" in tests:
+            emit("EMU-RESULT", dict({"area": "web", "test": "web_launch", "unit": "seconds"}, **unavailable))
+        if "render" in tests:
+            emit("EMU-RESULT", dict({"area": "graphics", "test": "web_render_fps", "unit": "frames/s"}, **unavailable))
+        if "mse" in tests:
+            for name in wanted:
+                emit("EMU-RESULT", dict({"area": "audio_video_decoding", "test": "mse_playback_dropped_frames",
+                                         "case": name, "unit": "frames"}, **unavailable))
+        return 1
+
+    server = Server(streams)
+    if "launch" in tests:
+        launch(server, display, resolution)
+    if "render" in tests:
+        render(server, display, resolution, args.seconds)
+    if "mse" in tests:
+        for name in wanted:
+            mse(server, display, resolution, streams[name], bool(audio))
+    subprocess.run(["/opt/emu/display", "stop"])
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

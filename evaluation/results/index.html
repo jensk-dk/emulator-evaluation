@@ -225,9 +225,10 @@ const TESTS = {
   wayland_fps: "Wayland (CPU-drawn buffers)", gles_fps: "OpenGL ES", vulkan_fps: "Vulkan", flutter_fps: "Flutter",
   video_decode_speed: "Video decode", audio_decode_speed: "Audio decode",
   playback_dropped_frames: "Frames dropped in playback", audio_playback: "Audio playback",
+  web_render_fps: "Web page in WPE WebKit", mse_playback_dropped_frames: "Frames not shown in MSE playback in WPE WebKit",
 };
 // Tests where a smaller value is the better one.
-const LOWER_IS_BETTER = new Set(["playback_dropped_frames"]);
+const LOWER_IS_BETTER = new Set(["playback_dropped_frames", "mse_playback_dropped_frames"]);
 // The cases of the media tests: a reference stream, or a stream and the
 // graphics technology it was played through.
 const STREAM_PARTS = { mpeg2: "MPEG-2", avc: "AVC", hevc: "HEVC", mp2: "MP2", ac3: "AC-3", aac: "AAC", heaac: "HE-AAC",
@@ -368,14 +369,15 @@ function collect() {
       // A test that could not run does not name a resolution; the display does.
       const resolution = result.resolution
         || (result.area === "graphics" && record.emulator.display ? record.emulator.display.resolution : "");
-      if (result.test === "audio_playback") continue;      // a functional test, not a measurement
+      // Functional tests, not measurements.
+      if (result.test === "audio_playback" || result.test === "web_launch") continue;
       const chartKey = [result.area, result.test, result.case || "", resolution].join("|");
       if (!charts.has(chartKey)) {
         charts.set(chartKey, { area: result.area, test: result.test, case: result.case || "", unit: result.unit,
                                resolution, series: new Map() });
       }
       // Results that depend on how graphics were provided are kept apart by it.
-      const drawn = result.area === "graphics" || result.test === "playback_dropped_frames";
+      const drawn = result.area === "graphics" || LOWER_IS_BETTER.has(result.test);
       const provider = drawn && graphics ? graphics.provider : "";
       const seriesKey = [record.emulator.variant, record.host.id, provider].join("|");
       const chart = charts.get(chartKey);
