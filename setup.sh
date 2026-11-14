@@ -272,6 +272,7 @@ linux_gl_packages() {
   if have apt-get; then echo "qemu-system-modules-opengl"
   elif have dnf; then echo "qemu-device-display-virtio-gpu-gl qemu-ui-egl-headless qemu-ui-opengl"
   elif have pacman; then echo "qemu-hw-display-virtio-gpu-gl qemu-ui-egl-headless qemu-ui-opengl"
+  elif have zypper; then echo "qemu-hw-display-virtio-gpu qemu-hw-display-virtio-gpu-pci qemu-ui-opengl"
   fi
 }
 
@@ -746,6 +747,8 @@ install_linux() {
       as_root dnf install -y $(linux_gl_packages) || gl_status=1
     elif have pacman; then
       as_root pacman -S --needed --noconfirm $(linux_gl_packages) || gl_status=1
+    elif have zypper; then
+      as_root zypper --non-interactive install $(linux_gl_packages) || gl_status=1
     fi
     # shellcheck disable=SC2046
     record_added "$before" $(linux_gl_packages)
@@ -1072,10 +1075,27 @@ plan_apt_removal() {
   return 1
 }
 
+# Prints the packages dnf refuses to remove, sorted: those its configuration
+# protects, and dnf itself. A host that had none of them before setup ran (a
+# minimal installation, a container) gets them as dependencies, so they can be
+# in the record; with one of them in the command dnf removes nothing at all.
+dnf_protected() {
+  { cat /etc/dnf/protected.d/*.conf 2>/dev/null; printf '%s\n' dnf dnf5 yum; } |
+    sed -e 's/#.*//' -e 's/[[:space:]]//g' | grep . | LC_ALL=C sort -u
+}
+
 # Sets PKG_GOES to those of the packages in $1 that rpm can remove without
-# breaking a package that stays. Fails where it finds no such set.
+# breaking a package that stays. $2 has packages that stay whatever rpm says.
+# Fails where it finds no such set.
 plan_rpm_removal() {
   local set="$1" out stay cap p
+  if [ -n "${2:-}" ]; then
+    stay=$(lines_both "$set" "$2")
+    for p in $stay; do
+      info "  The package $p stays: the package manager protects it from removal."
+    done
+    set=$(lines_new "$stay" "$set")
+  fi
   while [ -n "$set" ]; do
     # shellcheck disable=SC2086
     out=$(LC_ALL=C rpm -e --test $set 2>&1) && break
@@ -1131,7 +1151,8 @@ remove_packages() {
   PKG_GOES=""; APT_KEEP=""
   case "$manager" in
     apt) plan_apt_removal "$names" "$ours" ;;
-    dnf|zypper) plan_rpm_removal "$ours" ;;
+    dnf) plan_rpm_removal "$ours" "$(dnf_protected)" ;;
+    zypper) plan_rpm_removal "$ours" ;;
     pacman) plan_pacman_removal "$ours" ;;
   esac || {
     info "    No package was removed."

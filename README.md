@@ -133,28 +133,37 @@ How far this has been run:
   script installed Homebrew, and removing it takes the whole setup. Its steps
   were run with stand-ins that remove nothing, and Homebrew's uninstaller in
   its dry-run mode.
-- Linux: in containers only, not on a Linux host. With apt in Ubuntu 24.04
-  the script installed 334 packages and recorded each. The uninstall then ran
-  with packages in place that the script did not install: three unused
-  dependencies from before setup, and two packages installed after setup that
-  need packages of the script. It left all of those, held `python3` back
-  while one of them needed it, and removed the rest. Eleven of the packages
-  that came with the script's own stayed: seven that the later package uses,
-  and four that packages from before recommend (apt keeps those). It also
-  removed Podman's storage, of which Podman leaves the empty directories.
+- Linux: in containers only, on a Linux host (x86-64) and on the Mac. This
+  host's own setup predates the record, so there is nothing for the script to
+  remove on it. With apt in Ubuntu 24.04, as a user who gets root through
+  `sudo`, the script installed some 300 packages and recorded each. The
+  uninstall then ran with packages in place that the script did not install:
+  unused dependencies from before setup, and a package installed after setup
+  that needs `python3`. It left all of those, held `python3` back while that
+  package needed it, and removed the rest; run again once that package was
+  gone, it removed `python3` too and deleted the record. Of the packages that
+  came with the script's own, a few stay that packages from before recommend
+  (apt keeps those). The same run took the user out of the `kvm` and `docker`
+  groups again, which setup had added them to, and disabled the Docker
+  service that setup had enabled; the service was a stand-in, as a container
+  has no systemd.
 - With dnf in Fedora, zypper in openSUSE Tumbleweed and pacman in Arch Linux
-  (x86-64, emulated) the same was run with a few small packages that stood in
-  for the script's own, recorded by the script's own functions. Before this
-  change, dnf removed an unused dependency from before setup, as apt did. The
-  group memberships and the Docker service have not been run.
+  the script installed its own packages, as root, and removed them again:
+  all of them on openSUSE and Arch. On Fedora `systemd` and `systemd-udev`
+  stay with what they need where they came with setup, because dnf protects
+  them and removes nothing at all when asked for one of them; a Fedora host
+  has them before setup. In all four, no package from before setup went.
+  Podman's storage could not be reset inside a container; the script says so
+  and goes on.
 - Windows: not run on Windows. The script's logic passed with stand-ins for
   winget, Podman and WSL, in PowerShell 7 on Linux.
 
 ### Linux
 
 `setup.sh` installs with the distribution's package manager (apt, dnf, pacman
-or zypper) and asks for root through `sudo`. It has been run on Kubuntu 24.04
-only.
+or zypper) and asks for root through `sudo`. As a host it has been run on
+Kubuntu 24.04 only; the package installation of the other three has been run
+in containers (Fedora, openSUSE Tumbleweed, Arch Linux).
 
 - An installed Docker is used as it is, also an old one: the launcher builds
   with BuildKit, which Docker engines before version 23 do not do by default
