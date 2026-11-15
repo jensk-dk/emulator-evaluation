@@ -164,6 +164,24 @@ Workload `media-decode`.
     were replaced before the application could draw them are the dropped ones.
   The two counts come from different players and are not comparable with each
   other; compare a technology with itself across hosts and modes.
+
+  Both are the players' own counts, not the display's. They were compared
+  with the display's own record (the compositor's count of repaints with new
+  content, see [MSE playback](#web)) on the macOS host on 2026-11-15, at 1080p
+  with emulated graphics, each stream played at least once in every mode:
+  - Container, host-native VM and ARM64 VM modes, every technology, and
+    Wayland in ARM32 VM mode: the display showed at most three fewer new
+    frames than the player counted as shown. (For Flutter it showed a few
+    more: the application draws its window before the stream starts.)
+  - OpenGL ES in ARM32 VM mode: mpv counted 19 to 45 of a stream's frames as
+    shown, and the display showed 13 to 34, six to eleven fewer each time.
+    The value understates the loss by that much. The likely cause, not
+    checked: mpv is told to draw without waiting for the display
+    (`--force-render`), and where the display is slower still, a frame is
+    replaced by the next before it was shown.
+
+  The value is unchanged by this: it is still the player's count. Not
+  compared on the other hosts.
 - Fragments are appended ahead of playback: a fragment when less than two
   seconds of media are buffered ahead of the playback position.
 - The record's `emulator.graphics` and `emulator.audio` say how graphics and
@@ -213,7 +231,9 @@ as a Wayland client, full screen on the target's display.
   [target/rootfs/opt/emu/web](../target/rootfs/opt/emu/web). The workload
   serves them to the browser over the target's loopback interface, and a page
   reports what it measured back to the workload. The browser is started anew
-  for each test and each stream.
+  for each test and each stream, and so is the target's display service: on
+  the simulated ARM32 target the compositor does not survive a second browser
+  while its record is being read (see MSE playback).
 - **Launch** (`web_launch`, a functional test). The browser starts, loads a
   page and runs its script; the page reports the browser's user agent, the
   size of its viewport and whether it has Media Source Extensions. The value
@@ -225,7 +245,9 @@ as a Wayland client, full screen on the target's display.
   (`-- --seconds S`) at the display resolution (`--resolution`). The browser
   draws one frame per display refresh, so the frame rate is bounded by the
   60 Hz display, as the Flutter test's is. Reported with percentiles of the
-  time between frames.
+  time between frames, and with `displayed_fps`: how often the display showed
+  something new in that time, by the compositor's own record (see MSE
+  playback). The value is the page's count of the frames it drew.
 - **MSE playback** (`mse_playback_dropped_frames`). The fragmented streams of
   the media-decode workload, one per video codec (MPEG-2 with MP2, AVC with
   AAC, HEVC with AC-3; `-- --streams` selects). A page
@@ -233,16 +255,31 @@ as a Wayland client, full screen on the target's display.
   initialisation segment and its media fragments to a Media Source buffer,
   keeping two seconds ahead of the playback position, and the browser plays
   them in real time, full screen, with their sound on the target's audio
-  device. The value is the stream's frames that the browser did not show:
-  all 125, less those the browser counted at its video output and did not
-  drop there (`getVideoPlaybackQuality()`). The browser's own count of
-  dropped frames is not the value, because it covers only frames that got as
-  far as the output: under CPU emulation the decoder skips most of a stream
-  before that, and the browser then reports a few dropped frames of the few
-  it counted. The result has both of the browser's counts, the times
-  playback stalled, and whether the sound was on. A
-  stream the browser does not play is reported with `"value": null` and the
-  browser's reason.
+  device. The value is the stream's frames that did not reach the display:
+  all 125, less the frames shown. The frames shown are the smaller of two
+  counts (`displayed_frames`):
+  - the browser's (`shown_frames`): the frames it counted at its video output
+    and did not drop there (`getVideoPlaybackQuality()`). The browser's own
+    count of dropped frames is not the value, because it covers only frames
+    that got as far as the output: under CPU emulation the decoder can skip
+    most of a stream before that.
+  - the display's (`display_repaints`): how often the display showed
+    something new while the stream played. The target's compositor records
+    every repaint and whether it had new content of a client (Weston's
+    timeline, read with `weston-debug`); the workload counts those from 0.1 s
+    before the browser reported the stream playing to 0.25 s after its end.
+    A frame at the browser's output is not yet on the display: the browser
+    still has to draw the page with it, and where that drawing is slower than
+    the stream the display shows a few frames of a stream whose every frame
+    the browser counted. (On a simulated ARM target on the macOS host: 125
+    counted by the browser, 5 to 9 shown.)
+
+  The result has both counts, the browser's count of dropped frames, the
+  times playback stalled, and whether the sound was on. A stream the browser
+  does not play is reported with `"value": null` and the browser's reason,
+  and so is one whose display record cannot be read. Before version 1.1.0 of
+  the workload the value was the browser's count alone; those results are not
+  comparable and the results page does not chart them.
 - **What is changed about the browser.** Two things, both because the target
   runs it unattended: WebKit's process sandbox is off (it needs kernel
   features a container does not give, and the browser loads nothing but the

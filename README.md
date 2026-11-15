@@ -23,9 +23,11 @@ runnable baseline, VM CPU and driver fidelity, graphics, and media playback.
 Stages 0 to 4 are verified on three hosts: macOS on ARM64, Windows on x86-64
 with Podman as the container runtime, and Linux on x86-64 (Kubuntu 24.04)
 with Docker. Stage 5, the WPE WebKit browser with its web workload, is
-implemented and so far run on the Windows host only: there the browser
-launches in every mode the image is built for, its checks pass, and the
-workload's measurements are recorded. macOS has no host
+implemented and verified on the Windows and macOS hosts: the browser
+launches, renders the workload's page and plays the reference streams through
+Media Source Extensions in every mode the image is built for, and the
+workload's measurements are recorded for both. The Linux host has not run it
+yet. macOS has no host
 graphics acceleration, which the Linux host has in VM mode. The task list and
 `evaluation/verification/` show what has been verified, and on which hosts.
 
@@ -552,6 +554,11 @@ Limits:
   frames/s stream, also with host graphics. A Flutter application that shows
   video the way real ones do, through a texture that a native plugin fills,
   is not part of this.
+- The dropped-frame values are the players' own counts. Compared with the
+  display's own record on the macOS host, they hold to within three frames,
+  except through OpenGL ES on a simulated ARM32 target: there mpv counts six
+  to eleven more frames as shown than the display shows
+  ([procedures](evaluation/procedures.md#audio-and-video-decoding)).
 - mpv's OpenGL ES and Vulkan outputs use its plain rendering path
   (`--gpu-dumb-mode`). With its default path, Mesa's CPU renderer showed a
   black or green picture in many runs.
@@ -568,7 +575,7 @@ the target's loopback interface:
 |---|---|
 | `launch` | the browser starts, loads a page and runs its script |
 | `render` | a fixed animated page for a fixed time: frames per second |
-| `mse` | the fragmented reference streams (MPEG-2, AVC, HEVC) played through Media Source Extensions, with sound: frames dropped |
+| `mse` | the fragmented reference streams (MPEG-2, AVC, HEVC) played through Media Source Extensions, with sound: frames that did not reach the display |
 
     ./emu run --mode vm --workload web-bench --window          # the three tests, with the display in a window
     ./emu run --workload web-bench -- --tests launch            # only start the browser
@@ -582,6 +589,12 @@ the target's loopback interface:
   ([target/src/emu_web_autoplay.c](target/src/emu_web_autoplay.c)).
 - Graphics are the display's: with emulated graphics the browser draws with
   Mesa's CPU renderer, like every other OpenGL ES program in the target.
+- MSE playback counts a frame as shown only if it reached the display. The
+  browser counts frames at its video output, and the target's compositor
+  records how often it showed something new; the smaller count is taken. On a
+  simulated ARM target the browser counts every frame of a stream while the
+  display shows a handful
+  ([procedures](evaluation/procedures.md#web)).
 
 ## Evaluation
 
@@ -633,7 +646,15 @@ do it without a window:
 
 `--virtual-time-budget` gives the page time to read the records before it is
 printed. The PDF shows all hosts with measured values, the page's defaults.
-This was run with Chrome on Linux and on Windows (there with `emu.cmd` and
-Chrome's `chrome.exe`); on macOS the browser's own print dialog does the
-same. The snapshot in the repository was made on the Windows host on
-2026-11-14, with the CPU, graphics and media results of all three hosts.
+This was run with Chrome on Linux, on Windows (there with `emu.cmd` and
+Chrome's `chrome.exe`) and on macOS (there with
+`"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"`). On macOS
+a newly installed Chrome that had never been opened stopped at once with
+"Failed to get the path for 1001"; after it had been opened once, the command
+worked.
+
+The snapshot in the repository was made on the macOS host on 2026-11-15, with
+the CPU, graphics and media results of all three hosts and the browser results
+of the Windows and macOS hosts. Windows' MSE playback values show as "n/a" in
+it: they are held back until they are measured again
+([procedures](evaluation/procedures.md#web)).

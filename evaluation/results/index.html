@@ -387,8 +387,21 @@ function collect() {
       }
       const series = chart.series.get(seriesKey);
       series.runs.push({ record, result });
-      if (typeof result.value === "number") series.values.push(result.value);
-      else series.unavailable = result.unavailable || "unavailable";
+      // MSE playback before web-bench 1.1.0 counted frames at the browser's
+      // video output only, not what reached the display. Where drawing is
+      // slower than the stream that understates the loss, so such a value is
+      // not put beside the others.
+      const browserCountOnly = result.test === "mse_playback_dropped_frames"
+        && typeof result.value === "number" && result.display_repaints === undefined;
+      if (browserCountOnly) {
+        if (!series.values.length) {
+          series.unavailable = "measured with web-bench " + (record.workload.version || "1.0.0")
+            + ", which counted frames at the browser's output and not on the display; to be measured again";
+        }
+      } else if (typeof result.value === "number") {
+        series.values.push(result.value);
+        if (series.unavailable && series.unavailable.startsWith("measured with web-bench")) series.unavailable = null;
+      } else series.unavailable = result.unavailable || "unavailable";
     }
   }
   for (const chart of charts.values()) {

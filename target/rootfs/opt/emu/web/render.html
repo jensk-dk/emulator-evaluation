@@ -77,6 +77,7 @@ window.addEventListener("load", () => {
       const found = browser();
       Object.assign(found, {
         frames, seconds: Math.round(elapsed * 1000) / 1000, value: Math.round(frames / elapsed * 100) / 100,
+        started_at: wallClock(started), ended_at: wallClock(time),
         frame_time_ms: { p50: percentile(intervals, 0.5), p90: percentile(intervals, 0.9),
                          p99: percentile(intervals, 0.99), max: intervals[intervals.length - 1] },
         shapes: SHAPES, labels: LABELS });

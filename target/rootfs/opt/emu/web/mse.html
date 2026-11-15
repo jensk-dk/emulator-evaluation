@@ -54,11 +54,15 @@ async function main() {
   video.addEventListener("error", () => failure("the video element reported: "
     + (video.error ? video.error.code + " " + (video.error.message || "") : "an error")));
 
-  let started = null, stalls = 0, fragments = 0, total = 0, captured = parameter("capture", "0") !== "1";
+  let started = null, playingAt = null, stalls = 0, fragments = 0, total = 0;
+  let captured = parameter("capture", "0") !== "1";
   let capturing = false, unmute = false;
   let sound = video.muted ? "off: the target has no audio device" : "on";
   video.addEventListener("playing", () => {
-    if (started === null) started = performance.now();
+    if (started === null) {
+      started = performance.now();
+      playingAt = wallClock();
+    }
     if (unmute) {
       // Started without sound because the browser allowed nothing else:
       // the sound is turned on now that the stream plays.
@@ -111,6 +115,7 @@ async function main() {
       dropped_video_frames: counted.dropped + counted.lastDropped,
       corrupted_video_frames: counted.corrupted + counted.lastCorrupted, stalls,
       seconds: Math.round(performance.now() - started) / 1000, media_seconds: video.duration,
+      playing_at: playingAt, ended_at: wallClock(),
       video_size: video.videoWidth + "x" + video.videoHeight, fragments_appended: fragments, bytes_appended: total,
       type: stream.type, sound });
     report(found);

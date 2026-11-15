@@ -41,6 +41,13 @@ function browser() {
            device_pixel_ratio: devicePixelRatio, media_source: "MediaSource" in window, graphics: renderer() };
 }
 
+// The time now, or of a timestamp the browser gave (as requestAnimationFrame
+// does), in milliseconds of the wall clock. The workload uses it to find, in
+// the display's own record, what the display showed between two moments.
+function wallClock(stamp) {
+  return Math.round(performance.timeOrigin + (stamp === undefined ? performance.now() : stamp));
+}
+
 function percentile(sorted, fraction) {
   if (!sorted.length) return null;
   return sorted[Math.min(sorted.length - 1, Math.floor(fraction * sorted.length))];

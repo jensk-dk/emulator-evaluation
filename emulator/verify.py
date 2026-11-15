@@ -932,11 +932,14 @@ def _web_mse(mode, arch="native"):
         result = _web_result(evaluation, "mse_playback_dropped_frames", case)
         _require(result.get("fragments_appended", 0) > 0, "no fragments were appended for %s" % case)
         _require(result.get("total_video_frames", 0) > 0, "the browser counted no video frames for %s" % case)
+        _require(result.get("display_repaints") is not None,
+                 "the result for %s does not say what the display showed" % case)
         lines.append("%s through MSE: %d fragments appended, %d of %d frames not shown (the browser counted %d at "
-                     "its output and %d dropped), sound %s; a capture of the display shows the video%s" % (
+                     "its output and %d dropped; the display showed something new %d times), sound %s; a capture "
+                     "of the display shows the video%s" % (
                          VIDEO_CODECS[result["video_codec"]], result["fragments_appended"], result["value"],
                          result["frames"], result["total_video_frames"], result.get("dropped_video_frames") or 0,
-                         result.get("sound"),
+                         result["display_repaints"], result.get("sound"),
                          " (the display service ended during the first attempt and was started again)"
                          if result.get("display_restarts") else ""))
     result = evaluation[("mse_playback_dropped_frames", cases[0])][1]

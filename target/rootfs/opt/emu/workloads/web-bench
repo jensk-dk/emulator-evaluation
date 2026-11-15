@@ -19,8 +19,13 @@ interface; a page reports what it measured back to this program.
            fragmented streams of the media-decode workload, one per video
            codec; a stream the browser does not play is reported unavailable,
            with the browser's reason. The value is the stream's frames that
-           the browser did not show: all of them, less those the browser
-           counted at its video output and did not drop there.
+           did not reach the display: all of them, less the frames shown,
+           which are the smaller of two counts. One is the browser's: the
+           frames it counted at its video output and did not drop there. The
+           other is the display's: the repaints with new content that the
+           compositor made while the stream played. Where drawing the page is
+           slower than the stream, the browser counts frames that the display
+           never shows.
 
 See evaluation/workloads.json and evaluation/procedures.md#web. Each test
 prints one EMU-RESULT line per case. With EMU_SCREEN_HOLD set, a page keeps a
@@ -46,7 +51,7 @@ import threading
 import time
 import urllib.parse
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 WEB = "/opt/emu/web"
 MEDIA = "/opt/emu/media"
 AUDIO_STATE = "/run/emu/drivers/audio.json"
@@ -87,6 +92,8 @@ class Server(http.server.ThreadingHTTPServer):
         self.streams = streams
         self.reports = queue.Queue()        # (kind, data) from the page that is running
         self.screen = None                  # what an EMU-SCREEN line of the running test says
+        self.displayed = None               # when the display showed something new, as of the last page
+        self.display_log = DisplayLog()
         self.hold = float(os.environ.get("EMU_SCREEN_HOLD", "0") or 0)
         threading.Thread(target=self.serve_forever, daemon=True).start()
 
@@ -149,6 +156,110 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self._send(200, b"{}")
 
 
+# --------------------------------------------------------------- display ---
+
+class DisplayLog:
+    """What reached the display, from the compositor itself.
+
+    Weston records every repaint of the display, and which of them put new
+    content of a client on it (its "timeline"); weston-debug reads that
+    record. The browser's own counters cannot tell this: they count frames at
+    its video output, and where drawing the page is slower than the stream
+    most of those frames are never drawn.
+
+    A reader follows one compositor, and ends with it. Each test has a
+    compositor of its own (with_display), and so a reader of its own."""
+
+    def __init__(self):
+        self.reader = None
+        self.path = None
+        self.opened = time.monotonic()
+
+    def follow(self):
+        """Make sure a reader follows the compositor that runs now. A reader
+        ends with its compositor, so after the display service was started
+        again there is a new one."""
+        if self.reader is not None and self.reader.poll() is None:
+            return
+        self._forget()
+        self.opened = time.monotonic()
+        try:
+            handle, self.path = tempfile.mkstemp(prefix="emu-web-timeline.")
+            with os.fdopen(handle, "wb") as output:
+                self.reader = subprocess.Popen(["weston-debug", "timeline"], stdin=subprocess.DEVNULL,
+                                               stdout=output, stderr=subprocess.DEVNULL)
+        except OSError:
+            self.reader = None
+
+    def times(self):
+        """The times (seconds of CLOCK_MONOTONIC) of the repaints so far that
+        showed new content, or None where the compositor's record cannot be
+        read."""
+        if self.reader is None or not self.path:
+            return None
+        time.sleep(0.35)        # what the compositor logged a moment ago reaches the file
+        ended = self.reader.poll() is not None
+        try:
+            with open(self.path, errors="replace") as handle:
+                lines = handle.readlines()
+        except OSError:
+            return None
+        times, events, fresh = [], 0, False
+        for line in lines:
+            try:
+                event = json.loads(line)
+            except ValueError:
+                continue                # the line that is being written
+            name = event.get("N") if isinstance(event, dict) else None
+            if not name:
+                continue
+            events += 1
+            if name == "core_repaint_begin":
+                fresh = False
+            elif name == "core_flush_damage":
+                fresh = True            # a client's new content goes into this repaint
+            elif name == "core_repaint_posted" and fresh:
+                fresh = False
+                stamp = event.get("T") or [0, 0]
+                times.append(stamp[0] + stamp[1] / 1e9)
+        if ended and not events:
+            return None                 # weston-debug got no record (or is not there)
+        now = time.monotonic()
+        if times and not any(self.opened - 1 <= moment <= now + 1 for moment in times):
+            return None                 # not the clock this program reads: the times cannot be placed
+        return times
+
+    def close(self):
+        """Call when the compositor has been stopped."""
+        self._forget()
+
+    def _forget(self):
+        if self.reader is not None:
+            if self.reader.poll() is None:
+                self.reader.terminate()
+            try:
+                self.reader.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                self.reader.kill()
+                self.reader.wait()
+        if self.path:
+            try:
+                os.unlink(self.path)
+            except OSError:
+                pass
+        self.reader = self.path = None
+
+
+def displayed_between(times, start_ms, end_ms, before, after):
+    """How many repaints with new content the display made between two moments
+    that a page gave as wall-clock milliseconds; None where that is not known."""
+    if times is None or start_ms is None or end_ms is None:
+        return None
+    offset = time.time() - time.monotonic()
+    first, last = start_ms / 1000.0 - offset - before, end_ms / 1000.0 - offset + after
+    return sum(1 for moment in times if first <= moment <= last)
+
+
 # --------------------------------------------------------------- browser ---
 
 def browser_environment():
@@ -162,12 +273,15 @@ def browser_environment():
 
 def run_page(server, url, screen, limit):
     """Start the browser on a page and wait for the page's report. Returns
-    (report or None, error or None, seconds from start to the report)."""
+    (report or None, error or None, seconds from start to the report), and
+    leaves in server.displayed what the display has shown (DisplayLog.times)."""
     while not server.reports.empty():
         server.reports.get()
     server.screen = screen
+    server.displayed = None
     directory = tempfile.mkdtemp(prefix="emu-web.")
     log = os.path.join(directory, "browser.log")
+    server.display_log.follow()
     started = time.monotonic()
     try:
         with open(log, "wb") as handle:
@@ -195,6 +309,7 @@ def run_page(server, url, screen, limit):
                     error = "the page did not report in %d seconds: %s" % (limit, log_tail(log))
         return report, error, time.monotonic() - started
     finally:
+        server.displayed = server.display_log.times()
         server.screen = None
         # Cog and the processes WebKit started for it.
         for sign in (signal.SIGTERM, signal.SIGKILL):
@@ -224,13 +339,19 @@ def display_running():
 
 
 def with_display(run):
-    """Run a test that needs the display for all of it: when the compositor
-    has ended, it is started again and the test is run once more. Returns
-    (report, error, seconds, restarts)."""
+    """Run a test on a display of its own: the display service is started
+    anew for it. When the compositor ends during the test, the test is run
+    once more. Returns (report, error, seconds, restarts).
+
+    A display of its own, because Weston does not survive a second browser
+    while its record is being read (DisplayLog): on the simulated ARM32 target
+    it ended during every stream that was played on a compositor an earlier
+    page had used, and during none without a reader, or on a new compositor."""
     restarts = 0
     while True:
-        if not display_running() and subprocess.run(["/opt/emu/display", "start"]).returncode != 0:
-            return None, "the display service ended and did not start again", 0.0, restarts
+        subprocess.run(["/opt/emu/display", "stop"])
+        if subprocess.run(["/opt/emu/display", "start"]).returncode != 0:
+            return None, "the display service did not start again", 0.0, restarts
         report, error, seconds = run()
         if display_running():
             return report, error, seconds, restarts
@@ -284,6 +405,11 @@ def render(server, display, resolution, seconds):
         return
     fields.update(frames=report.get("frames"), seconds=report.get("seconds"), frame_time_ms=report.get("frame_time_ms"),
                   shapes=report.get("shapes"), labels=report.get("labels"))
+    # Beside the page's own count of the frames it drew: how many the display
+    # showed in that time, by the compositor's record.
+    displayed = displayed_between(server.displayed, report.get("started_at"), report.get("ended_at"), 0.0, 0.05)
+    if displayed is not None and report.get("seconds"):
+        fields["displayed_fps"] = round(displayed / report["seconds"], 2)
     emit("EMU-RESULT", dict(data, value=report.get("value"), **fields))
 
 
@@ -312,11 +438,22 @@ def mse(server, display, resolution, stream, audio):
         fields[name] = report.get(name)
     # The browser counts the frames that reached its video output, and how
     # many of those it dropped there. Under load most of a stream's frames
-    # never get that far: the decoder skips them. A frame counts as dropped
-    # here if the browser did not show it, wherever it was lost.
+    # never get that far: the decoder skips them.
     shown = max(0, (report.get("total_video_frames") or 0) - (report.get("dropped_video_frames") or 0))
     fields["shown_frames"] = min(shown, stream["video"]["frames"])
-    emit("EMU-RESULT", dict(data, value=stream["video"]["frames"] - fields["shown_frames"], **fields))
+    # And a frame at the browser's output is not yet on the display: the
+    # browser still has to draw the page with it. The display's own record
+    # says how often it showed something new while the stream played (a little
+    # before the browser said "playing", for the frame it shows first, to a
+    # little after the end). A frame counts as shown only if both agree.
+    repaints = displayed_between(server.displayed, report.get("playing_at"), report.get("ended_at"), 0.1, 0.25)
+    if repaints is None:
+        emit("EMU-RESULT", dict(data, value=None, unavailable="the display's own record of what it showed while "
+                                "the stream played could not be read (weston-debug timeline)", **fields))
+        return
+    fields["display_repaints"] = repaints
+    fields["displayed_frames"] = min(repaints, fields["shown_frames"])
+    emit("EMU-RESULT", dict(data, value=stream["video"]["frames"] - fields["displayed_frames"], **fields))
 
 
 # ------------------------------------------------------------------ main ---
@@ -395,6 +532,7 @@ def main():
         for name in wanted:
             mse(server, display, resolution, streams[name], bool(audio))
     subprocess.run(["/opt/emu/display", "stop"])
+    server.display_log.close()      # after the compositor, not before
     return 0
 
 
