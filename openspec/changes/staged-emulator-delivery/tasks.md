@@ -92,6 +92,9 @@
 ## 8. Stage 7: Full qualification and report
 - [ ] 8.1 Run the complete supported host OS, host CPU architecture, emulator mode, and VM guest architecture matrix and verify all required performance areas are measured or marked unavailable.
 - [ ] 8.2 Produce the Slidev comparison with pros, cons, and actual results for each evaluated combination; verify unavailable results are explicit and no estimates are presented as measurements.
+- [ ] 8.3 Measure, on every evaluated host, the disk space of the host installation and of each target, and the install, build and performance-evaluation times; include them in the Slidev comparison and verify each value is a measurement from that host or marked unavailable.
+  - Requirement added 2026-11-15 (performance-reporting: "Report disk space and time costs"). Nothing is measured yet: `evaluation/footprint.md` lists every value as not measured. It is filled in as tasks provide the values (a setup run on a host, a target build, a recorded performance run), each with its date and how it was taken.
+  - To settle when the first values are taken, proposed in `evaluation/footprint.md`: what counts as the host installation, from what state an installation and a build are timed, and which runs make up the performance evaluation time. Each result record already has its run's `duration_seconds` and `boot_seconds`; they have not been added up.
 
 ## Verification status
 

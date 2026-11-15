@@ -38,6 +38,11 @@ context: |
   and audio/video decoding performance. Report the comparison in a Slidev
   presentation with pros, cons, and actual performance results for each
   combination; identify unavailable results without inventing measurements.
+  The report must also state, for every evaluated host, the disk space that
+  the host installation takes and that each target takes individually, and
+  the time that installing, building each target, and running the performance
+  evaluation took. These are actual measurements as well; a value that has not
+  been measured is identified as unavailable.
   The project must provide or acquire a Linux client OS image for VM simulation,
   with sufficient workloads and functionality to run the specified functional
   and performance evaluations. The client OS must include WPE WebKit and support

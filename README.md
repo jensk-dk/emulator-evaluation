@@ -604,6 +604,9 @@ the target's loopback interface:
 - `evaluation/results/`: recorded results (`./emu run ... --record`), and a
   page that shows them as charts (see below).
 - `evaluation/verification/`: what `./emu verify` has confirmed, per host.
+- [evaluation/footprint.md](evaluation/footprint.md): the disk space of the
+  host installation and of each target, and the install, build and run times
+  that the report has to state. None is measured yet.
 
 ### Results page
 
