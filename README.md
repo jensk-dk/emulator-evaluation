@@ -817,7 +817,22 @@ GPU with its driver, operating system and emulator software, as the records
 describe them. (Records made before the launcher recorded the GPU name it only
 where a test rendered on it.) [machines.json](evaluation/results/machines.json)
 adds what was stated about each host's machine, such as its GPU where the
-records do not have it; the page marks that as stated. Each test has a card with one row per host and emulator mode. A bar is the
+records do not have it; the page marks that as stated.
+
+Under the hosts is "Platform support and known issues": a matrix with a row
+for each feature the launcher's checks cover and, for each host, a cell per
+emulator mode that says whether `./emu verify` verified it there, found it
+failing, or could not run it on that host. It is made from the verification
+reports in `evaluation/verification/` on each load, which the server hands
+out as well, so it follows the last `./emu verify` of each host; pointing at
+a cell shows what the check found. Below it are the known issues and limits,
+with the hosts and modes each applies to: those that make a check fail, those
+no check covers, and what is not implemented. That list is kept by hand, in
+[known-issues.json](evaluation/results/known-issues.json); the task list has
+the full account of each entry. Without the launcher's server, pick the
+`evaluation` folder so that the page gets the verification reports too.
+
+Each test has a card with one row per host and emulator mode. A bar is the
 median of that configuration's runs and the dots are the single runs. The
 hosts can be filtered, values can be shown relative to the container on the
 same host, and pointing at a row shows the details of its runs.
@@ -825,9 +840,11 @@ same host, and pointing at a row shows the details of its runs.
 ### Results as PDF
 
 [emulator-results.pdf](evaluation/results/emulator-results.pdf) is a snapshot
-of the charts; unlike the page it does not follow new runs. To make it again,
+of the page: the hosts, the support matrix with the known issues, and the
+charts. Unlike the page it does not follow new runs. To make it again,
 start `./emu report` and either print the page from the browser (Save as PDF;
-the page has its own print layout, A4 landscape, charts only), or let Chrome
+the page has its own print layout, A4 landscape, without the list of
+records), or let Chrome
 do it without a window:
 
     ./emu report --no-browser &

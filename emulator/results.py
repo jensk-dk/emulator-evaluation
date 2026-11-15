@@ -13,6 +13,8 @@ from .paths import RESULTS_DIR
 SCHEMA_VERSION = 1
 # In the results directory, but not a record: stated facts about the hosts' machines.
 MACHINES_FILE = "machines.json"
+# Likewise not a record: the known issues and limits the results page lists.
+ISSUES_FILE = "known-issues.json"
 IDENTITY_FIELDS = (
     ("host", "os"), ("host", "os_version"), ("host", "arch"), ("host", "cpu_model"),
     ("emulator", "mode"), ("emulator", "variant"), ("emulator", "guest_arch"), ("emulator", "runtime"),
@@ -74,7 +76,7 @@ def write(record):
 
 
 def record_paths():
-    return sorted(path for path in RESULTS_DIR.glob("*.json") if path.name != MACHINES_FILE)
+    return sorted(path for path in RESULTS_DIR.glob("*.json") if path.name not in (MACHINES_FILE, ISSUES_FILE))
 
 
 def load_all():

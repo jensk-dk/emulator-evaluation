@@ -35,6 +35,8 @@
     --host-7: #6250d6;
     --host-8: #e34948;
     --other: #898781;
+    --ok: #1a7f37;
+    --bad: #c62828;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -55,6 +57,8 @@
       --host-6: #008300;
       --host-7: #9085e9;
       --host-8: #e66767;
+      --ok: #46b35e;
+      --bad: #f0605d;
     }
   }
   * { box-sizing: border-box; }
@@ -149,6 +153,35 @@
   td.num { text-align: right; font-variant-numeric: tabular-nums; }
   a { color: inherit; }
 
+  /* Platform support: one cell per check, and the known issues under it. */
+  .support { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .support th, .support td { padding: 4px 8px; }
+  .support thead th { text-align: center; font-size: 11px; }
+  .support thead th.hosthead { font-size: 13px; color: var(--text); font-weight: 600; }
+  .support thead th.hosthead .swatch { display: inline-block; margin-right: 6px; }
+  .support th.feature { text-align: left; color: var(--text); font-weight: 400; }
+  .support tr.group th { text-align: left; font-size: 11px; letter-spacing: .04em; text-transform: uppercase;
+                         color: var(--muted); padding-top: 12px; }
+  .support td.cell { text-align: center; width: 62px; font-weight: 600; cursor: default; }
+  .support td.cell:hover, .support td.cell:focus { background: var(--track); outline: none; }
+  .support td.first, .support th.first { border-left: 1px solid var(--grid); }
+  .support td.pass { color: var(--ok); }
+  .support td.fail { color: var(--bad); }
+  .support td.unavailable, .support td.notrun { color: var(--muted); }
+  .support tfoot td { text-align: center; color: var(--text-2); border-bottom: 0; }
+  .support tfoot th { border-bottom: 0; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-top: 8px; font-size: 12px; color: var(--text-2); }
+  .legend b { display: inline-block; width: 14px; text-align: center; }
+  .legend .pass { color: var(--ok); } .legend .fail { color: var(--bad); }
+  .issues { margin-top: 16px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .issues td { white-space: normal; vertical-align: top; padding: 8px 10px; }
+  .issues td.where { white-space: nowrap; color: var(--text-2); }
+  .issues td b { display: block; }
+  .issues td .detail { color: var(--text-2); max-width: 720px; }
+  .issues .tag { white-space: nowrap; }
+  .issues .tag.fails { color: var(--bad); border-color: var(--bad); }
+  .issues .hostline { display: flex; align-items: center; gap: 6px; }
+
   /* Printing, or saving as PDF: the charts only, on a white page. */
   @page { size: A4 landscape; margin: 10mm; }
   @media print {
@@ -166,7 +199,10 @@
     .controls { position: static; border: 0; padding: 0; margin-top: 12px; }
     .chip[aria-pressed="false"] { display: none; }
     .cards { grid-template-columns: repeat(3, 1fr); gap: 8px; }
-    .card, .tile { break-inside: avoid; }
+    .card, .tile, .support tr, .issues tr { break-inside: avoid; }
+    :root { --ok: #1a7f37; --bad: #c62828; }
+    .support tfoot { display: table-row-group; }      /* once, at the end, not on every page */
+    .issues td .detail { max-width: none; }
     .hostcard dl { font-size: 13px; }
     h2 { break-after: avoid; margin-top: 18px; }
     h2 + .sub { break-after: avoid; }
@@ -182,7 +218,7 @@
     <p><b>The result files could not be listed from here.</b></p>
     <p class="sub">A browser cannot list a directory by itself. Let the launcher serve this page, and it reads every record on each load:</p>
     <p><code>./emu report</code></p>
-    <p class="sub">Or pick the <code>evaluation/results</code> folder (or drop its JSON files on this page). Nothing is uploaded; the files are read in the browser.</p>
+    <p class="sub">Or pick the <code>evaluation/results</code> folder (or drop its JSON files on this page). Nothing is uploaded; the files are read in the browser. For the support matrix, pick the <code>evaluation</code> folder instead, which has the verification reports as well.</p>
     <div class="actions">
       <button class="action" id="pick">Choose the results folder…</button>
       <input type="file" id="folder" webkitdirectory multiple hidden>
@@ -246,9 +282,13 @@ const HOST_ORDER = ["linux-x86_64", "windows-x86_64", "macos-arm64", "macos-x86_
 const HOST_NAMES = { "linux-x86_64": "Linux x86-64", "windows-x86_64": "Windows x86-64",
                      "macos-arm64": "macOS ARM64", "macos-x86_64": "macOS x86-64" };
 
-const state = { records: [], machines: {}, hosts: new Set(), relative: false, source: "" };
+const state = { records: [], machines: {}, verification: {}, issues: [], hosts: new Set(), relative: false, source: "" };
 // Stated facts about the hosts' machines, beside the records.
 const MACHINES_FILE = "machines.json";
+// Known issues and limits, kept by hand; and the verification reports of
+// `emu verify`, one per host, which `emu report` serves from their directory.
+const ISSUES_FILE = "known-issues.json";
+const VERIFICATION_PATH = "verification/";
 const $ = (id) => document.getElementById(id);
 
 function el(tag, attrs, ...children) {
@@ -291,6 +331,11 @@ function median(values) {
 
 // --------------------------------------------------------------- loading ---
 
+function isVerification(data) {
+  return data && typeof data === "object" && data.host && data.host.id && data.checks && typeof data.checks === "object"
+    && !Array.isArray(data.checks);
+}
+
 function isRecord(data) {
   return data && typeof data === "object" && Array.isArray(data.results) && data.host && data.emulator && data.workload;
 }
@@ -305,6 +350,17 @@ async function loadFromServer() {
   try {
     state.machines = (await (await fetch(MACHINES_FILE, { cache: "no-store" })).json()).hosts || {};
   } catch (error) { state.machines = {}; }
+  const json = async (url) => (await fetch(url, { cache: "no-store" })).json();
+  try { state.issues = (await json(ISSUES_FILE)).issues || []; } catch (error) { state.issues = []; }
+  state.verification = {};
+  try {
+    for (const name of await json(VERIFICATION_PATH + "list")) {
+      try {
+        const report = await json(VERIFICATION_PATH + encodeURIComponent(name));
+        if (isVerification(report)) state.verification[report.host.id] = report;
+      } catch (error) { /* one unreadable report leaves the others */ }
+    }
+  } catch (error) { /* a plain web server has no such list */ }
   const loaded = await Promise.all(urls.map(async (url) => {
     try {
       const data = await (await fetch(url, { cache: "no-store" })).json();
@@ -318,9 +374,14 @@ async function loadFromFiles(fileList) {
   const files = [...fileList].filter((file) => /\.json$/i.test(file.name));
   const machines = files.find((file) => file.name === MACHINES_FILE);
   try { state.machines = machines ? JSON.parse(await machines.text()).hosts || {} : {}; } catch (error) { state.machines = {}; }
+  const issues = files.find((file) => file.name === ISSUES_FILE);
+  try { state.issues = issues ? JSON.parse(await issues.text()).issues || [] : []; } catch (error) { state.issues = []; }
+  state.verification = {};
   const loaded = await Promise.all(files.map(async (file) => {
     try {
       const data = JSON.parse(await file.text());
+      // A verification report among the chosen files (evaluation/verification).
+      if (isVerification(data)) { state.verification[data.host.id] = data; return null; }
       return isRecord(data) ? Object.assign(data, { _file: file.name }) : null;
     } catch (error) { return null; }
   }));
@@ -454,7 +515,8 @@ function render() {
   const charts = collect();
   const sections = [el("h2", {}, "Hosts"),
                     el("p", { class: "sub" }, "The machines the results were measured on, as the records describe them."),
-                    el("div", { class: "cards" }, hosts.filter((id) => state.hosts.has(id)).map(hostCard))];
+                    el("div", { class: "cards" }, hosts.filter((id) => state.hosts.has(id)).map(hostCard)),
+                    ...support()];
   const areas = [...AREAS, ...[...new Set(charts.map((c) => c.area))].filter((a) => !AREAS.some(([id]) => id === a)).map((a) => [a, a])];
   for (const [area, title] of areas) {
     const mine = charts.filter((chart) => chart.area === area)
@@ -524,6 +586,165 @@ function hostCard(id) {
       if (!found.length && !missing) return null;
       return [el("dt", {}, name), el("dd", { class: found.length ? "" : "missing" }, found.length ? found.join("; ") : missing)];
     })));
+}
+
+// ------------------------------------------------------ platform support ---
+
+// The features the verification checks cover, by the first part of a check's
+// name; the rest of the name is the emulator mode. A check that is not listed
+// here still gets a row, under its own name.
+const SUPPORT_GROUPS = [
+  ["Launcher and target", [["prompt", "Interactive prompt"], ["guest", "ARM target starts"],
+                           ["bench", "CPU, memory and I/O benchmark"], ["drivers", "Driver features: host, emulated, mocked"]]],
+  ["Graphics", [["wayland", "Wayland"], ["gles", "OpenGL ES"], ["vulkan", "Vulkan"], ["flutter", "Flutter"],
+                ["graphics-emulated", "Emulated graphics"], ["graphics-host", "Host GPU graphics"],
+                ["resolution", "720p, 1080p and 4K"]]],
+  ["Media", [["media-input", "MP2TS, MP4 and MSE-style input"], ["media-codecs", "Video and audio codecs"],
+             ["video-wayland", "Video through Wayland"], ["video-gles", "Video through OpenGL ES"],
+             ["video-vulkan", "Video through Vulkan"], ["video-flutter", "Video through Flutter"],
+             ["audio-host", "Sound through the host"], ["audio-mute", "Mute and unmute while playing"],
+             ["audio-strategies", "Audio driver: emulated and mocked"]]],
+  ["Browser", [["web-launch", "WPE WebKit launches"], ["web-render", "Web page rendering"],
+               ["web-mse", "MSE playback"]]],
+  ["Windows and input", [["settings-window", "Settings window"], ["settings-launch", "Start from the settings window"],
+                         ["window-display", "Display window"], ["window-fullscreen", "Full screen and its hotkeys"],
+                         ["window-scaling", "Scaling with the window"], ["window-toolbar", "Toolbar: 1:1 and mute"],
+                         ["remote-keys", "Remote control keys from the keyboard"],
+                         ["remote-window", "On-screen remote control"]]],
+  ["Evaluation", [["matrix", "Host test matrix"], ["image", "Target image and its record"],
+                  ["workloads", "Workload definitions"], ["results", "Result records are identified"]]],
+];
+const SUPPORT_MODES = [["container", "Container"], ["vm-native", "VM"], ["vm-arm64", "ARM64"], ["vm-arm32", "ARM32"]];
+const STATUS = { pass: ["\u2713", "verified"], fail: ["\u2715", "fails"], unavailable: ["\u2013", "could not be run on this host"] };
+const ISSUE_KINDS = [["fails", "Fails a check"], ["limit", "Limit"], ["unverified", "Not verified"], ["missing", "Not implemented"]];
+
+// "video-gles-vm-arm32" is the feature "video-gles" in mode "vm-arm32"; a
+// check without a mode in its name is about the host as a whole.
+function parseCheck(name) {
+  if (name === "vm-arm64" || name === "vm-arm32") return ["guest", name];
+  for (const [suffix, mode] of [["-vm-arm64", "vm-arm64"], ["-vm-arm32", "vm-arm32"], ["-container", "container"],
+                                ["-vm", "vm-native"]]) {
+    if (name.endsWith(suffix)) return [name.slice(0, -suffix.length), mode];
+  }
+  return [name, ""];
+}
+
+function checkTooltip(host, name, check) {
+  const rows = [["Check", name], ["Checked", String(check.checked_at || "").replace("T", " ").replace("Z", " UTC")],
+                ["Task", check.task], ["Image", check.image_definition_sha256 && check.image_definition_sha256.slice(0, 12)]]
+    .filter(([, value]) => value);
+  const details = (check.details || []).slice(0, 4).map((line) => line.length > 260 ? line.slice(0, 260) + "\u2026" : line);
+  return el("div", {},
+    el("b", {}, hostName(host) + " \u00b7 " + (STATUS[check.status] || ["", check.status])[1]),
+    el("div", {}, check.description || ""),
+    el("dl", {}, rows.map(([key, value]) => [el("dt", {}, key), el("dd", {}, String(value))])),
+    details.map((line) => el("div", { class: "small", style: "margin-top:6px" }, line)));
+}
+
+// The section: the matrix of checks by host and mode, and the known issues.
+function support() {
+  const recorded = new Set(state.records.map((r) => r.host.id));
+  const hosts = Object.keys(state.verification)
+    .filter((id) => !recorded.has(id) || state.hosts.has(id))
+    .sort((a, b) => order(HOST_ORDER, a) - order(HOST_ORDER, b));
+  const issues = state.issues.filter((issue) => issue.hosts === "all" || !Array.isArray(issue.hosts)
+    || issue.hosts.some((id) => !recorded.has(id) || state.hosts.has(id)));
+  if (!hosts.length && !issues.length) return [];
+  const out = [el("h2", {}, "Platform support and known issues"),
+               el("p", { class: "sub" }, hosts.length
+                 ? "What the launcher\u2019s verification checks (./emu verify) found on each host, by emulator mode, and below "
+                   + "them the issues and limits that are known. Point at a cell for what the check found."
+                 : "The issues and limits that are known. The verification reports, which the support matrix is made from, "
+                   + "were not among the files read.")];
+
+  if (hosts.length) {
+    // feature -> mode -> host -> [check name, check]
+    const found = new Map();
+    for (const host of hosts) {
+      for (const [name, check] of Object.entries(state.verification[host].checks)) {
+        const [feature, mode] = parseCheck(name);
+        if (!found.has(feature)) found.set(feature, new Map());
+        if (!found.get(feature).has(mode)) found.get(feature).set(mode, new Map());
+        found.get(feature).get(mode).set(host, [name, check]);
+      }
+    }
+    const listed = new Set(SUPPORT_GROUPS.flatMap(([, features]) => features.map(([id]) => id)));
+    const others = [...found.keys()].filter((id) => !listed.has(id)).sort().map((id) => [id, id]);
+    const groups = others.length ? [...SUPPORT_GROUPS, ["Other checks", others]] : SUPPORT_GROUPS;
+    const cell = (host, entry, attrs) => {
+      const [name, check] = entry;
+      const [glyph, meaning] = STATUS[check.status] || ["?", check.status];
+      const node = el("td", Object.assign({ class: "cell " + check.status + (attrs.first ? " first" : ""), tabindex: "0",
+                                            "aria-label": name + ": " + meaning, colspan: attrs.colspan }), glyph);
+      attachTooltip(node, () => checkTooltip(host, name, check));
+      return node;
+    };
+    const body = [];
+    for (const [title, features] of groups) {
+      const rows = features.filter(([id]) => found.has(id)).map(([id, label]) => {
+        const modes = found.get(id);
+        const wide = modes.has("");           // about the host as a whole: one cell across its modes
+        return el("tr", {}, el("th", { class: "feature", scope: "row" }, label), hosts.map((host) => {
+          if (wide) {
+            const entry = modes.get("").get(host);
+            return entry ? cell(host, entry, { colspan: SUPPORT_MODES.length, first: true })
+              : el("td", { class: "cell notrun first", colspan: SUPPORT_MODES.length, title: "not run on this host" }, "\u00b7");
+          }
+          return SUPPORT_MODES.map(([mode], index) => {
+            const first = index === 0;
+            if (!modes.has(mode)) return el("td", { class: "cell" + (first ? " first" : "") });      // no such check for the mode
+            const entry = modes.get(mode).get(host);
+            return entry ? cell(host, entry, { first })
+              : el("td", { class: "cell notrun" + (first ? " first" : ""), title: "not run on this host" }, "\u00b7");
+          });
+        }));
+      });
+      if (!rows.length) continue;
+      body.push(el("tr", { class: "group" }, el("th", { colspan: 1 + hosts.length * SUPPORT_MODES.length }, title)), ...rows);
+    }
+    const totals = hosts.map((host) => {
+      const all = Object.values(state.verification[host].checks);
+      const count = (status) => all.filter((check) => check.status === status).length;
+      const latest = all.map((check) => String(check.checked_at || "")).sort().pop().slice(0, 10);
+      return el("td", { class: "first", colspan: SUPPORT_MODES.length },
+        count("pass") + " of " + all.length + " verified" + (count("fail") ? ", " + count("fail") + " fail" : "")
+        + (count("unavailable") ? ", " + count("unavailable") + " not runnable" : "") + (latest ? " \u00b7 " + latest : ""));
+    });
+    out.push(el("div", { class: "tablewrap" }, el("table", { class: "support" },
+      el("thead", {},
+        el("tr", {}, el("th", { rowspan: 2 }), hosts.map((host) => el("th", { class: "hosthead first", colspan: SUPPORT_MODES.length },
+          el("span", { class: "swatch", style: "background:" + hostColor(host) }), hostName(host)))),
+        el("tr", {}, hosts.map(() => SUPPORT_MODES.map(([mode, label], index) =>
+          el("th", { class: index === 0 ? "first" : "", title: modeName(mode) }, label))))),
+      el("tbody", {}, body),
+      el("tfoot", {}, el("tr", {}, el("th", { class: "feature" }, "Checks"), totals)))));
+    out.push(el("div", { class: "legend" },
+      el("span", {}, el("b", { class: "pass" }, STATUS.pass[0]), " verified by a check"),
+      el("span", {}, el("b", { class: "fail" }, STATUS.fail[0]), " the check fails"),
+      el("span", {}, el("b", {}, STATUS.unavailable[0]), " could not be run on this host"),
+      el("span", {}, el("b", {}, "\u00b7"), " not run on this host yet"),
+      el("span", {}, "empty: no such check for the mode"),
+      el("span", {}, "VM is the host-native VM; ARM64 and ARM32 are VMs with an emulated CPU")));
+  }
+
+  if (issues.length) {
+    const where = (issue) => issue.hosts === "all" || !Array.isArray(issue.hosts) ? [el("div", {}, "All hosts")]
+      : issue.hosts.map((id) => el("div", { class: "hostline" },
+          el("span", { class: "swatch", style: "background:" + hostColor(id) }), hostName(id)));
+    const modes = (issue) => issue.modes === "all" || !Array.isArray(issue.modes) ? "All modes"
+      : ["vm-native", "vm-arm64", "vm-arm32"].every((id) => issue.modes.includes(id)) && issue.modes.length === 3 ? "VM, every target"
+      : issue.modes.map((id) => modeName(id)).join("; ");
+    const sorted = [...issues].sort((a, b) => order(ISSUE_KINDS.map(([id]) => id), a.kind) - order(ISSUE_KINDS.map(([id]) => id), b.kind));
+    out.push(el("div", { class: "tablewrap" }, el("table", { class: "issues" },
+      el("thead", {}, el("tr", {}, ["Kind", "Known issue or limit", "Hosts", "Modes", "Task"].map((h) => el("th", {}, h)))),
+      el("tbody", {}, sorted.map((issue) => el("tr", {},
+        el("td", {}, el("span", { class: "tag " + issue.kind }, (ISSUE_KINDS.find(([id]) => id === issue.kind) || ["", issue.kind])[1])),
+        el("td", {}, el("b", {}, (issue.area ? issue.area + ": " : "") + issue.title), el("div", { class: "detail" }, issue.detail || "")),
+        el("td", { class: "where" }, where(issue)),
+        el("td", { class: "where" }, modes(issue)),
+        el("td", { class: "where" }, issue.task || "")))))));
+  }
+  return out;
 }
 
 function card(chart) {

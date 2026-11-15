@@ -42,9 +42,9 @@
         "graphics: graphics-demo 1.0.0 (implemented), web-bench 1.1.0 (implemented)",
         "audio_video_decoding: media-decode 1.0.0 (implemented), web-bench 1.1.0 (implemented)"
       ],
-      "checked_at": "2026-11-15T16:06:21Z",
+      "checked_at": "2026-11-15T17:39:55Z",
       "seconds": 0.0,
-      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "revision": "ebc05917d05fbd396db30f2b10bd4f14a56e72cb-dirty",
       "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "prompt-container": {
@@ -239,9 +239,9 @@
         "168 records, all fully identified",
         "this host has bench results for: container, vm-arm32, vm-arm64, vm-native"
       ],
-      "checked_at": "2026-11-15T17:24:29Z",
+      "checked_at": "2026-11-15T17:39:55Z",
       "seconds": 0.0,
-      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7-dirty",
+      "revision": "ebc05917d05fbd396db30f2b10bd4f14a56e72cb-dirty",
       "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "vm-arm32": {
