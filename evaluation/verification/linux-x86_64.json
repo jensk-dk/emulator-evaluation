@@ -6,7 +6,7 @@
     "arch": "x86_64",
     "cpu_model": "Intel(R) Core(TM) i7-10700K CPU @ 3.80GHz",
     "cpus": 16,
-    "memory_bytes": 33543806976,
+    "memory_bytes": 33543815168,
     "gpus": [
       {
         "model": "NVIDIA GeForce RTX 4070",
@@ -25,10 +25,10 @@
         "4 hosts x 4 modes = 16 combinations, each measuring 6 performance areas",
         "every declared host combination has a host entry: linux-x86_64, windows-x86_64, macos-x86_64, macos-arm64"
       ],
-      "checked_at": "2026-11-14T12:54:37Z",
+      "checked_at": "2026-11-15T16:06:19Z",
       "seconds": 0.0,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "workloads": {
       "status": "pass",
@@ -39,13 +39,13 @@
         "memory_allocation: bench 1.0.0 (implemented)",
         "memory_bandwidth: bench 1.0.0 (implemented)",
         "io: bench 1.0.0 (implemented)",
-        "graphics: graphics-demo 1.0.0 (implemented), web-bench 0.1.0 (defined)",
-        "audio_video_decoding: media-decode 1.0.0 (implemented), web-bench 0.1.0 (defined)"
+        "graphics: graphics-demo 1.0.0 (implemented), web-bench 1.1.0 (implemented)",
+        "audio_video_decoding: media-decode 1.0.0 (implemented), web-bench 1.1.0 (implemented)"
       ],
-      "checked_at": "2026-11-14T12:54:40Z",
+      "checked_at": "2026-11-15T16:06:21Z",
       "seconds": 0.0,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "prompt-container": {
       "status": "pass",
@@ -53,96 +53,96 @@
       "description": "the container image starts the target OS and a prompt",
       "details": [
         "target OS environment up in 0.2s; the prompt answered a typed command",
-        "image sha256:6afd76c3e0f818f966cb2f4d660e1f19fe6e509717611d523b41c6ba594915f3"
+        "image sha256:bc720e47ce33d988ff06dee7837fec31304040dde55fd08c2e161677c0c11baa"
       ],
-      "checked_at": "2026-11-14T12:54:41Z",
+      "checked_at": "2026-11-15T16:06:22Z",
       "seconds": 1.0,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "drivers-container": {
       "status": "pass",
       "task": "3.2",
       "description": "emulated, mocked and host-routed drivers in container mode",
       "details": [
-        "emulated: no host-side process ran; provider model:emu-swrng-1; 130554.3 bytes/s",
-        "mocked: sample is the stub's fixed pattern; provider mock:fixed-pattern; 3415833571.2 bytes/s",
-        "host: sample found in the 4202496 bytes served by the host-side process; provider host:host.docker.internal:33931; 9403759.2 bytes/s"
+        "emulated: no host-side process ran; provider model:emu-swrng-1; 130527.9 bytes/s",
+        "mocked: sample is the stub's fixed pattern; provider mock:fixed-pattern; 3782307482.7 bytes/s",
+        "host: sample found in the 4202496 bytes served by the host-side process; provider host:host.docker.internal:46615; 9215560.0 bytes/s"
       ],
-      "checked_at": "2026-11-14T12:55:58Z",
+      "checked_at": "2026-11-15T16:07:44Z",
       "seconds": 2.6,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "wayland-container": {
       "status": "pass",
       "task": "4.1",
       "description": "a Wayland workload renders in container mode",
       "details": [
-        "Wayland at 1280x720: 1905.3 frames/s on cpu; the display capture is 1280x720 and shows its frame",
-        "wl_shm XRGB8888; frame time p99 1.1 ms",
+        "Wayland at 1280x720: 1964.2 frames/s on cpu; the display capture is 1280x720 and shows its frame",
+        "wl_shm XRGB8888; frame time p99 1.0 ms",
         "graphics provider: emulated"
       ],
-      "checked_at": "2026-11-14T12:59:37Z",
+      "checked_at": "2026-11-15T16:11:02Z",
       "seconds": 27.8,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "gles-container": {
       "status": "pass",
       "task": "4.1",
       "description": "a OpenGL ES workload renders in container mode",
       "details": [
-        "OpenGL ES at 1280x720: 193.6 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 1280x720 and shows its frame",
-        "OpenGL ES 3.2 Mesa 25.0.7-2+deb13u1; frame time p99 17.4 ms",
+        "OpenGL ES at 1280x720: 194.1 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 1280x720 and shows its frame",
+        "OpenGL ES 3.2 Mesa 25.0.7-2+deb13u1; frame time p99 14.7 ms",
         "graphics provider: emulated"
       ],
-      "checked_at": "2026-11-14T13:02:16Z",
+      "checked_at": "2026-11-15T16:13:44Z",
       "seconds": 0.0,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "vulkan-container": {
       "status": "pass",
       "task": "4.1",
       "description": "a Vulkan workload renders in container mode",
       "details": [
-        "Vulkan at 1280x720: 362.6 frames/s on llvmpipe (LLVM 19.1.7, 256 bits) (CPU); the display capture is 1280x720 and shows its frame",
-        "Vulkan 1.4.305; frame time p99 4.0 ms",
+        "Vulkan at 1280x720: 363.1 frames/s on llvmpipe (LLVM 19.1.7, 256 bits) (CPU); the display capture is 1280x720 and shows its frame",
+        "Vulkan 1.4.305; frame time p99 3.9 ms",
         "graphics provider: emulated"
       ],
-      "checked_at": "2026-11-14T13:02:16Z",
+      "checked_at": "2026-11-15T16:13:44Z",
       "seconds": 0.0,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "flutter-container": {
       "status": "pass",
       "task": "4.1",
       "description": "a Flutter workload renders in container mode",
       "details": [
-        "Flutter at 1280x720: 17.5 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 1280x720 and shows its frame",
-        "Flutter 3.47.9, Dart 3.13.7; frame build p99 2.2 ms, raster p99 85.7 ms",
+        "Flutter at 1280x720: 17.3 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 1280x720 and shows its frame",
+        "Flutter 3.47.9, Dart 3.13.7; frame build p99 2.7 ms, raster p99 97.3 ms",
         "graphics provider: emulated"
       ],
-      "checked_at": "2026-11-14T13:02:16Z",
+      "checked_at": "2026-11-15T16:13:44Z",
       "seconds": 0.0,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "graphics-emulated-container": {
       "status": "pass",
       "task": "4.2",
       "description": "graphics are emulated on request and as the fallback, in container mode",
       "details": [
-        "requested emulation: OpenGL ES at 1280x720: 198.8 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 1280x720 and shows its frame",
-        "requested emulation: Vulkan at 1280x720: 371.7 frames/s on llvmpipe (LLVM 19.1.7, 256 bits) (CPU); the display capture is 1280x720 and shows its frame",
+        "requested emulation: OpenGL ES at 1280x720: 198.7 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 1280x720 and shows its frame",
+        "requested emulation: Vulkan at 1280x720: 372.0 frames/s on llvmpipe (LLVM 19.1.7, 256 bits) (CPU); the display capture is 1280x720 and shows its frame",
         "auto fell back to emulation: no compatible host graphics acceleration: the container engine's GPU render node (/dev/dri/renderD128) belongs to the nvidia kernel driver, which the target's graphics stack (Mesa) cannot render with; it works only with that vendor's own libraries"
       ],
-      "checked_at": "2026-11-14T13:02:44Z",
-      "seconds": 27.2,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T16:14:11Z",
+      "seconds": 27.0,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "graphics-host-container": {
       "status": "unavailable",
@@ -151,59 +151,59 @@
       "details": [
         "the container engine's GPU render node (/dev/dri/renderD128) belongs to the nvidia kernel driver, which the target's graphics stack (Mesa) cannot render with; it works only with that vendor's own libraries. Asking for it is refused: host graphics acceleration is not available: the container engine's GPU render node (/dev/dri/renderD128) belongs to the nvidia kernel driver, which the target's graphics stack (Mesa) cannot render with; it works only with that vendor's own libraries"
       ],
-      "checked_at": "2026-11-14T13:02:44Z",
+      "checked_at": "2026-11-15T16:14:11Z",
       "seconds": 0.1,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "resolution-container": {
       "status": "pass",
       "task": "4.3",
       "description": "720p, 1080p and 4K are rendered and displayed in container mode",
       "details": [
-        "Wayland at 1280x720: 1905.3 frames/s on cpu; the display capture is 1280x720 and shows its frame",
-        "OpenGL ES at 1280x720: 193.6 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 1280x720 and shows its frame",
-        "Vulkan at 1280x720: 362.6 frames/s on llvmpipe (LLVM 19.1.7, 256 bits) (CPU); the display capture is 1280x720 and shows its frame",
-        "Flutter at 1280x720: 17.5 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 1280x720 and shows its frame",
-        "Wayland at 1920x1080: 873.6 frames/s on cpu; the display capture is 1920x1080 and shows its frame",
-        "OpenGL ES at 1920x1080: 60.8 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 1920x1080 and shows its frame",
-        "Vulkan at 1920x1080: 157.1 frames/s on llvmpipe (LLVM 19.1.7, 256 bits) (CPU); the display capture is 1920x1080 and shows its frame",
-        "Flutter at 1920x1080: 9.4 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 1920x1080 and shows its frame",
-        "Wayland at 3840x2160: 154.0 frames/s on cpu; the display capture is 3840x2160 and shows its frame",
-        "OpenGL ES at 3840x2160: 13.7 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 3840x2160 and shows its frame",
-        "Vulkan at 3840x2160: 35.9 frames/s on llvmpipe (LLVM 19.1.7, 256 bits) (CPU); the display capture is 3840x2160 and shows its frame",
-        "Flutter at 3840x2160: 3.4 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 3840x2160 and shows its frame"
+        "Wayland at 1280x720: 1964.2 frames/s on cpu; the display capture is 1280x720 and shows its frame",
+        "OpenGL ES at 1280x720: 194.1 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 1280x720 and shows its frame",
+        "Vulkan at 1280x720: 363.1 frames/s on llvmpipe (LLVM 19.1.7, 256 bits) (CPU); the display capture is 1280x720 and shows its frame",
+        "Flutter at 1280x720: 17.3 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 1280x720 and shows its frame",
+        "Wayland at 1920x1080: 863.0 frames/s on cpu; the display capture is 1920x1080 and shows its frame",
+        "OpenGL ES at 1920x1080: 62.9 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 1920x1080 and shows its frame",
+        "Vulkan at 1920x1080: 156.8 frames/s on llvmpipe (LLVM 19.1.7, 256 bits) (CPU); the display capture is 1920x1080 and shows its frame",
+        "Flutter at 1920x1080: 9.5 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 1920x1080 and shows its frame",
+        "Wayland at 3840x2160: 155.8 frames/s on cpu; the display capture is 3840x2160 and shows its frame",
+        "OpenGL ES at 3840x2160: 14.7 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 3840x2160 and shows its frame",
+        "Vulkan at 3840x2160: 36.5 frames/s on llvmpipe (LLVM 19.1.7, 256 bits) (CPU); the display capture is 3840x2160 and shows its frame",
+        "Flutter at 3840x2160: 3.5 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 3840x2160 and shows its frame"
       ],
-      "checked_at": "2026-11-14T13:04:47Z",
-      "seconds": 70.3,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T16:16:13Z",
+      "seconds": 70.2,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "image": {
       "status": "pass",
       "task": "1.2",
       "description": "the client OS image boots in VM mode and its revision is recorded",
       "details": [
-        "emu-target-debian 0.3.0 booted in 1.8s, kernel 6.12.115+deb13.1-amd64",
+        "emu-target-debian 0.5.0 booted in 1.9s, kernel 6.12.115+deb13.1-amd64",
         "source: Debian 13 (trixie), docker.io/library/debian:trixie-slim@sha256:a72b4433de1c, apt snapshot 20261104T212339Z",
-        "definition 79c8da60d1bd, build revision 1fbe67ce2ce2ba2265f42ae526307a45478731a6, rootfs sha256 fbbc2b887b02"
+        "definition e1e6d3ddba76, build revision 847b2ef3f86c28b0df2229fd0cacfce89caf7fb7, rootfs sha256 d2c62a349659"
       ],
-      "checked_at": "2026-11-14T12:54:40Z",
-      "seconds": 2.4,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T16:06:21Z",
+      "seconds": 2.5,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "prompt-vm": {
       "status": "pass",
       "task": "2.2, 2.4",
       "description": "the target OS boots in host-native VM mode to a prompt",
       "details": [
-        "booted on kvm (x86_64, cpu host) in 1.8s; the prompt answered a typed command"
+        "booted on kvm (x86_64, cpu host) in 1.9s; the prompt answered a typed command"
       ],
-      "checked_at": "2026-11-14T12:54:43Z",
-      "seconds": 2.4,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T16:06:25Z",
+      "seconds": 2.5,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "bench-container": {
       "status": "pass",
@@ -211,12 +211,12 @@
       "description": "CPU, memory and I/O workloads run in container mode",
       "details": [
         "13 measurements across cpu, io, memory_allocation, memory_bandwidth",
-        "record identifies host linux-x86_64, mode container, image emu-target-debian 0.3.0, workload bench 1.0.0"
+        "record identifies host linux-x86_64, mode container, image emu-target-debian 0.5.0, workload bench 1.0.0"
       ],
-      "checked_at": "2026-11-14T12:54:49Z",
+      "checked_at": "2026-11-15T16:06:30Z",
       "seconds": 5.6,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "bench-vm": {
       "status": "pass",
@@ -224,189 +224,189 @@
       "description": "CPU, memory and I/O workloads run in host-native VM mode",
       "details": [
         "13 measurements across cpu, io, memory_allocation, memory_bandwidth",
-        "record identifies host linux-x86_64, mode vm-native, image emu-target-debian 0.3.0, workload bench 1.0.0"
+        "record identifies host linux-x86_64, mode vm-native, image emu-target-debian 0.5.0, workload bench 1.0.0"
       ],
-      "checked_at": "2026-11-14T12:54:56Z",
-      "seconds": 6.9,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T16:06:38Z",
+      "seconds": 7.1,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "results": {
       "status": "pass",
       "task": "2.5",
       "description": "recorded results carry their environment identity",
       "details": [
-        "84 records, all fully identified",
+        "168 records, all fully identified",
         "this host has bench results for: container, vm-arm32, vm-arm64, vm-native"
       ],
-      "checked_at": "2026-11-14T12:54:56Z",
+      "checked_at": "2026-11-15T17:24:29Z",
       "seconds": 0.0,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "vm-arm32": {
       "status": "pass",
       "task": "3.1",
       "description": "ARM32 VM guest mode starts the target OS workload",
       "details": [
-        "armv7l guest on tcg simulating cortex-a15 (CPU part 0xc0f) booted in 40.4s and ran the prompt workload"
+        "armv7l guest on tcg simulating cortex-a15 (CPU part 0xc0f) booted in 42.0s and ran the prompt workload"
       ],
-      "checked_at": "2026-11-14T12:55:38Z",
-      "seconds": 42.4,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T16:07:22Z",
+      "seconds": 43.9,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "vm-arm64": {
       "status": "pass",
       "task": "3.1",
       "description": "ARM64 VM guest mode starts the target OS workload",
       "details": [
-        "aarch64 guest on tcg simulating cortex-a53 (CPU part 0xd03) booted in 15.4s and ran the prompt workload"
+        "aarch64 guest on tcg simulating cortex-a53 (CPU part 0xd03) booted in 17.8s and ran the prompt workload"
       ],
-      "checked_at": "2026-11-14T12:55:55Z",
-      "seconds": 17.3,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T16:07:41Z",
+      "seconds": 19.7,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "drivers-vm": {
       "status": "pass",
       "task": "3.2",
       "description": "emulated, mocked and host-routed drivers in host-native VM mode",
       "details": [
-        "emulated: no host-side process ran; provider kernel:virtio_rng.0; 5179580.9 bytes/s",
-        "mocked: sample is the stub's fixed pattern; provider mock:fixed-pattern; 2251840918.1 bytes/s",
-        "host: sample found in the 852160 bytes served by the host-side process; provider kernel:virtio_rng.0; 1633795.5 bytes/s"
+        "emulated: no host-side process ran; provider kernel:virtio_rng.0; 5812721.5 bytes/s",
+        "mocked: sample is the stub's fixed pattern; provider mock:fixed-pattern; 2143482784.8 bytes/s",
+        "host: sample found in the 917696 bytes served by the host-side process; provider kernel:virtio_rng.0; 1802960.0 bytes/s"
       ],
-      "checked_at": "2026-11-14T12:56:05Z",
-      "seconds": 6.7,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T16:07:51Z",
+      "seconds": 7.0,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "drivers-vm-arm32": {
       "status": "pass",
       "task": "3.2",
       "description": "the three driver strategies in an ARM32 VM",
       "details": [
-        "emulated: no host-side process ran; provider kernel:virtio_rng.0; 1155167.2 bytes/s",
-        "mocked: sample is the stub's fixed pattern; provider mock:fixed-pattern; 39039772.7 bytes/s",
-        "host: sample found in the 262336 bytes served by the host-side process; provider kernel:virtio_rng.0; 389465.7 bytes/s"
+        "emulated: no host-side process ran; provider kernel:virtio_rng.0; 1129105.6 bytes/s",
+        "mocked: sample is the stub's fixed pattern; provider mock:fixed-pattern; 39434604.2 bytes/s",
+        "host: sample found in the 262336 bytes served by the host-side process; provider kernel:virtio_rng.0; 414027.5 bytes/s"
       ],
-      "checked_at": "2026-11-14T12:58:08Z",
-      "seconds": 123.5,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T16:09:37Z",
+      "seconds": 105.8,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "drivers-vm-arm64": {
       "status": "pass",
       "task": "3.2",
       "description": "the three driver strategies in an ARM64 VM",
       "details": [
-        "emulated: no host-side process ran; provider kernel:virtio_rng.0; 1316061.4 bytes/s",
-        "mocked: sample is the stub's fixed pattern; provider mock:fixed-pattern; 41290737.0 bytes/s",
-        "host: sample found in the 393408 bytes served by the host-side process; provider kernel:virtio_rng.0; 664563.3 bytes/s"
+        "emulated: no host-side process ran; provider kernel:virtio_rng.0; 1000187.6 bytes/s",
+        "mocked: sample is the stub's fixed pattern; provider mock:fixed-pattern; 46067903.4 bytes/s",
+        "host: sample found in the 393408 bytes served by the host-side process; provider kernel:virtio_rng.0; 725603.6 bytes/s"
       ],
-      "checked_at": "2026-11-14T12:59:09Z",
-      "seconds": 61.4,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T16:10:34Z",
+      "seconds": 57.2,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "wayland-vm": {
       "status": "pass",
       "task": "4.1",
       "description": "a Wayland workload renders in a host-native VM",
       "details": [
-        "Wayland at 1280x720: 1962.5 frames/s on cpu; the display capture is 1280x720 and shows its frame",
-        "wl_shm XRGB8888; frame time p99 0.7 ms",
+        "Wayland at 1280x720: 1817.8 frames/s on cpu; the display capture is 1280x720 and shows its frame",
+        "wl_shm XRGB8888; frame time p99 1.0 ms",
         "graphics provider: host"
       ],
-      "checked_at": "2026-11-14T13:00:03Z",
-      "seconds": 25.9,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T16:11:27Z",
+      "seconds": 25.0,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "wayland-vm-arm64": {
       "status": "pass",
       "task": "4.1",
       "description": "a Wayland workload renders in an ARM64 VM",
       "details": [
-        "Wayland at 1280x720: 135.6 frames/s on cpu; the display capture is 1280x720 and shows its frame",
-        "wl_shm XRGB8888; frame time p99 81.3 ms",
+        "Wayland at 1280x720: 128.7 frames/s on cpu; the display capture is 1280x720 and shows its frame",
+        "wl_shm XRGB8888; frame time p99 90.2 ms",
         "graphics provider: host"
       ],
-      "checked_at": "2026-11-14T13:01:10Z",
-      "seconds": 66.8,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T16:12:36Z",
+      "seconds": 69.7,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "wayland-vm-arm32": {
       "status": "pass",
       "task": "4.1",
       "description": "a Wayland workload renders in an ARM32 VM",
       "details": [
-        "Wayland at 1280x720: 70.0 frames/s on cpu; the display capture is 1280x720 and shows its frame",
-        "wl_shm XRGB8888; frame time p99 413.9 ms",
+        "Wayland at 1280x720: 116.9 frames/s on cpu; the display capture is 1280x720 and shows its frame",
+        "wl_shm XRGB8888; frame time p99 119.0 ms",
         "graphics provider: host"
       ],
-      "checked_at": "2026-11-14T13:02:16Z",
-      "seconds": 66.4,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T16:13:44Z",
+      "seconds": 67.0,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "gles-vm": {
       "status": "pass",
       "task": "4.1",
       "description": "a OpenGL ES workload renders in a host-native VM",
       "details": [
-        "OpenGL ES at 1280x720: 223.8 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1280x720 and shows its frame",
-        "OpenGL ES 3.2 Mesa 25.0.7-2+deb13u1; frame time p99 12.0 ms",
+        "OpenGL ES at 1280x720: 155.2 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1280x720 and shows its frame",
+        "OpenGL ES 3.2 Mesa 25.0.7-2+deb13u1; frame time p99 13.5 ms",
         "graphics provider: host"
       ],
-      "checked_at": "2026-11-14T13:02:16Z",
+      "checked_at": "2026-11-15T16:13:44Z",
       "seconds": 0.0,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "gles-vm-arm64": {
       "status": "pass",
       "task": "4.1",
       "description": "a OpenGL ES workload renders in an ARM64 VM",
       "details": [
-        "OpenGL ES at 1280x720: 97.7 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1280x720 and shows its frame",
-        "OpenGL ES 3.2 Mesa 25.0.7-2+deb13u1; frame time p99 124.8 ms",
+        "OpenGL ES at 1280x720: 95.0 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1280x720 and shows its frame",
+        "OpenGL ES 3.2 Mesa 25.0.7-2+deb13u1; frame time p99 111.3 ms",
         "graphics provider: host"
       ],
-      "checked_at": "2026-11-14T13:02:16Z",
+      "checked_at": "2026-11-15T16:13:44Z",
       "seconds": 0.0,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "gles-vm-arm32": {
       "status": "pass",
       "task": "4.1",
       "description": "a OpenGL ES workload renders in an ARM32 VM",
       "details": [
-        "OpenGL ES at 1280x720: 73.5 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1280x720 and shows its frame",
-        "OpenGL ES 3.2 Mesa 25.0.7-2+deb13u1; frame time p99 108.9 ms",
+        "OpenGL ES at 1280x720: 82.7 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1280x720 and shows its frame",
+        "OpenGL ES 3.2 Mesa 25.0.7-2+deb13u1; frame time p99 104.5 ms",
         "graphics provider: host"
       ],
-      "checked_at": "2026-11-14T13:02:16Z",
+      "checked_at": "2026-11-15T16:13:44Z",
       "seconds": 0.0,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "vulkan-vm": {
       "status": "pass",
       "task": "4.1",
       "description": "a Vulkan workload renders in a host-native VM",
       "details": [
-        "Vulkan at 1280x720: 355.7 frames/s on llvmpipe (LLVM 19.1.7, 256 bits) (CPU); the display capture is 1280x720 and shows its frame",
-        "Vulkan 1.4.305; frame time p99 4.7 ms",
+        "Vulkan at 1280x720: 336.1 frames/s on llvmpipe (LLVM 19.1.7, 256 bits) (CPU); the display capture is 1280x720 and shows its frame",
+        "Vulkan 1.4.305; frame time p99 5.0 ms",
         "graphics provider: host"
       ],
-      "checked_at": "2026-11-14T13:02:16Z",
+      "checked_at": "2026-11-15T16:13:44Z",
       "seconds": 0.0,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "vulkan-vm-arm64": {
       "status": "pass",
@@ -414,13 +414,13 @@
       "description": "a Vulkan workload renders in an ARM64 VM",
       "details": [
         "Vulkan at 1280x720: 2.4 frames/s on llvmpipe (LLVM 19.1.7, 128 bits) (CPU); the display capture is 1280x720 and shows its frame",
-        "Vulkan 1.4.305; frame time p99 419.6 ms",
+        "Vulkan 1.4.305; frame time p99 420.7 ms",
         "graphics provider: host"
       ],
-      "checked_at": "2026-11-14T13:02:16Z",
+      "checked_at": "2026-11-15T16:13:44Z",
       "seconds": 0.0,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "vulkan-vm-arm32": {
       "status": "fail",
@@ -429,10 +429,10 @@
       "details": [
         "Vulkan is unavailable: the vulkan test ended with status 134: malloc(): invalid size (unsorted) "
       ],
-      "checked_at": "2026-11-14T13:02:16Z",
+      "checked_at": "2026-11-15T16:13:44Z",
       "seconds": 0.0,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "flutter-vm": {
       "status": "pass",
@@ -440,27 +440,27 @@
       "description": "a Flutter workload renders in a host-native VM",
       "details": [
         "Flutter at 1280x720: 60.8 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1280x720 and shows its frame",
-        "Flutter 3.47.9, Dart 3.13.7; frame build p99 1.8 ms, raster p99 5.8 ms",
+        "Flutter 3.47.9, Dart 3.13.7; frame build p99 3.3 ms, raster p99 2.9 ms",
         "graphics provider: host"
       ],
-      "checked_at": "2026-11-14T13:02:16Z",
+      "checked_at": "2026-11-15T16:13:44Z",
       "seconds": 0.0,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "flutter-vm-arm64": {
       "status": "pass",
       "task": "4.1",
       "description": "a Flutter workload renders in an ARM64 VM",
       "details": [
-        "Flutter at 1280x720: 11.5 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1280x720 and shows its frame",
-        "Flutter 3.47.9, Dart 3.13.7; frame build p99 49.6 ms, raster p99 50.0 ms",
+        "Flutter at 1280x720: 9.9 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1280x720 and shows its frame",
+        "Flutter 3.47.9, Dart 3.13.7; frame build p99 52.6 ms, raster p99 45.2 ms",
         "graphics provider: host"
       ],
-      "checked_at": "2026-11-14T13:02:16Z",
+      "checked_at": "2026-11-15T16:13:44Z",
       "seconds": 0.0,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "flutter-vm-arm32": {
       "status": "fail",
@@ -469,104 +469,112 @@
       "details": [
         "the arm32 target image has no Flutter workload: the Flutter SDK (3.47.9) builds Linux applications for x86_64 and arm64 only"
       ],
-      "checked_at": "2026-11-14T13:02:17Z",
+      "checked_at": "2026-11-15T16:13:44Z",
       "seconds": 0.0,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "graphics-emulated-vm": {
       "status": "pass",
       "task": "4.2",
       "description": "graphics are emulated on request and as the fallback, in VM mode",
       "details": [
-        "requested emulation: OpenGL ES at 1280x720: 137.7 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 1280x720 and shows its frame",
-        "requested emulation: Vulkan at 1280x720: 302.3 frames/s on llvmpipe (LLVM 19.1.7, 256 bits) (CPU); the display capture is 1280x720 and shows its frame",
+        "requested emulation: OpenGL ES at 1280x720: 136.9 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 1280x720 and shows its frame",
+        "requested emulation: Vulkan at 1280x720: 306.7 frames/s on llvmpipe (LLVM 19.1.7, 256 bits) (CPU); the display capture is 1280x720 and shows its frame",
         "auto did not need the fallback here: host acceleration is available"
       ],
-      "checked_at": "2026-11-14T13:03:10Z",
+      "checked_at": "2026-11-15T16:14:37Z",
       "seconds": 26.6,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "graphics-host-vm": {
       "status": "pass",
       "task": "4.2",
       "description": "graphics are mapped to host acceleration and preferred, in VM mode",
       "details": [
-        "requested host acceleration: OpenGL ES at 1280x720: 181.7 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1280x720 and shows its frame",
+        "requested host acceleration: OpenGL ES at 1280x720: 178.4 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1280x720 and shows its frame",
         "requested host acceleration: Vulkan: rendered by the target CPU (llvmpipe (LLVM 19.1.7, 256 bits) (CPU))",
         "auto preferred host acceleration: QEMU maps the target's OpenGL ES to the host GPU (virtio-gpu with virglrenderer)"
       ],
-      "checked_at": "2026-11-14T13:03:36Z",
+      "checked_at": "2026-11-15T16:15:03Z",
       "seconds": 25.9,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "resolution-vm": {
       "status": "pass",
       "task": "4.3",
       "description": "720p, 1080p and 4K are rendered and displayed in a host-native VM",
       "details": [
-        "Wayland at 1280x720: 1962.5 frames/s on cpu; the display capture is 1280x720 and shows its frame",
-        "OpenGL ES at 1280x720: 223.8 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1280x720 and shows its frame",
-        "Vulkan at 1280x720: 355.7 frames/s on llvmpipe (LLVM 19.1.7, 256 bits) (CPU); the display capture is 1280x720 and shows its frame",
+        "Wayland at 1280x720: 1817.8 frames/s on cpu; the display capture is 1280x720 and shows its frame",
+        "OpenGL ES at 1280x720: 155.2 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1280x720 and shows its frame",
+        "Vulkan at 1280x720: 336.1 frames/s on llvmpipe (LLVM 19.1.7, 256 bits) (CPU); the display capture is 1280x720 and shows its frame",
         "Flutter at 1280x720: 60.8 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1280x720 and shows its frame",
-        "Wayland at 1920x1080: 728.8 frames/s on cpu; the display capture is 1920x1080 and shows its frame",
-        "OpenGL ES at 1920x1080: 256.9 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1920x1080 and shows its frame",
-        "Vulkan at 1920x1080: 152.9 frames/s on llvmpipe (LLVM 19.1.7, 256 bits) (CPU); the display capture is 1920x1080 and shows its frame",
-        "Flutter at 1920x1080: 59.9 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1920x1080 and shows its frame",
-        "Wayland at 3840x2160: 160.2 frames/s on cpu; the display capture is 2560x2048 and shows the top left part of its frame (QEMU's capture of a display rendered on the host GPU reaches no further)",
-        "OpenGL ES at 3840x2160: 52.8 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 2560x2048 and shows the top left part of its frame (QEMU's capture of a display rendered on the host GPU reaches no further)",
-        "Vulkan at 3840x2160: 36.3 frames/s on llvmpipe (LLVM 19.1.7, 256 bits) (CPU); the display capture is 2560x2048 and shows the top left part of its frame (QEMU's capture of a display rendered on the host GPU reaches no further)",
-        "Flutter at 3840x2160: 28.6 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 2560x2048 and shows the top left part of its frame (QEMU's capture of a display rendered on the host GPU reaches no further)",
-        "with emulated graphics, for the whole frame: Wayland at 3840x2160: 71.0 frames/s on cpu; the display capture is 3840x2160 and shows its frame",
-        "with emulated graphics, for the whole frame: OpenGL ES at 3840x2160: 8.8 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 3840x2160 and shows its frame",
-        "with emulated graphics, for the whole frame: Vulkan at 3840x2160: 35.4 frames/s on llvmpipe (LLVM 19.1.7, 256 bits) (CPU); the display capture is 3840x2160 and shows its frame",
+        "Wayland at 1920x1080: 759.1 frames/s on cpu; the display capture is 1920x1080 and shows its frame",
+        "OpenGL ES at 1920x1080: 174.7 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1920x1080 and shows its frame",
+        "Vulkan at 1920x1080: 149.6 frames/s on llvmpipe (LLVM 19.1.7, 256 bits) (CPU); the display capture is 1920x1080 and shows its frame",
+        "Flutter at 1920x1080: 59.8 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1920x1080 and shows its frame",
+        "Wayland at 3840x2160: 153.5 frames/s on cpu; the display capture is 2560x2048 and shows the top left part of its frame (QEMU's capture of a display rendered on the host GPU reaches no further)",
+        "OpenGL ES at 3840x2160: 53.0 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 2560x2048 and shows the top left part of its frame (QEMU's capture of a display rendered on the host GPU reaches no further)",
+        "Vulkan at 3840x2160: 37.3 frames/s on llvmpipe (LLVM 19.1.7, 256 bits) (CPU); the display capture is 2560x2048 and shows the top left part of its frame (QEMU's capture of a display rendered on the host GPU reaches no further)",
+        "Flutter at 3840x2160: 31.4 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 2560x2048 and shows the top left part of its frame (QEMU's capture of a display rendered on the host GPU reaches no further)",
+        "with emulated graphics, for the whole frame: Wayland at 3840x2160: 72.1 frames/s on cpu; the display capture is 3840x2160 and shows its frame",
+        "with emulated graphics, for the whole frame: OpenGL ES at 3840x2160: 8.6 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 3840x2160 and shows its frame",
+        "with emulated graphics, for the whole frame: Vulkan at 3840x2160: 36.5 frames/s on llvmpipe (LLVM 19.1.7, 256 bits) (CPU); the display capture is 3840x2160 and shows its frame",
         "with emulated graphics, for the whole frame: Flutter at 3840x2160: 3.2 frames/s on llvmpipe (LLVM 19.1.7, 256 bits); the display capture is 3840x2160 and shows its frame"
       ],
-      "checked_at": "2026-11-14T13:06:06Z",
+      "checked_at": "2026-11-15T16:17:33Z",
       "seconds": 79.8,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "resolution-vm-arm64": {
       "status": "pass",
       "task": "4.3",
       "description": "720p, 1080p and 4K are rendered and displayed in an ARM64 VM",
       "details": [
-        "Wayland at 1280x720: 135.6 frames/s on cpu; the display capture is 1280x720 and shows its frame",
-        "OpenGL ES at 1280x720: 97.7 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1280x720 and shows its frame",
+        "Wayland at 1280x720: 128.7 frames/s on cpu; the display capture is 1280x720 and shows its frame",
+        "OpenGL ES at 1280x720: 95.0 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1280x720 and shows its frame",
         "Vulkan at 1280x720: 2.4 frames/s on llvmpipe (LLVM 19.1.7, 128 bits) (CPU); the display capture is 1280x720 and shows its frame",
-        "Flutter at 1280x720: 11.5 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1280x720 and shows its frame",
-        "Wayland at 1920x1080: 27.9 frames/s on cpu; the display capture is 1920x1080 and shows its frame",
-        "OpenGL ES at 1920x1080: 112.6 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1920x1080 and shows its frame",
+        "Flutter at 1280x720: 9.9 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1280x720 and shows its frame",
+        "Wayland at 1920x1080: 38.7 frames/s on cpu; the display capture is 1920x1080 and shows its frame",
+        "OpenGL ES at 1920x1080: 115.0 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1920x1080 and shows its frame",
         "Vulkan at 1920x1080: 1.1 frames/s on llvmpipe (LLVM 19.1.7, 128 bits) (CPU); the display capture is 1920x1080 and shows its frame",
-        "Flutter at 1920x1080: 7.6 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1920x1080 and shows its frame",
+        "Flutter at 1920x1080: 7.8 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1920x1080 and shows its frame",
         "Wayland at 3840x2160: 1.4 frames/s on cpu; the display capture is 2560x2048 and shows the top left part of its frame (QEMU's capture of a display rendered on the host GPU reaches no further)",
-        "OpenGL ES at 3840x2160: 48.9 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 2560x2048 and shows the top left part of its frame (QEMU's capture of a display rendered on the host GPU reaches no further)",
+        "OpenGL ES at 3840x2160: 42.9 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 2560x2048 and shows the top left part of its frame (QEMU's capture of a display rendered on the host GPU reaches no further)",
         "Vulkan at 3840x2160: 0.3 frames/s on llvmpipe (LLVM 19.1.7, 128 bits) (CPU); the display capture is 2560x2048 and shows the top left part of its frame (QEMU's capture of a display rendered on the host GPU reaches no further)",
-        "Flutter at 3840x2160: 3.1 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 2560x2048 and shows the top left part of its frame (QEMU's capture of a display rendered on the host GPU reaches no further)",
-        "with emulated graphics, for the whole frame: Wayland at 3840x2160: 1.5 frames/s on cpu; the display capture is 3840x2160 and shows its frame",
+        "Flutter at 3840x2160: 3.0 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 2560x2048 and shows the top left part of its frame (QEMU's capture of a display rendered on the host GPU reaches no further)",
+        "with emulated graphics, for the whole frame: Wayland at 3840x2160: 1.4 frames/s on cpu; the display capture is 3840x2160 and shows its frame",
         "with emulated graphics, for the whole frame: OpenGL ES at 3840x2160: 0.2 frames/s on llvmpipe (LLVM 19.1.7, 128 bits); the display capture is 3840x2160 and shows its frame",
         "with emulated graphics, for the whole frame: Vulkan at 3840x2160: 0.3 frames/s on llvmpipe (LLVM 19.1.7, 128 bits) (CPU); the display capture is 3840x2160 and shows its frame",
         "with emulated graphics, for the whole frame: Flutter at 3840x2160: 0.1 frames/s on llvmpipe (LLVM 19.1.7, 128 bits); the display capture is 3840x2160 and shows its frame"
       ],
-      "checked_at": "2026-11-14T13:11:29Z",
-      "seconds": 322.0,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T16:22:55Z",
+      "seconds": 321.7,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "resolution-vm-arm32": {
-      "status": "fail",
+      "status": "pass",
       "task": "4.3",
       "description": "720p, 1080p and 4K are rendered and displayed in an ARM32 VM",
       "details": [
-        "OpenGL ES is unavailable: lost the connection to the Wayland compositor"
+        "Wayland at 1280x720: 116.9 frames/s on cpu; the display capture is 1280x720 and shows its frame",
+        "OpenGL ES at 1280x720: 82.7 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1280x720 and shows its frame",
+        "Wayland at 1920x1080: 40.8 frames/s on cpu; the display capture is 1920x1080 and shows its frame",
+        "OpenGL ES at 1920x1080: 65.8 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 1920x1080 and shows its frame",
+        "Wayland at 3840x2160: 0.7 frames/s on cpu; the display capture is 2560x2048 and shows the top left part of its frame (QEMU's capture of a display rendered on the host GPU reaches no further)",
+        "OpenGL ES at 3840x2160: 4.7 frames/s on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); the display capture is 2560x2048 and shows the top left part of its frame (QEMU's capture of a display rendered on the host GPU reaches no further)",
+        "with emulated graphics, for the whole frame: Wayland at 3840x2160: 0.9 frames/s on cpu; the display capture is 3840x2160 and shows its frame",
+        "with emulated graphics, for the whole frame: OpenGL ES at 3840x2160: 0.2 frames/s on llvmpipe (LLVM 19.1.7, 128 bits); the display capture is 3840x2160 and shows its frame",
+        "not covered, because unavailable in this mode: Vulkan, Flutter"
       ],
-      "checked_at": "2026-11-14T13:42:09Z",
-      "seconds": 292.2,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T16:26:40Z",
+      "seconds": 224.7,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "media-input-container": {
       "status": "pass",
@@ -578,28 +586,28 @@
         "MSE-style fragments accepted: MPEG-2 from 11 fragments appended to the decoder (3255220 bytes), AVC from 5 fragments appended to the decoder (1656736 bytes), HEVC from 5 fragments appended to the decoder (1148951 bytes)",
         "audio-only streams accepted in MP2TS and in MP4"
       ],
-      "checked_at": "2026-11-14T13:15:36Z",
-      "seconds": 35.7,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T16:27:16Z",
+      "seconds": 36.0,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "media-codecs-container": {
       "status": "pass",
       "task": "5.2",
       "description": "MPEG-2, AVC, HEVC, MP2, AC-3, AAC and HE-AAC are decoded in container mode",
       "details": [
-        "MPEG-2 video: 125 frames of 1280x720 decoded at 132.6, 134.5, 133.8 x realtime (MP2TS, MP4, MSE-style fragments; FFmpeg 7.1.5-0+deb13u1)",
-        "AVC video: 125 frames of 1280x720 decoded at 59.6, 61.5, 60.4 x realtime (MP2TS, MP4, MSE-style fragments; FFmpeg 7.1.5-0+deb13u1)",
-        "HEVC video: 125 frames of 1280x720 decoded at 41.7, 41.7, 41.5 x realtime (MP2TS, MP4, MSE-style fragments; FFmpeg 7.1.5-0+deb13u1)",
-        "MP2 audio: decoded at 964 x realtime",
-        "AC-3 audio: decoded at 1652 x realtime",
-        "AAC audio: decoded at 1573 x realtime",
-        "HE-AAC audio: decoded at 1066, 1041 x realtime"
+        "MPEG-2 video: 125 frames of 1280x720 decoded at 130.8, 134.3, 133.5 x realtime (MP2TS, MP4, MSE-style fragments; FFmpeg 7.1.5-0+deb13u1)",
+        "AVC video: 125 frames of 1280x720 decoded at 58.0, 59.1, 58.2 x realtime (MP2TS, MP4, MSE-style fragments; FFmpeg 7.1.5-0+deb13u1)",
+        "HEVC video: 125 frames of 1280x720 decoded at 41.1, 41.3, 40.8 x realtime (MP2TS, MP4, MSE-style fragments; FFmpeg 7.1.5-0+deb13u1)",
+        "MP2 audio: decoded at 955 x realtime",
+        "AC-3 audio: decoded at 1666 x realtime",
+        "AAC audio: decoded at 1585 x realtime",
+        "HE-AAC audio: decoded at 1068, 1042 x realtime"
       ],
-      "checked_at": "2026-11-14T13:15:36Z",
+      "checked_at": "2026-11-15T16:27:16Z",
       "seconds": 0.0,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "audio-host-container": {
       "status": "pass",
@@ -610,12 +618,12 @@
         "AC-3: played on the target in 3.1 s; its 660 Hz tone reached the host-side process and was recorded at the host's sound server",
         "AAC: played on the target in 3.1 s; its 880 Hz tone reached the host-side process and was recorded at the host's sound server",
         "HE-AAC: played on the target in 3.1, 3.1 s; its 1100 Hz tone reached the host-side process and was recorded at the host's sound server",
-        "path: target ALSA device (host:host.docker.internal:36821) -> the target's shim device, over TCP -> the host's player program (pacat)"
+        "path: target ALSA device (host:host.docker.internal:46323) -> the target's shim device, over TCP -> the host's player program (pacat)"
       ],
-      "checked_at": "2026-11-14T13:32:36Z",
-      "seconds": 19.2,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T16:44:23Z",
+      "seconds": 19.3,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "audio-mute-container": {
       "status": "pass",
@@ -625,10 +633,10 @@
         "while the target played a 880 Hz tone for 7.0 s, the sound sent to the host was: sound for 1.6 s, silent for 1.9 s, sound for 3.5 s",
         "recorded at the host's sound server: the tone, 2.1 s of silence, the tone again"
       ],
-      "checked_at": "2026-11-14T13:36:33Z",
+      "checked_at": "2026-11-15T16:48:05Z",
       "seconds": 8.9,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "audio-strategies-container": {
       "status": "pass",
@@ -638,10 +646,10 @@
         "emulated: 2 s of sound played in 2.1 s on model:emu-sndcard-1 (48 kHz stereo, plays to nowhere); no host-side process ran",
         "mocked: 2 s of sound played in 2.1 s on mock:discard; no host-side process ran"
       ],
-      "checked_at": "2026-11-14T13:36:40Z",
-      "seconds": 6.6,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T16:48:11Z",
+      "seconds": 6.5,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "video-wayland-container": {
       "status": "pass",
@@ -653,10 +661,10 @@
         "HEVC from MSE-style fragments: played on cpu, 0 of 125 frames dropped; a capture of the display shows the video",
         "graphics provider: emulated; sound: the target's audio device"
       ],
-      "checked_at": "2026-11-14T13:22:00Z",
-      "seconds": 122.9,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T16:33:46Z",
+      "seconds": 123.5,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "video-gles-container": {
       "status": "pass",
@@ -668,10 +676,10 @@
         "HEVC from MSE-style fragments: played on llvmpipe (LLVM 19.1.7, 256 bits), 0 of 125 frames dropped; a capture of the display shows the video",
         "graphics provider: emulated; sound: the target's audio device"
       ],
-      "checked_at": "2026-11-14T13:32:17Z",
+      "checked_at": "2026-11-15T16:44:04Z",
       "seconds": 0.0,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "video-vulkan-container": {
       "status": "pass",
@@ -683,67 +691,67 @@
         "HEVC from MSE-style fragments: played on llvmpipe (LLVM 19.1.7, 256 bits), 0 of 125 frames dropped; a capture of the display shows the video",
         "graphics provider: emulated; sound: the target's audio device"
       ],
-      "checked_at": "2026-11-14T13:32:17Z",
+      "checked_at": "2026-11-15T16:44:04Z",
       "seconds": 0.0,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "video-flutter-container": {
       "status": "pass",
       "task": "5.3",
       "description": "decoded video is rendered through Flutter in container mode",
       "details": [
-        "MPEG-2 from MP2TS: played on llvmpipe (LLVM 19.1.7, 256 bits), 92 of 125 frames dropped; a capture of the display shows the video",
-        "AVC from MP4: played on llvmpipe (LLVM 19.1.7, 256 bits), 84 of 125 frames dropped; a capture of the display shows the video",
-        "HEVC from MSE-style fragments: played on llvmpipe (LLVM 19.1.7, 256 bits), 84 of 125 frames dropped; a capture of the display shows the video",
+        "MPEG-2 from MP2TS: played on llvmpipe (LLVM 19.1.7, 256 bits), 94 of 125 frames dropped; a capture of the display shows the video",
+        "AVC from MP4: played on llvmpipe (LLVM 19.1.7, 256 bits), 85 of 125 frames dropped; a capture of the display shows the video",
+        "HEVC from MSE-style fragments: played on llvmpipe (LLVM 19.1.7, 256 bits), 85 of 125 frames dropped; a capture of the display shows the video",
         "graphics provider: emulated; sound: the target's audio device"
       ],
-      "checked_at": "2026-11-14T13:32:17Z",
+      "checked_at": "2026-11-15T16:44:04Z",
       "seconds": 0.0,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "audio-strategies-vm": {
       "status": "pass",
       "task": "3.2, 5.3",
       "description": "the emulated and mocked audio devices in VM mode",
       "details": [
-        "emulated: 2 s of sound played in 4.8 s on kernel:virtio-snd - VirtIO SoundCard; no host-side process ran",
+        "emulated: 2 s of sound played in 5.0 s on kernel:virtio-snd - VirtIO SoundCard; no host-side process ran",
         "mocked: 2 s of sound played in 2.1 s on mock:discard; no host-side process ran"
       ],
-      "checked_at": "2026-11-14T13:37:07Z",
-      "seconds": 13.0,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T16:48:38Z",
+      "seconds": 13.2,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "audio-host-vm": {
       "status": "pass",
       "task": "5.3",
       "description": "decoded audio is played through the host OS, from a host-native VM",
       "details": [
-        "MP2: played on the target in 5.8 s; its 440 Hz tone reached the host-side process and was recorded at the host's sound server",
+        "MP2: played on the target in 6.0 s; its 440 Hz tone reached the host-side process and was recorded at the host's sound server",
         "AC-3: played on the target in 5.9 s; its 660 Hz tone reached the host-side process and was recorded at the host's sound server",
         "AAC: played on the target in 5.9 s; its 880 Hz tone reached the host-side process and was recorded at the host's sound server",
         "HE-AAC: played on the target in 5.9, 5.9 s; its 1100 Hz tone reached the host-side process and was recorded at the host's sound server",
         "path: target ALSA device (kernel:virtio-snd - VirtIO SoundCard) -> the emulated sound card's backend, through a named pipe -> the host's player program (pacat)"
       ],
-      "checked_at": "2026-11-14T13:33:11Z",
-      "seconds": 35.1,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T16:44:58Z",
+      "seconds": 35.4,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "audio-mute-vm": {
       "status": "pass",
       "task": "5.3",
       "description": "audio is muted and unmuted while it plays, in VM mode",
       "details": [
-        "while the target played a 880 Hz tone for 6.8 s, the sound sent to the host was: sound for 1.6 s, silent for 1.9 s, sound for 3.3 s",
+        "while the target played a 880 Hz tone for 6.8 s, the sound sent to the host was: sound for 1.6 s, silent for 2.0 s, sound for 3.2 s",
         "recorded at the host's sound server: the tone, 2.1 s of silence, the tone again"
       ],
-      "checked_at": "2026-11-14T13:36:54Z",
+      "checked_at": "2026-11-15T16:48:25Z",
       "seconds": 13.6,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "media-input-vm": {
       "status": "pass",
@@ -755,28 +763,28 @@
         "MSE-style fragments accepted: MPEG-2 from 11 fragments appended to the decoder (3255220 bytes), AVC from 5 fragments appended to the decoder (1656736 bytes), HEVC from 5 fragments appended to the decoder (1148951 bytes)",
         "audio-only streams accepted in MP2TS and in MP4"
       ],
-      "checked_at": "2026-11-14T13:16:13Z",
+      "checked_at": "2026-11-15T16:27:52Z",
       "seconds": 36.3,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "media-codecs-vm": {
       "status": "pass",
       "task": "5.2",
       "description": "MPEG-2, AVC, HEVC, MP2, AC-3, AAC and HE-AAC are decoded in a host-native VM",
       "details": [
-        "MPEG-2 video: 125 frames of 1280x720 decoded at 124.6, 128.2, 120.9 x realtime (MP2TS, MP4, MSE-style fragments; FFmpeg 7.1.5-0+deb13u1)",
-        "AVC video: 125 frames of 1280x720 decoded at 50.6, 52.7, 52.2 x realtime (MP2TS, MP4, MSE-style fragments; FFmpeg 7.1.5-0+deb13u1)",
-        "HEVC video: 125 frames of 1280x720 decoded at 38.8, 38.3, 38.8 x realtime (MP2TS, MP4, MSE-style fragments; FFmpeg 7.1.5-0+deb13u1)",
-        "MP2 audio: decoded at 868 x realtime",
-        "AC-3 audio: decoded at 1448 x realtime",
-        "AAC audio: decoded at 1300 x realtime",
-        "HE-AAC audio: decoded at 982, 934 x realtime"
+        "MPEG-2 video: 125 frames of 1280x720 decoded at 112.5, 119.4, 119.9 x realtime (MP2TS, MP4, MSE-style fragments; FFmpeg 7.1.5-0+deb13u1)",
+        "AVC video: 125 frames of 1280x720 decoded at 51.2, 53.2, 52.0 x realtime (MP2TS, MP4, MSE-style fragments; FFmpeg 7.1.5-0+deb13u1)",
+        "HEVC video: 125 frames of 1280x720 decoded at 37.9, 38.8, 38.7 x realtime (MP2TS, MP4, MSE-style fragments; FFmpeg 7.1.5-0+deb13u1)",
+        "MP2 audio: decoded at 870 x realtime",
+        "AC-3 audio: decoded at 1473 x realtime",
+        "AAC audio: decoded at 1285 x realtime",
+        "HE-AAC audio: decoded at 979, 956 x realtime"
       ],
-      "checked_at": "2026-11-14T13:16:13Z",
+      "checked_at": "2026-11-15T16:27:52Z",
       "seconds": 0.0,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "video-wayland-vm": {
       "status": "pass",
@@ -788,10 +796,10 @@
         "HEVC from MSE-style fragments: played on cpu, 0 of 125 frames dropped; a capture of the display shows the video",
         "graphics provider: host; sound: the target's audio device"
       ],
-      "checked_at": "2026-11-14T13:23:59Z",
-      "seconds": 119.4,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T16:35:45Z",
+      "seconds": 119.7,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "video-gles-vm": {
       "status": "pass",
@@ -803,10 +811,10 @@
         "HEVC from MSE-style fragments: played on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2), 0 of 125 frames dropped; a capture of the display shows the video",
         "graphics provider: host; sound: the target's audio device"
       ],
-      "checked_at": "2026-11-14T13:32:17Z",
+      "checked_at": "2026-11-15T16:44:04Z",
       "seconds": 0.0,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "video-vulkan-vm": {
       "status": "pass",
@@ -818,25 +826,25 @@
         "HEVC from MSE-style fragments: played on llvmpipe (LLVM 19.1.7, 256 bits), 0 of 125 frames dropped; a capture of the display shows the video",
         "graphics provider: host; sound: the target's audio device"
       ],
-      "checked_at": "2026-11-14T13:32:17Z",
+      "checked_at": "2026-11-15T16:44:04Z",
       "seconds": 0.0,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "video-flutter-vm": {
       "status": "pass",
       "task": "5.3",
       "description": "decoded video is rendered through Flutter in a host-native VM",
       "details": [
-        "MPEG-2 from MP2TS: played on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2), 86 of 125 frames dropped; a capture of the display shows the video",
-        "AVC from MP4: played on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2), 77 of 125 frames dropped; a capture of the display shows the video",
-        "HEVC from MSE-style fragments: played on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2), 76 of 125 frames dropped; a capture of the display shows the video",
+        "MPEG-2 from MP2TS: played on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2), 84 of 125 frames dropped; a capture of the display shows the video",
+        "AVC from MP4: played on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2), 76 of 125 frames dropped; a capture of the display shows the video",
+        "HEVC from MSE-style fragments: played on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2), 79 of 125 frames dropped; a capture of the display shows the video",
         "graphics provider: host; sound: the target's audio device"
       ],
-      "checked_at": "2026-11-14T13:32:17Z",
+      "checked_at": "2026-11-15T16:44:04Z",
       "seconds": 0.0,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "media-input-vm-arm64": {
       "status": "pass",
@@ -848,28 +856,28 @@
         "MSE-style fragments accepted: MPEG-2 from 11 fragments appended to the decoder (3255220 bytes), AVC from 5 fragments appended to the decoder (1656736 bytes), HEVC from 5 fragments appended to the decoder (1148951 bytes)",
         "audio-only streams accepted in MP2TS and in MP4"
       ],
-      "checked_at": "2026-11-14T13:17:51Z",
-      "seconds": 98.2,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T16:29:32Z",
+      "seconds": 100.2,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "media-codecs-vm-arm64": {
       "status": "pass",
       "task": "5.2",
       "description": "MPEG-2, AVC, HEVC, MP2, AC-3, AAC and HE-AAC are decoded in an ARM64 VM",
       "details": [
-        "MPEG-2 video: 125 frames of 1280x720 decoded at 7.0, 6.8, 7.1 x realtime (MP2TS, MP4, MSE-style fragments; FFmpeg 7.1.5-0+deb13u1)",
-        "AVC video: 125 frames of 1280x720 decoded at 2.9, 3.0, 2.9 x realtime (MP2TS, MP4, MSE-style fragments; FFmpeg 7.1.5-0+deb13u1)",
-        "HEVC video: 125 frames of 1280x720 decoded at 2.1, 2.2, 2.2 x realtime (MP2TS, MP4, MSE-style fragments; FFmpeg 7.1.5-0+deb13u1)",
+        "MPEG-2 video: 125 frames of 1280x720 decoded at 7.0, 6.4, 6.9 x realtime (MP2TS, MP4, MSE-style fragments; FFmpeg 7.1.5-0+deb13u1)",
+        "AVC video: 125 frames of 1280x720 decoded at 3.0, 3.0, 3.0 x realtime (MP2TS, MP4, MSE-style fragments; FFmpeg 7.1.5-0+deb13u1)",
+        "HEVC video: 125 frames of 1280x720 decoded at 2.1, 2.2, 2.1 x realtime (MP2TS, MP4, MSE-style fragments; FFmpeg 7.1.5-0+deb13u1)",
         "MP2 audio: decoded at 46 x realtime",
         "AC-3 audio: decoded at 30 x realtime",
         "AAC audio: decoded at 25 x realtime",
-        "HE-AAC audio: decoded at 15, 15 x realtime"
+        "HE-AAC audio: decoded at 15, 14 x realtime"
       ],
-      "checked_at": "2026-11-14T13:17:51Z",
+      "checked_at": "2026-11-15T16:29:32Z",
       "seconds": 0.0,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "media-input-vm-arm32": {
       "status": "pass",
@@ -881,103 +889,103 @@
         "MSE-style fragments accepted: MPEG-2 from 11 fragments appended to the decoder (3255220 bytes), AVC from 5 fragments appended to the decoder (1656736 bytes), HEVC from 5 fragments appended to the decoder (1148951 bytes)",
         "audio-only streams accepted in MP2TS and in MP4"
       ],
-      "checked_at": "2026-11-14T13:19:57Z",
-      "seconds": 126.3,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T16:31:42Z",
+      "seconds": 129.9,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "media-codecs-vm-arm32": {
       "status": "pass",
       "task": "5.2",
       "description": "MPEG-2, AVC, HEVC, MP2, AC-3, AAC and HE-AAC are decoded in an ARM32 VM",
       "details": [
-        "MPEG-2 video: 125 frames of 1280x720 decoded at 5.4, 5.3, 5.2 x realtime (MP2TS, MP4, MSE-style fragments; FFmpeg 7.1.5-0+deb13u1)",
-        "AVC video: 125 frames of 1280x720 decoded at 2.0, 1.9, 1.9 x realtime (MP2TS, MP4, MSE-style fragments; FFmpeg 7.1.5-0+deb13u1)",
-        "HEVC video: 125 frames of 1280x720 decoded at 1.8, 1.6, 1.6 x realtime (MP2TS, MP4, MSE-style fragments; FFmpeg 7.1.5-0+deb13u1)",
+        "MPEG-2 video: 125 frames of 1280x720 decoded at 4.7, 5.0, 4.8 x realtime (MP2TS, MP4, MSE-style fragments; FFmpeg 7.1.5-0+deb13u1)",
+        "AVC video: 125 frames of 1280x720 decoded at 2.0, 1.9, 1.8 x realtime (MP2TS, MP4, MSE-style fragments; FFmpeg 7.1.5-0+deb13u1)",
+        "HEVC video: 125 frames of 1280x720 decoded at 1.6, 1.6, 1.6 x realtime (MP2TS, MP4, MSE-style fragments; FFmpeg 7.1.5-0+deb13u1)",
         "MP2 audio: decoded at 45 x realtime",
         "AC-3 audio: decoded at 35 x realtime",
-        "AAC audio: decoded at 32 x realtime",
-        "HE-AAC audio: decoded at 15, 14 x realtime"
+        "AAC audio: decoded at 33 x realtime",
+        "HE-AAC audio: decoded at 14, 14 x realtime"
       ],
-      "checked_at": "2026-11-14T13:19:57Z",
+      "checked_at": "2026-11-15T16:31:42Z",
       "seconds": 0.0,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "video-wayland-vm-arm64": {
       "status": "pass",
       "task": "5.3",
       "description": "decoded video is rendered through Wayland in an ARM64 VM",
       "details": [
-        "MPEG-2 from MP2TS: played on cpu, 60 of 125 frames dropped; a capture of the display shows the video",
-        "AVC from MP4: played on cpu, 70 of 125 frames dropped; a capture of the display shows the video",
+        "MPEG-2 from MP2TS: played on cpu, 58 of 125 frames dropped; a capture of the display shows the video",
+        "AVC from MP4: played on cpu, 71 of 125 frames dropped; a capture of the display shows the video",
         "HEVC from MSE-style fragments: played on cpu, 71 of 125 frames dropped; a capture of the display shows the video",
         "graphics provider: host; sound: the target's audio device"
       ],
-      "checked_at": "2026-11-14T13:28:37Z",
-      "seconds": 277.6,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T16:40:24Z",
+      "seconds": 279.1,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "video-wayland-vm-arm32": {
       "status": "pass",
       "task": "5.3",
       "description": "decoded video is rendered through Wayland in an ARM32 VM",
       "details": [
-        "MPEG-2 from MP2TS: played on cpu, 102 of 125 frames dropped; a capture of the display shows the video",
-        "AVC from MP4: played on cpu, 105 of 125 frames dropped; a capture of the display shows the video (the display service ended during the first attempt and was started again)",
-        "HEVC from MSE-style fragments: played on cpu, 107 of 125 frames dropped; a capture of the display shows the video",
+        "MPEG-2 from MP2TS: played on cpu, 103 of 125 frames dropped; a capture of the display shows the video",
+        "AVC from MP4: played on cpu, 107 of 125 frames dropped; a capture of the display shows the video (the display service ended during the first attempt and was started again)",
+        "HEVC from MSE-style fragments: played on cpu, 105 of 125 frames dropped; a capture of the display shows the video",
         "graphics provider: host; sound: the target's audio device"
       ],
-      "checked_at": "2026-11-14T13:32:17Z",
-      "seconds": 219.6,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T16:44:04Z",
+      "seconds": 219.3,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "video-gles-vm-arm64": {
       "status": "pass",
       "task": "5.3",
       "description": "decoded video is rendered through OpenGL ES in an ARM64 VM",
       "details": [
-        "MPEG-2 from MP2TS: played on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2), 2 of 125 frames dropped; a capture of the display shows the video",
+        "MPEG-2 from MP2TS: played on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2), 0 of 125 frames dropped; a capture of the display shows the video",
         "AVC from MP4: played on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2), 0 of 125 frames dropped; a capture of the display shows the video",
         "HEVC from MSE-style fragments: played on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2), 0 of 125 frames dropped; a capture of the display shows the video",
         "graphics provider: host; sound: the target's audio device"
       ],
-      "checked_at": "2026-11-14T13:32:17Z",
+      "checked_at": "2026-11-15T16:44:04Z",
       "seconds": 0.0,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "video-gles-vm-arm32": {
       "status": "pass",
       "task": "5.3",
       "description": "decoded video is rendered through OpenGL ES in an ARM32 VM",
       "details": [
-        "MPEG-2 from MP2TS: played on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2), 4 of 125 frames dropped; a capture of the display shows the video",
+        "MPEG-2 from MP2TS: played on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2), 0 of 125 frames dropped; a capture of the display shows the video",
         "AVC from MP4: played on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2), 0 of 125 frames dropped; a capture of the display shows the video",
         "HEVC from MSE-style fragments: played on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2), 1 of 125 frames dropped; a capture of the display shows the video (the display service ended during the first attempt and was started again)",
         "graphics provider: host; sound: the target's audio device"
       ],
-      "checked_at": "2026-11-14T13:32:17Z",
+      "checked_at": "2026-11-15T16:44:04Z",
       "seconds": 0.0,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "video-vulkan-vm-arm64": {
       "status": "pass",
       "task": "5.3",
       "description": "decoded video is rendered through Vulkan in an ARM64 VM",
       "details": [
-        "MPEG-2 from MP2TS: played on llvmpipe (LLVM 19.1.7, 128 bits), 103 of 125 frames dropped; a capture of the display shows the video",
-        "AVC from MP4: played on llvmpipe (LLVM 19.1.7, 128 bits), 106 of 125 frames dropped; a capture of the display shows the video",
-        "HEVC from MSE-style fragments: played on llvmpipe (LLVM 19.1.7, 128 bits), 95 of 125 frames dropped; a capture of the display shows the video",
+        "MPEG-2 from MP2TS: played on llvmpipe (LLVM 19.1.7, 128 bits), 106 of 125 frames dropped; a capture of the display shows the video",
+        "AVC from MP4: played on llvmpipe (LLVM 19.1.7, 128 bits), 108 of 125 frames dropped; a capture of the display shows the video",
+        "HEVC from MSE-style fragments: played on llvmpipe (LLVM 19.1.7, 128 bits), 93 of 125 frames dropped; a capture of the display shows the video",
         "graphics provider: host; sound: the target's audio device"
       ],
-      "checked_at": "2026-11-14T13:32:17Z",
+      "checked_at": "2026-11-15T16:44:04Z",
       "seconds": 0.0,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "video-vulkan-vm-arm32": {
       "status": "fail",
@@ -986,25 +994,25 @@
       "details": [
         "mpeg2-mp2ts/vulkan was not played: the player closed its control connection"
       ],
-      "checked_at": "2026-11-14T13:32:17Z",
+      "checked_at": "2026-11-15T16:44:04Z",
       "seconds": 0.0,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "video-flutter-vm-arm64": {
       "status": "pass",
       "task": "5.3",
       "description": "decoded video is rendered through Flutter in an ARM64 VM",
       "details": [
-        "MPEG-2 from MP2TS: played on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2), 50 of 125 frames dropped; a capture of the display shows the video",
-        "AVC from MP4: played on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2), 47 of 125 frames dropped; a capture of the display shows the video",
-        "HEVC from MSE-style fragments: played on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2), 51 of 125 frames dropped; a capture of the display shows the video",
+        "MPEG-2 from MP2TS: played on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2), 53 of 125 frames dropped; a capture of the display shows the video",
+        "AVC from MP4: played on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2), 51 of 125 frames dropped; a capture of the display shows the video",
+        "HEVC from MSE-style fragments: played on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2), 45 of 125 frames dropped; a capture of the display shows the video",
         "graphics provider: host; sound: the target's audio device"
       ],
-      "checked_at": "2026-11-14T13:32:17Z",
+      "checked_at": "2026-11-15T16:44:04Z",
       "seconds": 0.0,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "video-flutter-vm-arm32": {
       "status": "fail",
@@ -1013,42 +1021,583 @@
       "details": [
         "the arm32 target image has no Flutter application: the Flutter SDK (3.47.9) builds Linux applications for x86_64 and arm64 only"
       ],
-      "checked_at": "2026-11-14T13:32:17Z",
+      "checked_at": "2026-11-15T16:44:04Z",
       "seconds": 0.0,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "audio-host-vm-arm64": {
       "status": "pass",
       "task": "5.3",
       "description": "decoded audio is played through the host OS, from an ARM64 VM",
       "details": [
-        "MP2: played on the target in 8.4 s; its 440 Hz tone reached the host-side process and was recorded at the host's sound server",
-        "AC-3: played on the target in 8.7 s; its 660 Hz tone reached the host-side process and was recorded at the host's sound server",
-        "AAC: played on the target in 8.7 s; its 880 Hz tone reached the host-side process and was recorded at the host's sound server",
-        "HE-AAC: played on the target in 8.8, 9.0 s; its 1100 Hz tone reached the host-side process and was recorded at the host's sound server",
+        "MP2: played on the target in 8.7 s; its 440 Hz tone reached the host-side process and was recorded at the host's sound server",
+        "AC-3: played on the target in 8.5 s; its 660 Hz tone reached the host-side process and was recorded at the host's sound server",
+        "AAC: played on the target in 8.5 s; its 880 Hz tone reached the host-side process and was recorded at the host's sound server",
+        "HE-AAC: played on the target in 8.9, 8.7 s; its 1100 Hz tone reached the host-side process and was recorded at the host's sound server",
         "path: target ALSA device (kernel:virtio-snd - VirtIO SoundCard) -> the emulated sound card's backend, through a named pipe -> the host's player program (pacat)"
       ],
-      "checked_at": "2026-11-14T13:34:25Z",
-      "seconds": 74.3,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T16:46:13Z",
+      "seconds": 74.1,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "audio-host-vm-arm32": {
       "status": "pass",
       "task": "5.3",
       "description": "decoded audio is played through the host OS, from an ARM32 VM",
       "details": [
-        "MP2: played on the target in 8.8 s; its 440 Hz tone reached the host-side process and was recorded at the host's sound server",
-        "AC-3: played on the target in 8.5 s; its 660 Hz tone reached the host-side process and was recorded at the host's sound server",
-        "AAC: played on the target in 8.5 s; its 880 Hz tone reached the host-side process and was recorded at the host's sound server",
-        "HE-AAC: played on the target in 8.5, 8.7 s; its 1100 Hz tone reached the host-side process and was recorded at the host's sound server",
+        "MP2: played on the target in 8.5 s; its 440 Hz tone reached the host-side process and was recorded at the host's sound server",
+        "AC-3: played on the target in 8.4 s; its 660 Hz tone reached the host-side process and was recorded at the host's sound server",
+        "AAC: played on the target in 8.2 s; its 880 Hz tone reached the host-side process and was recorded at the host's sound server",
+        "HE-AAC: played on the target in 8.5, 8.5 s; its 1100 Hz tone reached the host-side process and was recorded at the host's sound server",
         "path: target ALSA device (kernel:virtio-snd - VirtIO SoundCard) -> the emulated sound card's backend, through a named pipe -> the host's player program (pacat)"
       ],
-      "checked_at": "2026-11-14T13:36:24Z",
-      "seconds": 119.2,
-      "revision": "1fbe67ce2ce2ba2265f42ae526307a45478731a6",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T16:47:56Z",
+      "seconds": 103.3,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "settings-window": {
+      "status": "pass",
+      "task": "7.3",
+      "description": "the settings window offers every launcher setting and gives its arguments",
+      "details": [
+        "the window has a field for every argument of \"emu run\": arch, cpus, driver, emulator_arg, graphics, memory, mode, mute, option, rebuild, record, remote_control, repeat, resolution, screenshot, timeout, window_mode, workload, workload_args",
+        "mode, VM guest CPU (off in container mode), workload, window mode and the others set as a person would; Start gave: emu run --mode vm --arch arm64 --workload graphics-demo --cpus 2 --memory 1024 --resolution 4k --graphics emulated --fullscreen --remote-control window --mute --driver hwrng=mocked --option accel=tcg --option verbose-boot=yes --record --repeat 2 --timeout 120 -- --tests wayland --seconds 1",
+        "the launcher's own parser reads those arguments as what was set",
+        "unchanged, Start gives \"emu run\"; a timeout of \"soon\" is refused with the launcher's reason (Argument --timeout: invalid float value: 'soon'); closing the window starts nothing"
+      ],
+      "checked_at": "2026-11-15T16:59:57Z",
+      "seconds": 2.6,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "settings-launch": {
+      "status": "pass",
+      "task": "7.3",
+      "description": "without arguments the launcher shows the settings window and starts from it",
+      "details": [
+        "\"emu\" without arguments showed the settings window; the driver check was chosen in it and started, and the launcher ran: emu run --workload driver-check --driver hwrng=mocked",
+        "its results are those of the same arguments on the command line: [('hwrng', 'mocked', 'mock:fixed-pattern', '4d4f434b45442d4857524e472d56312e', True)]",
+        "with arguments (\"emu workloads\") the launcher did as they say, without the window"
+      ],
+      "checked_at": "2026-11-15T16:59:59Z",
+      "seconds": 2.1,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "web-launch-container": {
+      "status": "pass",
+      "task": "6.1",
+      "description": "WPE WebKit launches in container mode",
+      "details": [
+        "WPE WebKit 2.48.3 (Cog 0.18.4) started, loaded a page and ran its script in 4.4 s; a capture of the display shows the page, full screen at 1280x720",
+        "Media Source Extensions: available; drawn on llvmpipe (LLVM 19.1.7, 256 bits)",
+        "graphics provider: emulated"
+      ],
+      "checked_at": "2026-11-15T16:48:45Z",
+      "seconds": 6.6,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "window-display-container": {
+      "status": "pass",
+      "task": "7.1",
+      "description": "the launcher's window shows the display of container mode",
+      "details": [
+        "the window got the target's 1280x720 display and shows its picture: the marker blocks are where the target drew them, pixel for pixel",
+        "windowed, with its toolbar; the display took 1280x720 of the window at a pixel ratio of 1.0",
+        "graphics provider: emulated"
+      ],
+      "checked_at": "2026-11-15T17:24:18Z",
+      "seconds": 10.2,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "remote-keys-container": {
+      "status": "pass",
+      "task": "7.4",
+      "description": "host keyboard keys reach the target as remote control keys in container mode",
+      "details": [
+        "typed into the emulator's window on the host keyboard: all 32 remote control keys reached a program on the target's display, each pressed and released with its own Linux key code",
+        "key symbols in the target: up Up, ok Return, back XF86Back, red XF86Red, play XF86AudioPlay, channel_up XF86ChannelUp, exit XF86Close",
+        "with a key code but no symbol in the target's keymap: text",
+        "host keys: Up for Up, Down for Down, Left for Left, Right for Right, Return for OK, Backspace for BACK, 0 for 0, 1 for 1, 2 for 2, 3 for 3, 4 for 4, 5 for 5, 6 for 6, 7 for 7, 8 for 8, 9 for 9, R for Red, G for Green, Y for Yellow, B for Blue, P for Play, U for Pause, Space for Play/pause, S for Stop, F for Fast forward, W for Rewind, C for Record, T for TEXT, PageUp for P+, PageDown for P-, H for WEBTV, Escape for EXIT",
+        "not checked: that the keys stay away from the target while another window has the focus"
+      ],
+      "checked_at": "2026-11-15T16:59:59Z",
+      "seconds": 0.0,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "web-launch-vm": {
+      "status": "pass",
+      "task": "6.1",
+      "description": "WPE WebKit launches in a host-native VM",
+      "details": [
+        "WPE WebKit 2.48.3 (Cog 0.18.4) started, loaded a page and ran its script in 4.3 s; a capture of the display shows the page, full screen at 1280x720",
+        "Media Source Extensions: available; drawn on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2)",
+        "graphics provider: host"
+      ],
+      "checked_at": "2026-11-15T16:48:53Z",
+      "seconds": 8.0,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "web-launch-vm-arm64": {
+      "status": "pass",
+      "task": "6.1",
+      "description": "WPE WebKit launches in an ARM64 VM",
+      "details": [
+        "WPE WebKit 2.48.3 (Cog 0.18.4) started, loaded a page and ran its script in 14.4 s; a capture of the display shows the page, full screen at 1280x720",
+        "Media Source Extensions: available; drawn on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2)",
+        "graphics provider: host"
+      ],
+      "checked_at": "2026-11-15T16:49:42Z",
+      "seconds": 49.4,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "web-launch-vm-arm32": {
+      "status": "pass",
+      "task": "6.1",
+      "description": "WPE WebKit launches in an ARM32 VM",
+      "details": [
+        "WPE WebKit 2.48.3 (Cog 0.18.4) started, loaded a page and ran its script in 15.5 s; a capture of the display shows the page, full screen at 1280x720",
+        "Media Source Extensions: available; drawn on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2)",
+        "graphics provider: host"
+      ],
+      "checked_at": "2026-11-15T16:51:03Z",
+      "seconds": 80.6,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "web-render-container": {
+      "status": "pass",
+      "task": "6.2",
+      "description": "WPE WebKit renders the animated page in container mode",
+      "details": [
+        "the animated page at 1280x720: 49.9 frames/s in WPE WebKit 2.48.3 (Cog 0.18.4) on llvmpipe (LLVM 19.1.7, 256 bits); a capture of the display shows it",
+        "time between frames p99 156.0 ms",
+        "graphics provider: emulated"
+      ],
+      "checked_at": "2026-11-15T16:51:46Z",
+      "seconds": 43.4,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "web-mse-container": {
+      "status": "pass",
+      "task": "6.2",
+      "description": "WPE WebKit plays the reference streams through MSE in container mode",
+      "details": [
+        "MPEG-2 through MSE: 11 fragments appended, 9 of 125 frames not shown (the browser counted 117 at its output and 1 dropped; the display showed something new 121 times), sound on; a capture of the display shows the video",
+        "AVC through MSE: 5 fragments appended, 8 of 125 frames not shown (the browser counted 118 at its output and 1 dropped; the display showed something new 121 times), sound on; a capture of the display shows the video",
+        "HEVC through MSE: 5 fragments appended, 8 of 125 frames not shown (the browser counted 118 at its output and 1 dropped; the display showed something new 121 times), sound on; a capture of the display shows the video",
+        "played by WPE WebKit 2.48.3 (Cog 0.18.4); graphics provider: emulated"
+      ],
+      "checked_at": "2026-11-15T16:51:46Z",
+      "seconds": 0.0,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "web-render-vm": {
+      "status": "pass",
+      "task": "6.2",
+      "description": "WPE WebKit renders the animated page in a host-native VM",
+      "details": [
+        "the animated page at 1280x720: 58.5 frames/s in WPE WebKit 2.48.3 (Cog 0.18.4) on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); a capture of the display shows it",
+        "time between frames p99 57.0 ms",
+        "graphics provider: host"
+      ],
+      "checked_at": "2026-11-15T16:52:30Z",
+      "seconds": 43.5,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "web-mse-vm": {
+      "status": "pass",
+      "task": "6.2",
+      "description": "WPE WebKit plays the reference streams through MSE in a host-native VM",
+      "details": [
+        "MPEG-2 through MSE: 11 fragments appended, 0 of 125 frames not shown (the browser counted 125 at its output and 0 dropped; the display showed something new 127 times), sound on; a capture of the display shows the video",
+        "AVC through MSE: 5 fragments appended, 1 of 125 frames not shown (the browser counted 124 at its output and 0 dropped; the display showed something new 127 times), sound on; a capture of the display shows the video",
+        "HEVC through MSE: 5 fragments appended, 0 of 125 frames not shown (the browser counted 125 at its output and 0 dropped; the display showed something new 127 times), sound on; a capture of the display shows the video",
+        "played by WPE WebKit 2.48.3 (Cog 0.18.4); graphics provider: host"
+      ],
+      "checked_at": "2026-11-15T16:52:30Z",
+      "seconds": 0.0,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "web-render-vm-arm64": {
+      "status": "pass",
+      "task": "6.2",
+      "description": "WPE WebKit renders the animated page in an ARM64 VM",
+      "details": [
+        "the animated page at 1280x720: 0.8 frames/s in WPE WebKit 2.48.3 (Cog 0.18.4) on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); a capture of the display shows it",
+        "time between frames p99 1905.0 ms",
+        "graphics provider: host"
+      ],
+      "checked_at": "2026-11-15T16:55:03Z",
+      "seconds": 153.1,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "web-mse-vm-arm64": {
+      "status": "pass",
+      "task": "6.2",
+      "description": "WPE WebKit plays the reference streams through MSE in an ARM64 VM",
+      "details": [
+        "MPEG-2 through MSE: 11 fragments appended, 0 of 125 frames not shown (the browser counted 125 at its output and 0 dropped; the display showed something new 127 times), sound on; a capture of the display shows the video",
+        "AVC through MSE: 5 fragments appended, 1 of 125 frames not shown (the browser counted 124 at its output and 0 dropped; the display showed something new 126 times), sound on; a capture of the display shows the video",
+        "HEVC through MSE: 5 fragments appended, 0 of 125 frames not shown (the browser counted 125 at its output and 0 dropped; the display showed something new 127 times), sound on; a capture of the display shows the video",
+        "played by WPE WebKit 2.48.3 (Cog 0.18.4); graphics provider: host"
+      ],
+      "checked_at": "2026-11-15T16:55:03Z",
+      "seconds": 0.0,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "web-render-vm-arm32": {
+      "status": "pass",
+      "task": "6.2",
+      "description": "WPE WebKit renders the animated page in an ARM32 VM",
+      "details": [
+        "the animated page at 1280x720: 0.2 frames/s in WPE WebKit 2.48.3 (Cog 0.18.4) on virgl (NVIDIA GeForce RTX 4070/PCIe/SSE2); a capture of the display shows it",
+        "time between frames p99 4874.0 ms",
+        "graphics provider: host"
+      ],
+      "checked_at": "2026-11-15T16:58:00Z",
+      "seconds": 176.9,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "web-mse-vm-arm32": {
+      "status": "pass",
+      "task": "6.2",
+      "description": "WPE WebKit plays the reference streams through MSE in an ARM32 VM",
+      "details": [
+        "MPEG-2 through MSE: 11 fragments appended, 9 of 125 frames not shown (the browser counted 116 at its output and 0 dropped; the display showed something new 117 times), sound on; a capture of the display shows the video",
+        "AVC through MSE: 5 fragments appended, 60 of 125 frames not shown (the browser counted 69 at its output and 4 dropped; the display showed something new 69 times), sound on; a capture of the display shows the video",
+        "HEVC through MSE: 5 fragments appended, 49 of 125 frames not shown (the browser counted 76 at its output and 0 dropped; the display showed something new 78 times), sound on; a capture of the display shows the video",
+        "played by WPE WebKit 2.48.3 (Cog 0.18.4); graphics provider: host"
+      ],
+      "checked_at": "2026-11-15T16:58:00Z",
+      "seconds": 0.0,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "window-fullscreen-container": {
+      "status": "pass",
+      "task": "7.1",
+      "description": "the hotkey switches to full screen and back, with container mode",
+      "details": [
+        "Ctrl+Alt+F: full screen, without the toolbar; F11: back to the 1280x755 window with its toolbar",
+        "full screen the window covered the 2560x1440 screen, and the display in it, scaled to 2560x1440, shows the target's picture"
+      ],
+      "checked_at": "2026-11-15T16:58:10Z",
+      "seconds": 0.0,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "window-display-vm": {
+      "status": "pass",
+      "task": "7.1",
+      "description": "the launcher's window shows the display of a host-native VM",
+      "details": [
+        "the window got the target's 1280x720 display and shows its picture: the marker blocks are where the target drew them, pixel for pixel",
+        "windowed, with its toolbar; the display took 1280x720 of the window at a pixel ratio of 1.0",
+        "graphics provider: host"
+      ],
+      "checked_at": "2026-11-15T17:24:08Z",
+      "seconds": 12.0,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "window-fullscreen-vm": {
+      "status": "pass",
+      "task": "7.1",
+      "description": "the hotkey switches to full screen and back, with a host-native VM",
+      "details": [
+        "Ctrl+Alt+F: full screen, without the toolbar; F11: back to the 1280x755 window with its toolbar",
+        "full screen the window covered the 2560x1440 screen, and the display in it, scaled to 2560x1440, shows the target's picture"
+      ],
+      "checked_at": "2026-11-15T16:58:22Z",
+      "seconds": 0.0,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "window-display-vm-arm64": {
+      "status": "pass",
+      "task": "7.1",
+      "description": "the launcher's window shows the display of an ARM64 VM",
+      "details": [
+        "the window got the target's 1280x720 display and shows its picture: the marker blocks are where the target drew them, pixel for pixel",
+        "windowed, with its toolbar; the display took 1280x720 of the window at a pixel ratio of 1.0",
+        "graphics provider: host"
+      ],
+      "checked_at": "2026-11-15T16:58:56Z",
+      "seconds": 33.9,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "window-fullscreen-vm-arm64": {
+      "status": "pass",
+      "task": "7.1",
+      "description": "the hotkey switches to full screen and back, with an ARM64 VM",
+      "details": [
+        "Ctrl+Alt+F: full screen, without the toolbar; F11: back to the 1280x755 window with its toolbar",
+        "full screen the window covered the 2560x1440 screen, and the display in it, scaled to 2560x1440, shows the target's picture"
+      ],
+      "checked_at": "2026-11-15T16:58:56Z",
+      "seconds": 0.0,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "window-display-vm-arm32": {
+      "status": "pass",
+      "task": "7.1",
+      "description": "the launcher's window shows the display of an ARM32 VM",
+      "details": [
+        "the window got the target's 1280x720 display and shows its picture: the marker blocks are where the target drew them, pixel for pixel",
+        "windowed, with its toolbar; the display took 1280x720 of the window at a pixel ratio of 1.0",
+        "graphics provider: host"
+      ],
+      "checked_at": "2026-11-15T16:59:54Z",
+      "seconds": 58.1,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "window-fullscreen-vm-arm32": {
+      "status": "pass",
+      "task": "7.1",
+      "description": "the hotkey switches to full screen and back, with an ARM32 VM",
+      "details": [
+        "Ctrl+Alt+F: full screen, without the toolbar; F11: back to the 1280x755 window with its toolbar",
+        "full screen the window covered the 2560x1440 screen, and the display in it, scaled to 2560x1440, shows the target's picture"
+      ],
+      "checked_at": "2026-11-15T16:59:54Z",
+      "seconds": 0.0,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "window-scaling-container": {
+      "status": "pass",
+      "task": "7.2",
+      "description": "the display scales with the window, with container mode",
+      "details": [
+        "window resized to 640x360: the 720p display is drawn 640x360, all of it, in its own shape",
+        "window resized to 900x700: the 720p display is drawn 900x506, all of it, in its own shape"
+      ],
+      "checked_at": "2026-11-15T16:59:54Z",
+      "seconds": 0.0,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "window-toolbar-container": {
+      "status": "pass",
+      "task": "7.2",
+      "description": "the toolbar's 1:1 and mute buttons work, with container mode",
+      "details": [
+        "1:1: the 1280x720 display is drawn on 1280x720 screen pixels, after the window had been another size",
+        "mute: the button muted the run's audio process and then unmuted it (asked of the process itself each time)"
+      ],
+      "checked_at": "2026-11-15T16:59:54Z",
+      "seconds": 0.0,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "window-scaling-vm": {
+      "status": "pass",
+      "task": "7.2",
+      "description": "the display scales with the window, with a host-native VM",
+      "details": [
+        "window resized to 640x360: the 720p display is drawn 640x360, all of it, in its own shape",
+        "window resized to 900x700: the 720p display is drawn 900x506, all of it, in its own shape"
+      ],
+      "checked_at": "2026-11-15T16:59:54Z",
+      "seconds": 0.0,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "window-toolbar-vm": {
+      "status": "pass",
+      "task": "7.2",
+      "description": "the toolbar's 1:1 and mute buttons work, with a host-native VM",
+      "details": [
+        "1:1: the 1280x720 display is drawn on 1280x720 screen pixels, after the window had been another size",
+        "mute: the button muted the run's audio process and then unmuted it (asked of the process itself each time)"
+      ],
+      "checked_at": "2026-11-15T17:24:18Z",
+      "seconds": 0.0,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "window-scaling-vm-arm64": {
+      "status": "pass",
+      "task": "7.2",
+      "description": "the display scales with the window, with an ARM64 VM",
+      "details": [
+        "window resized to 640x360: the 720p display is drawn 640x360, all of it, in its own shape",
+        "window resized to 900x700: the 720p display is drawn 900x506, all of it, in its own shape"
+      ],
+      "checked_at": "2026-11-15T16:59:54Z",
+      "seconds": 0.0,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "window-toolbar-vm-arm64": {
+      "status": "pass",
+      "task": "7.2",
+      "description": "the toolbar's 1:1 and mute buttons work, with an ARM64 VM",
+      "details": [
+        "1:1: the 1280x720 display is drawn on 1280x720 screen pixels, after the window had been another size",
+        "mute: the button muted the run's audio process and then unmuted it (asked of the process itself each time)"
+      ],
+      "checked_at": "2026-11-15T16:59:54Z",
+      "seconds": 0.0,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "window-scaling-vm-arm32": {
+      "status": "pass",
+      "task": "7.2",
+      "description": "the display scales with the window, with an ARM32 VM",
+      "details": [
+        "window resized to 640x360: the 720p display is drawn 640x360, all of it, in its own shape",
+        "window resized to 900x700: the 720p display is drawn 900x506, all of it, in its own shape"
+      ],
+      "checked_at": "2026-11-15T16:59:54Z",
+      "seconds": 0.0,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "window-toolbar-vm-arm32": {
+      "status": "pass",
+      "task": "7.2",
+      "description": "the toolbar's 1:1 and mute buttons work, with an ARM32 VM",
+      "details": [
+        "1:1: the 1280x720 display is drawn on 1280x720 screen pixels, after the window had been another size",
+        "mute: the button muted the run's audio process and then unmuted it (asked of the process itself each time)"
+      ],
+      "checked_at": "2026-11-15T16:59:54Z",
+      "seconds": 0.0,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "remote-keys-vm": {
+      "status": "pass",
+      "task": "7.4",
+      "description": "host keyboard keys reach the target as remote control keys in a host-native VM",
+      "details": [
+        "typed into the emulator's window on the host keyboard: all 32 remote control keys reached a program on the target's display, each pressed and released with its own Linux key code",
+        "key symbols in the target: up Up, ok Return, back XF86Back, red XF86Red, play XF86AudioPlay, channel_up XF86ChannelUp, exit XF86Close",
+        "with a key code but no symbol in the target's keymap: text",
+        "host keys: Up for Up, Down for Down, Left for Left, Right for Right, Return for OK, Backspace for BACK, 0 for 0, 1 for 1, 2 for 2, 3 for 3, 4 for 4, 5 for 5, 6 for 6, 7 for 7, 8 for 8, 9 for 9, R for Red, G for Green, Y for Yellow, B for Blue, P for Play, U for Pause, Space for Play/pause, S for Stop, F for Fast forward, W for Rewind, C for Record, T for TEXT, PageUp for P+, PageDown for P-, H for WEBTV, Escape for EXIT",
+        "not checked: that the keys stay away from the target while another window has the focus"
+      ],
+      "checked_at": "2026-11-15T17:24:18Z",
+      "seconds": 0.0,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "remote-keys-vm-arm64": {
+      "status": "pass",
+      "task": "7.4",
+      "description": "host keyboard keys reach the target as remote control keys in an ARM64 VM",
+      "details": [
+        "typed into the emulator's window on the host keyboard: all 32 remote control keys reached a program on the target's display, each pressed and released with its own Linux key code",
+        "key symbols in the target: up Up, ok Return, back XF86Back, red XF86Red, play XF86AudioPlay, channel_up XF86ChannelUp, exit XF86Close",
+        "with a key code but no symbol in the target's keymap: text",
+        "host keys: Up for Up, Down for Down, Left for Left, Right for Right, Return for OK, Backspace for BACK, 0 for 0, 1 for 1, 2 for 2, 3 for 3, 4 for 4, 5 for 5, 6 for 6, 7 for 7, 8 for 8, 9 for 9, R for Red, G for Green, Y for Yellow, B for Blue, P for Play, U for Pause, Space for Play/pause, S for Stop, F for Fast forward, W for Rewind, C for Record, T for TEXT, PageUp for P+, PageDown for P-, H for WEBTV, Escape for EXIT",
+        "not checked: that the keys stay away from the target while another window has the focus"
+      ],
+      "checked_at": "2026-11-15T16:59:59Z",
+      "seconds": 0.0,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "remote-keys-vm-arm32": {
+      "status": "pass",
+      "task": "7.4",
+      "description": "host keyboard keys reach the target as remote control keys in an ARM32 VM",
+      "details": [
+        "typed into the emulator's window on the host keyboard: all 32 remote control keys reached a program on the target's display, each pressed and released with its own Linux key code",
+        "key symbols in the target: up Up, ok Return, back XF86Back, red XF86Red, play XF86AudioPlay, channel_up XF86ChannelUp, exit XF86Close",
+        "with a key code but no symbol in the target's keymap: text",
+        "host keys: Up for Up, Down for Down, Left for Left, Right for Right, Return for OK, Backspace for BACK, 0 for 0, 1 for 1, 2 for 2, 3 for 3, 4 for 4, 5 for 5, 6 for 6, 7 for 7, 8 for 8, 9 for 9, R for Red, G for Green, Y for Yellow, B for Blue, P for Play, U for Pause, Space for Play/pause, S for Stop, F for Fast forward, W for Rewind, C for Record, T for TEXT, PageUp for P+, PageDown for P-, H for WEBTV, Escape for EXIT",
+        "not checked: that the keys stay away from the target while another window has the focus"
+      ],
+      "checked_at": "2026-11-15T16:59:59Z",
+      "seconds": 0.0,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "remote-window-container": {
+      "status": "pass",
+      "task": "7.5",
+      "description": "the on-screen remote control's buttons reach the target in container mode",
+      "details": [
+        "the remote control has a window of its own (232x548), with a button for each of the 32 keys",
+        "clicked on the on-screen remote control: all 32 remote control keys reached a program on the target's display, each pressed and released with its own Linux key code",
+        "key symbols in the target: up Up, ok Return, back XF86Back, red XF86Red, play XF86AudioPlay, channel_up XF86ChannelUp, exit XF86Close",
+        "with a key code but no symbol in the target's keymap: text",
+        "with the remote control shown, the host keys still worked in the emulator's window (32 keys) and in the remote control's own"
+      ],
+      "checked_at": "2026-11-15T16:59:59Z",
+      "seconds": 0.0,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "remote-window-vm": {
+      "status": "pass",
+      "task": "7.5",
+      "description": "the on-screen remote control's buttons reach the target in a host-native VM",
+      "details": [
+        "the remote control has a window of its own (232x548), with a button for each of the 32 keys",
+        "clicked on the on-screen remote control: all 32 remote control keys reached a program on the target's display, each pressed and released with its own Linux key code",
+        "key symbols in the target: up Up, ok Return, back XF86Back, red XF86Red, play XF86AudioPlay, channel_up XF86ChannelUp, exit XF86Close",
+        "with a key code but no symbol in the target's keymap: text",
+        "with the remote control shown, the host keys still worked in the emulator's window (32 keys) and in the remote control's own"
+      ],
+      "checked_at": "2026-11-15T16:59:59Z",
+      "seconds": 0.0,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "remote-window-vm-arm64": {
+      "status": "pass",
+      "task": "7.5",
+      "description": "the on-screen remote control's buttons reach the target in an ARM64 VM",
+      "details": [
+        "the remote control has a window of its own (232x548), with a button for each of the 32 keys",
+        "clicked on the on-screen remote control: all 32 remote control keys reached a program on the target's display, each pressed and released with its own Linux key code",
+        "key symbols in the target: up Up, ok Return, back XF86Back, red XF86Red, play XF86AudioPlay, channel_up XF86ChannelUp, exit XF86Close",
+        "with a key code but no symbol in the target's keymap: text",
+        "with the remote control shown, the host keys still worked in the emulator's window (32 keys) and in the remote control's own"
+      ],
+      "checked_at": "2026-11-15T16:59:59Z",
+      "seconds": 0.0,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "remote-window-vm-arm32": {
+      "status": "pass",
+      "task": "7.5",
+      "description": "the on-screen remote control's buttons reach the target in an ARM32 VM",
+      "details": [
+        "the remote control has a window of its own (232x548), with a button for each of the 32 keys",
+        "clicked on the on-screen remote control: all 32 remote control keys reached a program on the target's display, each pressed and released with its own Linux key code",
+        "key symbols in the target: up Up, ok Return, back XF86Back, red XF86Red, play XF86AudioPlay, channel_up XF86ChannelUp, exit XF86Close",
+        "with a key code but no symbol in the target's keymap: text",
+        "with the remote control shown, the host keys still worked in the emulator's window (32 keys) and in the remote control's own"
+      ],
+      "checked_at": "2026-11-15T16:59:59Z",
+      "seconds": 0.0,
+      "revision": "847b2ef3f86c28b0df2229fd0cacfce89caf7fb7",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     }
   }
 }

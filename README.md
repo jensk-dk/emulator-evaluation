@@ -24,14 +24,13 @@ runnable baseline, VM CPU and driver fidelity, graphics, and media playback.
 Stages 0 to 4 are verified on three hosts: macOS on ARM64, Windows on x86-64
 with Podman as the container runtime, and Linux on x86-64 (Kubuntu 24.04)
 with Docker. Stage 5, the WPE WebKit browser with its web workload, is
-implemented and verified on the Windows and macOS hosts: the browser
+implemented and verified on all three: the browser
 launches, renders the workload's page and plays the reference streams through
 Media Source Extensions in every mode the image is built for, and the
-workload's measurements are recorded for both. The Linux host has not run it
-yet. Of stage 6, the launcher's own windows are implemented and verified on
-the macOS and Windows hosts: the display window (toolbar, scaling, full
-screen), remote control keys from the host keyboard and from an on-screen
-remote control, and the settings window. They have not run on Linux yet, and
+workload's measurements are recorded for each host. Of stage 6, the
+launcher's own windows are implemented and verified on all three hosts: the
+display window (toolbar, scaling, full screen), remote control keys from the
+host keyboard and from an on-screen remote control, and the settings window.
 RedRat IR input is not implemented. macOS has no host
 graphics acceleration, which the Linux host has in VM mode. The task list and
 `evaluation/verification/` show what has been verified, and on which hosts.
@@ -98,6 +97,13 @@ Tumbleweed Qt installed, its X11 and Wayland plugins found their libraries
 (looked at on the two Ubuntus), and the settings window ran without a
 display. On Arch the installation stopped on a file conflict among the
 image's own packages and was not carried further.
+
+On the Linux host (Kubuntu 24.04, Python 3.12) `./setup.sh` installed version
+6.12.0, 262 MB, and the windows run on its desktop (X11). The system packages
+Qt needs were all there already. The script asks the package manager only
+for those that are missing: asked for one that is installed, apt marks it as
+installed on request, and it would then stay when the software it came with
+is removed.
 
 ### Removing what setup installed
 
@@ -441,14 +447,19 @@ Limits:
 
 - Run on the macOS and Windows hosts, with emulated graphics, in all four
   modes at 720p, and at 4K in a host-native VM (on Windows in container mode
-  as well). Not run on Linux.
+  as well). Run on the Linux host too (X11, KDE Plasma), in all four modes
+  at 720p; there a VM's display is rendered on the host GPU and still shown
+  in the launcher's window.
 - On Windows, QEMU shows a display rendered on the host GPU only in its own
   window, so `--mode vm --window` alone gets that window there, without
   toolbar or keys; add `--graphics emulated` or `--remote-control` for the
   launcher's.
-- On Linux with host graphics the launcher's window reads the display from
-  QEMU's VNC server, which in QEMU 8.2 shows no more than 2560x2048 pixels of
-  a 4K display (see the captures below). Not run.
+- In VM mode the launcher's window reads the display from QEMU's VNC server,
+  which in QEMU 8.2 (the Linux host's) serves no more than 2560x2048 pixels.
+  Of a 4K display the window then shows the top left part, with host and
+  with emulated graphics alike, and the launcher says so. `--option
+  window=qemu` shows the whole 4K display there, rendered on the host GPU, in
+  QEMU's own window. QEMU 11 (macOS, Windows) serves all of it.
 - Full screen is the window system's: on macOS it worked when the system had
   made the window the active application, and a window that was started from
   a background session and not made active reported full screen without
@@ -636,7 +647,7 @@ input is on, so runs without a window are as they were.
 Limits:
 
 - Verified on the macOS and Windows hosts, in all four modes: each of the 32
-  keys by its host key and by its button. Not run on Linux.
+  keys by its host key and by its button. Verified on the Linux host as well.
 - That host keys stay away from the target while another window has the focus
   follows from how windows get keys. The checks do not cover it; it was tried
   by hand on Windows, in container and host-native VM modes, with key presses

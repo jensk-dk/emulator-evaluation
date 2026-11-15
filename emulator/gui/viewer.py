@@ -40,6 +40,8 @@ QT_KEY_NAMES = {
     Qt.Key.Key_PageUp.value: "PageUp", Qt.Key.Key_PageDown.value: "PageDown",
 }
 QT_KEYS_BY_NAME = {name: key for key, name in QT_KEY_NAMES.items()}
+# The largest display QEMU 8.2's display server serves.
+VNC_LIMIT = (2560, 2048)
 COMMAND_KEYS = Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.MetaModifier
 
 
@@ -195,6 +197,8 @@ class Window(QMainWindow):
     def __init__(self, args, sender):
         super().__init__()
         self.sender = sender
+        self.args = args
+        self.cut_noted = False
         self.audio_port = args.audio_control
         self.keys_on = args.remote_control in ("keys", "window")
         self.muted = None
@@ -251,6 +255,7 @@ class Window(QMainWindow):
 
     def on_size(self, width, height):
         self.display.on_size(width, height)
+        self.note_cut(width, height)
         # As large as 1:1, or as the screen allows: when the display's size
         # is first known, and when it changes (a VM's display has another
         # size until the target sets its own), unless the user has given the
@@ -258,6 +263,19 @@ class Window(QMainWindow):
         if not self.isFullScreen() and (self.fitted is None or self.fitted == self.size()):
             self.one_to_one()
             self.fitted = self.size()
+
+    def note_cut(self, width, height):
+        """Say so, once, when the display server gives only the top left part
+        of the target's display. QEMU 8.2's stops at 2560x2048, so of a 4K
+        display it serves that much; QEMU 11 serves all of it."""
+        expected = getattr(self.args, "expect", None)
+        if not expected or self.cut_noted or (width, height) == expected:
+            return
+        if (width, height) == (min(expected[0], VNC_LIMIT[0]), min(expected[1], VNC_LIMIT[1])):
+            self.cut_noted = True
+            print("emu: the window shows the top left %dx%d of the target's %dx%d display: this QEMU's display "
+                  "server gives no more. --option window=qemu shows all of it, in QEMU's own window (no toolbar, "
+                  "no remote control keys)" % (width, height, expected[0], expected[1]), file=sys.stderr, flush=True)
 
     def one_to_one(self):
         if self.isFullScreen():
@@ -473,6 +491,11 @@ class Control(QObject):
             self.answer({"error": "%s: %s" % (type(error).__name__, error)})
 
 
+def _size(text):
+    width, _, height = text.partition("x")
+    return int(width), int(height)
+
+
 def _address(text):
     host, separator, port = text.rpartition(":")
     if separator and port.isdigit() and "/" not in text and "\\" not in text:
@@ -490,6 +513,8 @@ def main(argv=None):
     parser.add_argument("--keys-listen", type=int, metavar="PORT")
     parser.add_argument("--audio-control", type=int, metavar="PORT")
     parser.add_argument("--control", action="store_true")
+    parser.add_argument("--expect", type=_size, metavar="WIDTHxHEIGHT",
+                        help="the size of the target's display, to tell a display server that serves less of it")
     args = parser.parse_args(argv)
 
     sender = None

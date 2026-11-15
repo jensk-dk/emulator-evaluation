@@ -358,7 +358,9 @@ def launch(opts):
                 viewer_plan["display"], "Emulator: %s, %s" % (opts.workload, emulator["variant"]),
                 fullscreen=opts.fullscreen, remote_control=opts.remote_control or "keys",
                 keys_exec=viewer_plan.get("keys_exec"), keys_listen=viewer_plan.get("keys_listen"),
-                audio_port=plan.audio["control_port"] if plan.audio else None, control=bool(opts.on_viewer))
+                audio_port=plan.audio["control_port"] if plan.audio else None, control=bool(opts.on_viewer),
+                # A VM's display server can serve less than the display (QEMU 8.2: 2560x2048).
+                expect=(display["width"], display["height"]) if opts.mode == "vm" and display else None)
             if opts.on_viewer:
                 opts.on_viewer(viewer)
 

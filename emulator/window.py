@@ -106,7 +106,7 @@ class Viewer:
 
 
 def start_viewer(display, title, fullscreen=False, remote_control=None, keys_exec=None, keys_listen=None,
-                 audio_port=None, control=False):
+                 audio_port=None, control=False, expect=None):
     """Start the display window. `display` is where the target's display is
     served: a socket path or a (host, port) pair."""
     python = require_python("the emulator's display window")
@@ -124,6 +124,8 @@ def start_viewer(display, title, fullscreen=False, remote_control=None, keys_exe
         command += ["--audio-control", str(audio_port)]
     if control:
         command.append("--control")
+    if expect:
+        command += ["--expect", "%dx%d" % tuple(expect)]
     pipe = subprocess.PIPE if control else subprocess.DEVNULL
     try:
         process = subprocess.Popen(command, stdin=pipe, stdout=pipe, stderr=subprocess.PIPE if control else None,

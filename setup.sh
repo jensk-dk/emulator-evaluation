@@ -261,7 +261,7 @@ has_qt() { [ -x "$1" ] && "$1" -c 'import PySide6.QtWidgets' >/dev/null 2>&1; }
 # installation may lack: the module that creates Python environments, where
 # the distribution packages it apart, and the libraries that Qt and its
 # display plugins (X11 and Wayland) load. A desktop has most of them.
-linux_gui_packages() {
+linux_gui_package_names() {
   if have apt-get; then
     # GLib's package was renamed with Ubuntu 24.04.
     local glib=libglib2.0-0
@@ -278,6 +278,16 @@ linux_gui_packages() {
     echo "libglib-2_0-0 libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 libxkbcommon-x11-0 libICE6 libSM6" \
          "libwayland-cursor0 libglvnd fontconfig libdbus-1-3"
   fi
+}
+
+# Those of them that are not installed. Only these are asked for: a package
+# manager that is asked for a package it has marks it as installed on request,
+# and then no longer removes it with the software it came with.
+linux_gui_packages() {
+  local p
+  for p in $(linux_gui_package_names); do
+    package_installed "$p" || printf '%s ' "$p"
+  done
 }
 
 check_gui() {
@@ -765,6 +775,7 @@ install_linux() {
     is_missing container && pkgs="$pkgs podman"
     is_missing binfmt && pkgs="$pkgs qemu-user-static binfmt-support"
     is_missing gui && pkgs="$pkgs $(linux_gui_packages)"
+    pkgs=$(echo $pkgs)      # nothing but spaces is nothing to install
     if [ -n "$pkgs" ]; then
       as_root apt-get update || return 1
       before=$(installed_packages)
@@ -777,6 +788,7 @@ install_linux() {
     is_missing container && pkgs="$pkgs podman"
     is_missing binfmt && pkgs="$pkgs qemu-user-static"
     is_missing gui && pkgs="$pkgs $(linux_gui_packages)"
+    pkgs=$(echo $pkgs)      # nothing but spaces is nothing to install
     before=$(installed_packages)
     # shellcheck disable=SC2086
     [ -z "$pkgs" ] || as_root dnf install -y $pkgs || status=1
@@ -786,6 +798,7 @@ install_linux() {
     is_missing container && pkgs="$pkgs podman"
     is_missing binfmt && pkgs="$pkgs qemu-user-static qemu-user-static-binfmt"
     is_missing gui && pkgs="$pkgs $(linux_gui_packages)"
+    pkgs=$(echo $pkgs)      # nothing but spaces is nothing to install
     before=$(installed_packages)
     # shellcheck disable=SC2086
     [ -z "$pkgs" ] || as_root pacman -S --needed --noconfirm $pkgs || status=1
@@ -795,6 +808,7 @@ install_linux() {
     is_missing container && pkgs="$pkgs podman"
     is_missing binfmt && pkgs="$pkgs qemu-linux-user"
     is_missing gui && pkgs="$pkgs $(linux_gui_packages)"
+    pkgs=$(echo $pkgs)      # nothing but spaces is nothing to install
     before=$(installed_packages)
     # shellcheck disable=SC2086
     [ -z "$pkgs" ] || as_root zypper --non-interactive install $pkgs || status=1
