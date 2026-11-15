@@ -29,10 +29,10 @@ launches, renders the workload's page and plays the reference streams through
 Media Source Extensions in every mode the image is built for, and the
 workload's measurements are recorded for both. The Linux host has not run it
 yet. Of stage 6, the launcher's own windows are implemented and verified on
-the macOS host: the display window (toolbar, scaling, full screen), remote
-control keys from the host keyboard and from an on-screen remote control, and
-the settings window. They have not run on Windows or Linux yet, and RedRat IR
-input is not implemented. macOS has no host
+the macOS and Windows hosts: the display window (toolbar, scaling, full
+screen), remote control keys from the host keyboard and from an on-screen
+remote control, and the settings window. They have not run on Linux yet, and
+RedRat IR input is not implemented. macOS has no host
 graphics acceleration, which the Linux host has in VM mode. The task list and
 `evaluation/verification/` show what has been verified, and on which hosts.
 
@@ -91,13 +91,13 @@ names another Python that has PySide6, to use in its place. pip picks the
 newest version that fits the host's Python: 6.10.3 for the Python 3.9 of the
 macOS host, 6.12.0 for the newer ones tried.
 
-Installed and run on macOS. On Linux the package lists were tried in
+Installed and run on macOS and on Windows (`setup.cmd` installed version
+6.12.0 for Python 3.13, 234 MB). On Linux the package lists were tried in
 containers, not on a desktop: on Ubuntu 22.04 and 24.04, Fedora and openSUSE
 Tumbleweed Qt installed, its X11 and Wayland plugins found their libraries
 (looked at on the two Ubuntus), and the settings window ran without a
 display. On Arch the installation stopped on a file conflict among the
-image's own packages and was not carried further. The Windows script was
-changed likewise and parses; it has not been run.
+image's own packages and was not carried further.
 
 ### Removing what setup installed
 
@@ -432,13 +432,20 @@ the emulator.
   the host GPU only in a window of its own (the experimental QEMU on macOS,
   and QEMU on Windows), and host acceleration is asked for or preferred, the
   display is shown there, as before: without toolbar, scaling control or
-  remote control keys. `--graphics emulated` gets the launcher's window;
-  `--option window=qemu` gets QEMU's.
+  remote control keys. `--graphics emulated` gets the launcher's window, and
+  so does `--remote-control` while host acceleration is only preferred
+  (`--graphics auto`, the default): the keys come before the acceleration,
+  and the launcher says so. `--option window=qemu` gets QEMU's.
 
 Limits:
 
-- Run on the macOS host only, with emulated graphics, in all four modes at
-  720p, and once at 4K in a host-native VM. Not run on Windows or Linux.
+- Run on the macOS and Windows hosts, with emulated graphics, in all four
+  modes at 720p, and at 4K in a host-native VM (on Windows in container mode
+  as well). Not run on Linux.
+- On Windows, QEMU shows a display rendered on the host GPU only in its own
+  window, so `--mode vm --window` alone gets that window there, without
+  toolbar or keys; add `--graphics emulated` or `--remote-control` for the
+  launcher's.
 - On Linux with host graphics the launcher's window reads the display from
   QEMU's VNC server, which in QEMU 8.2 shows no more than 2560x2048 pixels of
   a 4K display (see the captures below). Not run.
@@ -628,10 +635,13 @@ input is on, so runs without a window are as they were.
 
 Limits:
 
-- Verified on the macOS host, in all four modes: each of the 32 keys by its
-  host key and by its button. Not run on Windows or Linux.
+- Verified on the macOS and Windows hosts, in all four modes: each of the 32
+  keys by its host key and by its button. Not run on Linux.
 - That host keys stay away from the target while another window has the focus
-  follows from how windows get keys, and was not checked.
+  follows from how windows get keys. The checks do not cover it; it was tried
+  by hand on Windows, in container and host-native VM modes, with key presses
+  given to Windows itself: they reached the target while the emulator's
+  window had the focus and not while another had it.
 - A key reaches the target as a key code. Turning the codes into HbbTV's key
   events is the job of an HbbTV application's browser; the image's browser is
   not one, and what it makes of each key was not looked at.
@@ -822,8 +832,9 @@ a newly installed Chrome that had never been opened stopped at once with
 "Failed to get the path for 1001"; after it had been opened once, the command
 worked.
 
-The snapshot in the repository was made on the macOS host on 2026-11-15, with
-the CPU, graphics and media results of all three hosts and the browser results
-of the Windows and macOS hosts. Windows' MSE playback values show as "n/a" in
-it: they are held back until they are measured again
+The snapshot in the repository was made on the Windows host on 2026-11-15,
+with the CPU, graphics and media results of all three hosts and the browser
+results of the Windows and macOS hosts. Windows' MSE playback values in it
+are those measured again that day with version 1.1.0 of the workload; the
+earlier ones are kept as records and not charted
 ([procedures](evaluation/procedures.md#web)).

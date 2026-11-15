@@ -56,6 +56,7 @@ has none yet.
 | What | Disk space | Time | Taken |
 |---|---|---|---|
 | Host installation | not measured | not measured | |
+| of that: Qt for Python, in `build/host/gui` | 234 MB | not measured | 2026-11-15, `du -sh` after `setup.cmd` installed PySide6-Essentials 6.12.0 |
 | Target: container image (x86-64) | not measured | not measured | |
 | Target: VM image, x86-64 (host-native) | not measured | not measured | |
 | Target: VM image, ARM64 | not measured | not measured | |

@@ -1,0 +1,298 @@
+{
+  "schema_version": 1,
+  "run_id": "20261115T150857Z-922968",
+  "recorded_at": "2026-11-15T15:13:54Z",
+  "host": {
+    "id": "windows-x86_64",
+    "os": "windows",
+    "os_version": "10.0.26300",
+    "arch": "x86_64",
+    "cpu_model": "Intel(R) Core(TM) i7-10700K CPU @ 3.80GHz",
+    "cpus": 16,
+    "memory_bytes": 34253012992,
+    "gpus": [
+      {
+        "model": "NVIDIA GeForce RTX 4070",
+        "driver_version": "32.0.16.1088"
+      }
+    ],
+    "python": "3.13.1"
+  },
+  "emulator": {
+    "mode": "vm",
+    "variant": "vm-arm32",
+    "guest_arch": "arm32",
+    "accelerator": "tcg",
+    "cpu_model": "cortex-a15",
+    "machine": "virt",
+    "runtime": "QEMU emulator version 11.1.0 (v11.1.0-12130-ge470268ff4)",
+    "display": {
+      "resolution": "1920x1080"
+    },
+    "graphics": {
+      "requested": "auto",
+      "provider": "emulated",
+      "reason": "no compatible host graphics acceleration: on Windows, QEMU's display that renders on the host GPU without a window (egl-headless) stays black: the target renders on the host GPU, but no frame reaches the emulator's display. In a window (--window) it does",
+      "device": "virtio-gpu (2D), rendering by the target CPU"
+    },
+    "cpus": 4,
+    "memory_mb": 2048,
+    "options": {
+      "audio-volume": "0"
+    },
+    "extra_args": [],
+    "audio": {
+      "strategy": "host",
+      "player": "emu-winmm",
+      "plays": true,
+      "sink": null,
+      "path": "the emulated sound card's backend, through a named pipe"
+    }
+  },
+  "image": {
+    "name": "emu-target-debian",
+    "version": "0.5.0",
+    "kind": "vm",
+    "arch": "arm32",
+    "source": {
+      "distribution": "Debian 13 (trixie)",
+      "base_image": "docker.io/library/debian:trixie-slim",
+      "base_image_digest": "sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2",
+      "apt_snapshot": "20261104T212339Z",
+      "flutter": {
+        "version": "3.47.9",
+        "revision": "c197ca5199e9ee5661e865596c9c07294dfab51c",
+        "repository": "https://github.com/flutter/flutter.git",
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ]
+      }
+    },
+    "definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f",
+    "build_revision": "3b84c22bbd275cb068733bd01df133afa52a3ab6-dirty",
+    "built_at": "2026-11-15T14:25:42Z",
+    "kernel_release": "6.12.115+deb13.1-armmp-lpae",
+    "rootfs_sha256": "e7039a2eda006c7ee7c8818b7ec7a3b765faf1fb42caf95e44a079330449753d",
+    "reported_by_target": {
+      "name": "emu-target-debian",
+      "version": "0.5.0",
+      "definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f",
+      "base_image": "docker.io/library/debian:trixie-slim@sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2",
+      "apt_snapshot": "20261104T212339Z",
+      "debian_version": "13.7",
+      "architecture": "armhf",
+      "packages_sha256": "3c132e9bf7bb2858e4cbe33a9be34866ab84174440f96e0f51e3972e33fd63cb"
+    }
+  },
+  "target": {
+    "mode": "vm",
+    "machine": "armv7l",
+    "kernel": "6.12.115+deb13.1-armmp-lpae",
+    "cpus": 4
+  },
+  "workload": {
+    "id": "web-bench",
+    "version": "1.1.0",
+    "tests": [
+      "launch",
+      "render",
+      "mse"
+    ],
+    "seconds_per_test": 5.0,
+    "streams": {
+      "mpeg2-fragments": "d21d32ca2bef9a3dcd295bf73832f4ff5d509d6b39987c8ada7d89393546d606",
+      "avc-fragments": "ef3b2d492f45ed488b0b1fd68620f6c946187eef1590a740647badee8e8aa575",
+      "hevc-fragments": "4fba534fb9f96491ecedd9d8f5b460168a52aefe91492e865039874d14d1279b"
+    },
+    "resolution": "1920x1080",
+    "graphics": "emulated",
+    "display": {
+      "width": 1920,
+      "height": 1080,
+      "presentation_feedback": true,
+      "gles": {
+        "renderer": "llvmpipe (LLVM 19.1.7, 128 bits)",
+        "version": "OpenGL ES 3.2 Mesa 25.0.7-2+deb13u1",
+        "accelerated": false
+      },
+      "vulkan": [
+        {
+          "name": "llvmpipe (LLVM 19.1.7, 128 bits)",
+          "type": "CPU",
+          "accelerated": false
+        }
+      ]
+    },
+    "audio": {
+      "feature": "audio",
+      "strategy": "host",
+      "mode": "vm",
+      "provider": "kernel:virtio-snd - VirtIO SoundCard",
+      "device": "default"
+    },
+    "browser": "WPE WebKit 2.48.3 (Cog 0.18.4)",
+    "wpe_webkit": "2.48.3",
+    "cog": "0.18.4",
+    "arguments": []
+  },
+  "drivers": {
+    "hwrng": "emulated",
+    "audio": "host"
+  },
+  "launcher_revision": "3b84c22bbd275cb068733bd01df133afa52a3ab6-dirty",
+  "boot_seconds": 60.97,
+  "duration_seconds": 287.979,
+  "exit_code": 0,
+  "results": [
+    {
+      "area": "web",
+      "test": "web_launch",
+      "unit": "seconds",
+      "value": 24.57,
+      "technology": "web",
+      "resolution": "1920x1080",
+      "browser": "WPE WebKit 2.48.3 (Cog 0.18.4)",
+      "renderer": "llvmpipe (LLVM 19.1.7, 128 bits)",
+      "accelerated": false,
+      "user_agent": "Mozilla/5.0 (X11; Linux armv7l) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/60.5 Safari/605.1.15",
+      "viewport": "1920x1080",
+      "webgl_renderer": "Apple GPU",
+      "media_source": true,
+      "page_load_ms": 12918
+    },
+    {
+      "area": "graphics",
+      "test": "web_render_fps",
+      "unit": "frames/s",
+      "value": 0.05,
+      "technology": "web",
+      "resolution": "1920x1080",
+      "browser": "WPE WebKit 2.48.3 (Cog 0.18.4)",
+      "renderer": "llvmpipe (LLVM 19.1.7, 128 bits)",
+      "accelerated": false,
+      "user_agent": "Mozilla/5.0 (X11; Linux armv7l) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/60.5 Safari/605.1.15",
+      "viewport": "1920x1080",
+      "webgl_renderer": "Apple GPU",
+      "frames": 1,
+      "seconds": 21.514,
+      "frame_time_ms": {
+        "p50": 21514,
+        "p90": 21514,
+        "p99": 21514,
+        "max": 21514
+      },
+      "shapes": 64,
+      "labels": 24,
+      "displayed_fps": 0.0
+    },
+    {
+      "area": "audio_video_decoding",
+      "test": "mse_playback_dropped_frames",
+      "case": "mpeg2-fragments",
+      "unit": "frames",
+      "value": 124,
+      "technology": "web",
+      "resolution": "1920x1080",
+      "browser": "WPE WebKit 2.48.3 (Cog 0.18.4)",
+      "renderer": "llvmpipe (LLVM 19.1.7, 128 bits)",
+      "accelerated": false,
+      "user_agent": "Mozilla/5.0 (X11; Linux armv7l) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/60.5 Safari/605.1.15",
+      "viewport": "1920x1080",
+      "webgl_renderer": "Apple GPU",
+      "stream": "mpeg2-fragments",
+      "container": "fragments",
+      "stream_sha256": "d21d32ca2bef9a3dcd295bf73832f4ff5d509d6b39987c8ada7d89393546d606",
+      "video_codec": "mpeg2",
+      "audio_codec": "mp2",
+      "frames": 125,
+      "media_seconds": 5.0,
+      "type": "video/mp4; codecs=\"mp4v.61, mp4a.6b\"",
+      "audio": "the target's audio device",
+      "total_video_frames": 17,
+      "dropped_video_frames": 5,
+      "corrupted_video_frames": 0,
+      "stalls": 0,
+      "seconds": 7.109,
+      "video_size": "1280x720",
+      "fragments_appended": 11,
+      "bytes_appended": 3255220,
+      "sound": "on",
+      "shown_frames": 12,
+      "display_repaints": 1,
+      "displayed_frames": 1
+    },
+    {
+      "area": "audio_video_decoding",
+      "test": "mse_playback_dropped_frames",
+      "case": "avc-fragments",
+      "unit": "frames",
+      "value": 124,
+      "technology": "web",
+      "resolution": "1920x1080",
+      "browser": "WPE WebKit 2.48.3 (Cog 0.18.4)",
+      "renderer": "llvmpipe (LLVM 19.1.7, 128 bits)",
+      "accelerated": false,
+      "user_agent": "Mozilla/5.0 (X11; Linux armv7l) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/60.5 Safari/605.1.15",
+      "viewport": "1920x1080",
+      "webgl_renderer": "Apple GPU",
+      "stream": "avc-fragments",
+      "container": "fragments",
+      "stream_sha256": "ef3b2d492f45ed488b0b1fd68620f6c946187eef1590a740647badee8e8aa575",
+      "video_codec": "avc",
+      "audio_codec": "aac",
+      "frames": 125,
+      "media_seconds": 5.0,
+      "type": "video/mp4; codecs=\"avc1.64001f, mp4a.40.2\"",
+      "audio": "the target's audio device",
+      "total_video_frames": 3,
+      "dropped_video_frames": 2,
+      "corrupted_video_frames": 0,
+      "stalls": 0,
+      "seconds": 14.122,
+      "video_size": "1280x720",
+      "fragments_appended": 5,
+      "bytes_appended": 1656736,
+      "sound": "on",
+      "shown_frames": 1,
+      "display_repaints": 2,
+      "displayed_frames": 1
+    },
+    {
+      "area": "audio_video_decoding",
+      "test": "mse_playback_dropped_frames",
+      "case": "hevc-fragments",
+      "unit": "frames",
+      "value": 125,
+      "technology": "web",
+      "resolution": "1920x1080",
+      "browser": "WPE WebKit 2.48.3 (Cog 0.18.4)",
+      "renderer": "llvmpipe (LLVM 19.1.7, 128 bits)",
+      "accelerated": false,
+      "user_agent": "Mozilla/5.0 (X11; Linux armv7l) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/60.5 Safari/605.1.15",
+      "viewport": "1920x1080",
+      "webgl_renderer": "Apple GPU",
+      "stream": "hevc-fragments",
+      "container": "fragments",
+      "stream_sha256": "4fba534fb9f96491ecedd9d8f5b460168a52aefe91492e865039874d14d1279b",
+      "video_codec": "hevc",
+      "audio_codec": "ac3",
+      "frames": 125,
+      "media_seconds": 5.0,
+      "type": "video/mp4; codecs=\"hvc1.1.6.L93.B0, ac-3\"",
+      "audio": "the target's audio device",
+      "total_video_frames": 2,
+      "dropped_video_frames": 2,
+      "corrupted_video_frames": 0,
+      "stalls": 0,
+      "seconds": 16.477,
+      "video_size": "1280x720",
+      "fragments_appended": 5,
+      "bytes_appended": 1148951,
+      "sound": "on",
+      "shown_frames": 0,
+      "display_repaints": 3,
+      "displayed_frames": 0
+    }
+  ]
+}

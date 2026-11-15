@@ -187,6 +187,7 @@ def launch(opts):
     console = None
     viewer = None
     viewer_plan = None      # what the display window is started with
+    keys_first = False      # the launcher's window was chosen over QEMU's for remote control input
     stop_emulator = []      # ends the emulator when the display window is closed
     try:
         if shown:
@@ -265,6 +266,13 @@ def launch(opts):
             if shown:
                 kind = graphics.window_backend(qemu) if opts.options.get("window") == "qemu" else \
                     graphics.window_kind(qemu, opts.graphics)
+                if kind != graphics.LAUNCHER_WINDOW and opts.remote_control and opts.options.get("window") != "qemu" \
+                        and (opts.graphics or "auto") == "auto":
+                    # Remote control input was asked for and host graphics
+                    # only preferred: the launcher's window, which takes the
+                    # keys, with the graphics it can show.
+                    kind = graphics.LAUNCHER_WINDOW
+                    keys_first = True
             own = kind == graphics.LAUNCHER_WINDOW
             if kind and not own and opts.remote_control:
                 asked = opts.options.get("window") == "qemu"
@@ -337,6 +345,10 @@ def launch(opts):
                 emulator["graphics"]["reason"]))
         if viewer_plan:
             emulator["display"]["remote_control"] = opts.remote_control or "keys"
+            if keys_first:
+                outcome.notes.append("remote control input was asked for, so the display is in the launcher's "
+                                     "window; QEMU's own window would show it rendered on the host GPU and take no "
+                                     "remote control keys (--graphics host asks for that)")
         if opts.echo:
             for note in outcome.notes:
                 print("emu: " + note, file=sys.stderr, flush=True)
