@@ -51,6 +51,11 @@ context: |
   A cross-platform startup launcher must run on Linux, macOS, and Windows and
   accept parameters for emulator mode, options, and the target OS workload,
   including choices such as a prompt, graphics demo, or benchmarks.
+  Started without any parameters, the launcher must show a graphical window
+  in which the user chooses the mode (container or VM), the VM guest CPU mode
+  (host-native, ARM32, or ARM64), the workload, the window mode, the options,
+  and every other setting the launcher accepts as a parameter, and starts the
+  emulator. The window must be available on Linux, macOS, and Windows.
   A setup script is required for each supported host OS: Linux, macOS, and
   Windows. The script must check for and install any host dependencies.
   The setup script must keep a record of what it installs on a host, and offer
