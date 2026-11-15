@@ -35,6 +35,13 @@ context: |
   buttons are clicked with the mouse, with the host key mapping still applying
   when the emulator window is focused; and RedRat IR input. Every mode must
   support all HbbTV input keys.
+  The target OS image must provide an STB simulator workload: it starts a
+  set-top-box-like user interface that simulates a device with a channel list,
+  video playback, and an app launcher. The app launcher includes a simulated
+  video-on-demand application that runs in the browser and plays adaptive
+  bitrate (ABR) content, for example links to free ABR content on the
+  internet. The user interface takes its keys from the remote control input
+  modes, and the performance workloads can be launched from it as well.
   The emulator must support MPEG-2 Transport Stream (MP2TS) and MP4 containers,
   MSE-style fragment injection, MPEG-2/AVC/HEVC video, and MP2/AC-3/AAC/HE-AAC
   audio. It
