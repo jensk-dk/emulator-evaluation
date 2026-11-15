@@ -122,6 +122,25 @@
       },
       "procedure": "evaluation/procedures.md#remote-control-input",
       "measurements": []
+    },
+    {
+      "id": "stb-simulator",
+      "version": "1.0.0",
+      "kind": "functional",
+      "status": "implemented",
+      "stage": 6,
+      "display": true,
+      "audio": true,
+      "remote": true,
+      "window": true,
+      "launch": "./emu run --mode MODE --workload stb-simulator",
+      "source": "target/rootfs/opt/emu/workloads/stb-simulator, target/rootfs/opt/emu/stb, target/media/build-abr.sh, target/media/fetch-dashjs.py",
+      "version_source": {
+        "file": "target/rootfs/opt/emu/workloads/stb-simulator",
+        "pattern": "VERSION = \"([^\"]+)\""
+      },
+      "procedure": "evaluation/procedures.md#stb-simulator",
+      "measurements": []
     }
   ]
 }

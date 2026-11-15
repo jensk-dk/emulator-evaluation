@@ -1,0 +1,23 @@
+<!doctype html>
+<!-- The STB simulator's video on demand application: a web application of
+     its own, started from the simulator's app launcher. Its titles are
+     MPEG-DASH streams (titles.json), played with dash.js. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Emu VOD</title>
+<link rel="stylesheet" href="../stb.css">
+</head>
+<body>
+<video id="video" playsinline hidden></video>
+<div id="screen">
+  <header><h1 id="title">Video on demand</h1><span class="where">Emu TV · Apps</span></header>
+  <main id="main"></main>
+  <footer id="hints"></footer>
+</div>
+<div id="banner" hidden></div>
+<div id="message" hidden></div>
+<script src="../lib/dash.all.min.js"></script>
+<script src="vod.js"></script>
+</body>
+</html>

@@ -122,6 +122,9 @@ def _build_command(runtime, arch, stage, tag, definition_hash):
         "KERNEL_PACKAGE": info["kernel_package"],
         "FLUTTER_VERSION": spec["source"]["flutter"]["version"],
         "FLUTTER_REVISION": spec["source"]["flutter"]["revision"],
+        "DASHJS_PACKAGE": spec["source"]["dash_js"]["package"],
+        "DASHJS_VERSION": spec["source"]["dash_js"]["version"],
+        "DASHJS_SHA256": spec["source"]["dash_js"]["package_sha256"],
     }
     command = [runtime.cli, "build", "--platform", info["platform"], "--target", stage, "--tag", tag,
                "--file", str(TARGET_DIR / "Dockerfile")]

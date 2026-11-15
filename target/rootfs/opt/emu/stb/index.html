@@ -1,0 +1,23 @@
+<!doctype html>
+<!-- The STB simulator's user interface: a set-top box with a channel list,
+     video playback, an app launcher and the performance workloads, operated
+     with remote control keys alone. Served and started by the stb-simulator
+     workload (target/rootfs/opt/emu/workloads/stb-simulator). -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Emu TV</title>
+<link rel="stylesheet" href="stb.css">
+</head>
+<body>
+<video id="video" class="fill" playsinline hidden></video>
+<div id="screen">
+  <header><h1 id="title">Emu TV</h1><span class="where" id="where"></span></header>
+  <main id="main"></main>
+  <footer id="hints"></footer>
+</div>
+<div id="banner" hidden></div>
+<div id="message" hidden></div>
+<script src="stb.js"></script>
+</body>
+</html>

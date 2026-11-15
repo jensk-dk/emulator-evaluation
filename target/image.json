@@ -1,6 +1,6 @@
 {
   "name": "emu-target-debian",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Linux client OS image that simulates the target OS in container and VM modes.",
   "source": {
     "distribution": "Debian 13 (trixie)",
@@ -12,6 +12,12 @@
       "revision": "c197ca5199e9ee5661e865596c9c07294dfab51c",
       "repository": "https://github.com/flutter/flutter.git",
       "architectures": ["x86_64", "arm64"]
+    },
+    "dash_js": {
+      "version": "5.3.0",
+      "package": "https://registry.npmjs.org/dashjs/-/dashjs-5.3.0.tgz",
+      "package_sha256": "3dbcd4dd957cf0bb885d4059e66b87f56a17c90f00c697d21fbdad1273d8005c",
+      "licence": "BSD-3-Clause"
     }
   },
   "architectures": {

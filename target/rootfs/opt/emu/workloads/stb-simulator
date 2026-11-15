@@ -1,0 +1,455 @@
+#!/usr/bin/env python3
+"""Workload "stb-simulator": a set-top-box-like user interface.
+
+    stb-simulator [--seconds N] [--quick]
+
+Simulates a device with a channel list, video playback and an app launcher,
+operated with remote control keys alone (emu run --remote-control, or
+--window). The user interface is a web application (/opt/emu/stb) shown full
+screen by the target's browser, WPE WebKit; this program starts the browser,
+serves the application and its media over the target's loopback interface,
+and does for it what a page cannot do: start a performance workload, and
+switch the simulator off.
+
+  Channels      the reference streams of the media-decode workload, one per
+                video codec, each played in a loop through Media Source
+                Extensions, with its sound on the target's audio device.
+  Apps          the app launcher. Its video on demand application (a web
+                application of its own, /opt/emu/stb/vod) plays MPEG-DASH
+                streams with dash.js: open films on the internet, and a test
+                title that is on the device.
+  Performance   starts a performance workload. It runs as it does when the
+                launcher starts it, and its results are printed as its own
+                EMU-RESULT lines, each with "launched_from". A workload that
+                uses the display takes it over while it runs; the user
+                interface comes back with the results.
+
+What the user interface does is printed, one line per event, for whoever
+watches the run (the launcher's checks do):
+
+  EMU-STB: {"event": "screen", "screen": "channels", ...}
+
+It ends when it is switched off from its home screen, after N seconds
+(--seconds), or with the emulator. --quick is for the checks: the performance
+workloads run a short part of their tests, and their results say so.
+
+See evaluation/workloads.json and evaluation/procedures.md#stb-simulator.
+"""
+import argparse
+import http.server
+import json
+import os
+import re
+import signal
+import subprocess
+import sys
+import threading
+import time
+import urllib.parse
+
+VERSION = "1.0.0"
+STB = "/opt/emu/stb"
+MEDIA = "/opt/emu/media"
+WORKLOADS = "/opt/emu/workloads"
+AUDIO_STATE = "/run/emu/drivers/audio.json"
+AUTOPLAY = "/opt/emu/lib/libemu_web_autoplay.so"
+# The MP4 container with each reference stream's codecs, as the page asks
+# the browser for them (as in the web-bench workload).
+MSE_TYPES = {
+    "mpeg2": 'video/mp4; codecs="mp4v.61, mp4a.6b"',
+    "avc": 'video/mp4; codecs="avc1.64001f, mp4a.40.2"',
+    "hevc": 'video/mp4; codecs="hvc1.1.6.L93.B0, ac-3"',
+}
+# The channels of the simulated device: number, name, reference stream.
+CHANNELS = (
+    (1, "Emu One", "mpeg2-fragments", "MPEG-2 video, MP2 audio"),
+    (2, "Emu Two", "avc-fragments", "AVC video, AAC audio"),
+    (3, "Emu Three", "hevc-fragments", "HEVC video, AC-3 audio"),
+)
+# The performance workloads: id, name, what it measures, whether it takes the
+# display, and the arguments of a short run (--quick).
+PERFORMANCE = (
+    ("bench", "Resource benchmark", "CPU, memory allocation, memory bandwidth and I/O", False,
+     ["--seconds", "0.2"]),
+    ("graphics-demo", "Graphics", "Wayland, OpenGL ES, Vulkan and Flutter frame rates", True,
+     ["--tests", "wayland,gles", "--seconds", "1"]),
+    ("media-decode", "Audio and video decoding", "decode speed, and frames dropped in playback", True,
+     ["--tests", "video", "--streams", "avc-mp4"]),
+    ("web-bench", "Web browser", "page rendering and MSE playback in WPE WebKit", True,
+     ["--tests", "render", "--seconds", "1"]),
+)
+# A path that serves the test title slowly, for a network that carries only
+# its smallest representation: /media/abr-limited/BYTES_PER_SECOND/...
+LIMITED = "/media/abr-limited/"
+CONTENT_TYPES = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8",
+                 ".css": "text/css; charset=utf-8", ".json": "application/json", ".svg": "image/svg+xml",
+                 ".mp4": "video/mp4", ".m4s": "video/iso.segment", ".mpd": "application/dash+xml",
+                 ".txt": "text/plain; charset=utf-8", ".md": "text/plain; charset=utf-8"}
+
+_print_lock = threading.Lock()
+
+
+def emit(marker, data):
+    with _print_lock:
+        print("%s: %s" % (marker, json.dumps(data)), flush=True)
+
+
+def output_of(command, timeout=900):
+    try:
+        done = subprocess.run(command, capture_output=True, text=True, timeout=timeout)
+        return done.stdout + done.stderr
+    except (OSError, subprocess.SubprocessError):
+        return ""
+
+
+def versions():
+    """(Cog's version, WPE WebKit's version), as installed."""
+    cog = re.search(r"(\d+\.\d+(?:\.\d+)?)", output_of(["cog", "--version"]))
+    webkit = re.search(r"Version: (\S+)", output_of(["dpkg-query", "-s", "libwpewebkit-2.0-1"]))
+    return (cog.group(1) if cog else "unknown"), (webkit.group(1).split("-")[0] if webkit else "unknown")
+
+
+# ------------------------------------------------------------ simulator ---
+
+class Simulator:
+    """The state the pages and this program share."""
+
+    def __init__(self, quick):
+        self.quick = quick
+        self.off = threading.Event()
+        self.lock = threading.Lock()
+        self.browser = None
+        self.browser_wanted = False
+        self.start_page = "/stb/index.html"
+        self.running = None             # the performance workload that runs now
+        self.last = None                # what the last one reported
+        self.address = None
+        with open(os.path.join(MEDIA, "manifest.json")) as handle:
+            streams = {s["id"]: s for s in json.load(handle)["streams"] if "fragments" in s}
+        self.channels = []
+        for number, name, stream_id, about in CHANNELS:
+            stream = streams.get(stream_id)
+            if not stream:
+                continue
+            fragments = stream["fragments"]
+            self.channels.append({
+                "number": number, "name": name, "about": about, "stream": stream_id,
+                "type": MSE_TYPES.get(stream["video"]["codec"], "video/mp4"),
+                "base": "/media/%s/" % fragments["directory"], "init": fragments["init"], "media": fragments["media"],
+                "seconds": stream["seconds"], "marker": stream["video"]["marker"]})
+        try:
+            with open(os.path.join(STB, "vod", "titles.json")) as handle:
+                self.titles = json.load(handle)["titles"]
+        except (OSError, ValueError, KeyError):
+            self.titles = []
+        self.workloads = [{"id": name, "name": title, "about": about, "display": display}
+                          for name, title, about, display, _ in PERFORMANCE
+                          if os.access(os.path.join(WORKLOADS, name), os.X_OK)]
+        try:
+            with open(AUDIO_STATE) as handle:
+                self.audio = json.load(handle)
+        except (OSError, ValueError):
+            self.audio = None
+
+    def config(self):
+        width, _, height = os.environ.get("EMU_DISPLAY", "1920x1080").partition("x")
+        with self.lock:
+            return {"version": VERSION, "channels": self.channels, "titles": self.titles, "workloads": self.workloads,
+                    "display": {"width": int(width), "height": int(height)},
+                    "graphics": os.environ.get("EMU_GRAPHICS", "emulated"), "sound": bool(self.audio),
+                    "remote": bool(os.environ.get("EMU_REMOTE")), "quick": self.quick,
+                    "running": self.running, "last": self.last}
+
+    # ---------------------------------------------------------- browser ---
+
+    def start_browser(self):
+        environment = dict(os.environ, WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS="1", HOME="/tmp/emu-stb-home",
+                           XDG_CACHE_HOME="/tmp/emu-stb-home/cache", XDG_DATA_HOME="/tmp/emu-stb-home/data")
+        os.makedirs(environment["HOME"], exist_ok=True)
+        if os.path.exists(AUTOPLAY):
+            environment["LD_PRELOAD"] = AUTOPLAY       # lets the pages start media with sound
+        log = open("/tmp/emu-stb-browser.log", "ab")
+        with self.lock:
+            self.browser_wanted = True
+            self.browser = subprocess.Popen(
+                ["cog", "--platform=wl", "--webprocess-failure=exit", "--media-playback-requires-user-gesture=false",
+                 "--enable-mediasource=true", "--enable-webgl=true", self.address + self.start_page],
+                stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT, env=environment,
+                start_new_session=True)
+        log.close()
+
+    def stop_browser(self):
+        with self.lock:
+            self.browser_wanted = False
+            browser, self.browser = self.browser, None
+        if browser is None:
+            return
+        # Cog and the processes WebKit started for it.
+        for sign in (signal.SIGTERM, signal.SIGKILL):
+            try:
+                os.killpg(browser.pid, sign)
+            except OSError:
+                break
+            try:
+                browser.wait(timeout=10)
+                break
+            except subprocess.TimeoutExpired:
+                continue
+        time.sleep(0.3)
+
+    def watch_browser(self):
+        """Start the browser again when it ends by itself: a set-top box's
+        user interface comes back. Five times in a minute is given up on."""
+        ended = []
+        while not self.off.is_set():
+            time.sleep(0.5)
+            with self.lock:
+                browser, wanted = self.browser, self.browser_wanted
+            if not wanted or browser is None or browser.poll() is None:
+                continue
+            now = time.monotonic()
+            ended = [moment for moment in ended if now - moment < 60] + [now]
+            emit("EMU-STB", {"event": "browser", "state": "ended", "status": browser.returncode,
+                             "log": log_tail("/tmp/emu-stb-browser.log")})
+            if len(ended) >= 5:
+                emit("EMU-STB", {"event": "failure", "reason": "the browser ended five times within a minute"})
+                self.off.set()
+                return
+            if not display_running() and subprocess.run(["/opt/emu/display", "start"]).returncode != 0:
+                emit("EMU-STB", {"event": "failure", "reason": "the display service did not start again"})
+                self.off.set()
+                return
+            self.start_browser()
+
+    # -------------------------------------------------------- workloads ---
+
+    def run_workload(self, name):
+        """Start a performance workload; returns why not, or None."""
+        entry = next((found for found in PERFORMANCE if found[0] == name), None)
+        if entry is None or not any(w["id"] == name for w in self.workloads):
+            return "no such performance workload"
+        with self.lock:
+            if self.running:
+                return "%s is running" % self.running["id"]
+            self.running = {"id": name, "name": entry[1], "display": entry[3], "started": time.time()}
+        threading.Thread(target=self._run_workload, args=entry, daemon=True).start()
+        return None
+
+    def _run_workload(self, name, title, about, takes_display, quick_arguments):
+        arguments = quick_arguments if self.quick else []
+        emit("EMU-STB", {"event": "workload", "state": "started", "id": name, "arguments": arguments,
+                         "takes_display": takes_display})
+        if takes_display:
+            # The workload shows its own pictures; the user interface comes
+            # back when it is done. A moment first, for the page to show that
+            # it is starting.
+            time.sleep(1.0)
+            self.stop_browser()
+        started = time.monotonic()
+        results, described, status = [], {}, None
+        try:
+            process = subprocess.Popen([os.path.join(WORKLOADS, name)] + arguments, stdin=subprocess.DEVNULL,
+                                       stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace")
+            for line in process.stdout:
+                line = line.rstrip("\n")
+                marker, _, rest = line.partition(": ")
+                data = None
+                if marker in ("EMU-RESULT", "EMU-WORKLOAD"):
+                    try:
+                        data = json.loads(rest)
+                    except ValueError:
+                        data = None
+                if marker == "EMU-WORKLOAD" and isinstance(data, dict):
+                    described = data        # this run's workload is the simulator; the line is not passed on
+                elif marker == "EMU-RESULT" and isinstance(data, dict):
+                    data.update(launched_from="stb-simulator", workload=name,
+                                workload_version=described.get("version"))
+                    if self.quick:
+                        data["quick"] = True        # a short run: not a measurement to compare
+                    results.append(data)
+                    emit("EMU-RESULT", data)
+                elif marker == "EMU-SCREEN":
+                    pass        # captures are for a run of the workload itself
+                elif line:
+                    with _print_lock:
+                        print(line, flush=True)
+            status = process.wait()
+        except OSError as error:
+            status = "did not start: %s" % error
+        seconds = round(time.monotonic() - started, 1)
+        shown = [{key: result.get(key) for key in ("area", "test", "case", "technology", "resolution", "value",
+                                                    "unit", "unavailable")} for result in results]
+        with self.lock:
+            self.last = {"id": name, "name": title, "status": status, "seconds": seconds, "results": shown,
+                         "version": described.get("version"), "quick": self.quick}
+            self.running = None
+        if takes_display and not self.off.is_set():
+            if not display_running():
+                subprocess.run(["/opt/emu/display", "start"])
+            self.start_page = "/stb/index.html#results"
+            self.start_browser()
+        emit("EMU-STB", {"event": "workload", "state": "finished", "id": name, "status": status,
+                         "seconds": seconds, "results": len(results),
+                         "measured": sum(1 for result in results if result.get("value") is not None)})
+
+
+def log_tail(path):
+    try:
+        with open(path, errors="replace") as handle:
+            lines = [line.strip() for line in handle if line.strip() and "Load" not in line]
+    except OSError:
+        lines = []
+    return " ".join(lines[-3:])[-300:]
+
+
+def display_running():
+    return subprocess.run(["/opt/emu/display", "status"]).returncode == 0
+
+
+# ---------------------------------------------------------------- server ---
+
+class Server(http.server.ThreadingHTTPServer):
+    daemon_threads = True
+
+    def __init__(self, simulator):
+        super().__init__(("127.0.0.1", 0), Handler)
+        self.simulator = simulator
+        simulator.address = "http://127.0.0.1:%d" % self.server_address[1]
+        threading.Thread(target=self.serve_forever, daemon=True).start()
+
+    def handle_error(self, request, client_address):
+        pass        # a browser that is being stopped drops its connections
+
+
+class Handler(http.server.BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
+
+    def log_message(self, *arguments):
+        pass
+
+    def _send(self, status, body=b"", content_type="application/json", rate=None):
+        self.send_response(status)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        if not rate:
+            self.wfile.write(body)
+            return
+        # No faster than `rate` bytes a second, in tenths of a second.
+        step = max(1, rate // 10)
+        for start in range(0, len(body), step):
+            began = time.monotonic()
+            self.wfile.write(body[start:start + step])
+            self.wfile.flush()
+            time.sleep(max(0.0, 0.1 - (time.monotonic() - began)))
+
+    def do_GET(self):
+        simulator = self.server.simulator
+        path = urllib.parse.urlsplit(self.path).path
+        if path == "/":
+            self.send_response(302)
+            self.send_header("Location", "/stb/index.html")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+        if path == "/api/config":
+            return self._send(200, json.dumps(simulator.config()).encode())
+        rate = None
+        if path.startswith(LIMITED):
+            limit, _, rest = path[len(LIMITED):].partition("/")
+            if not limit.isdigit() or int(limit) < 1000:
+                return self._send(404)
+            rate, path = int(limit), "/media/abr/" + rest
+        if path.startswith("/media/"):
+            root, name = MEDIA, path[len("/media/"):]
+        elif path.startswith("/stb/"):
+            root, name = STB, path[len("/stb/"):]
+        else:
+            return self._send(404)
+        found = os.path.normpath(os.path.join(root, name))
+        if not found.startswith(root + os.sep) or not os.path.isfile(found):
+            return self._send(404)
+        with open(found, "rb") as handle:
+            body = handle.read()
+        self._send(200, body, CONTENT_TYPES.get(os.path.splitext(found)[1], "application/octet-stream"), rate)
+
+    def do_POST(self):
+        simulator = self.server.simulator
+        try:
+            data = json.loads(self.rfile.read(int(self.headers.get("Content-Length", "0"))) or b"{}")
+        except ValueError:
+            return self._send(400)
+        if not isinstance(data, dict):
+            return self._send(400)
+        if self.path == "/api/event":
+            emit("EMU-STB", data)
+            return self._send(200, b"{}")
+        if self.path == "/api/run":
+            refused = simulator.run_workload(str(data.get("id")))
+            return self._send(200, json.dumps({"started": refused is None, "reason": refused}).encode())
+        if self.path == "/api/off":
+            self._send(200, b"{}")
+            simulator.off.set()
+            return
+        self._send(404)
+
+
+# ------------------------------------------------------------------ main ---
+
+def main():
+    parser = argparse.ArgumentParser(prog="stb-simulator", description=__doc__.splitlines()[0])
+    parser.add_argument("--seconds", type=float, default=0, help="end after this long (default: run until switched off)")
+    parser.add_argument("--quick", action="store_true",
+                        help="for the checks: the performance workloads run a short part of their tests")
+    args = parser.parse_args()
+
+    cog, webkit = versions()
+    simulator = Simulator(args.quick)
+    resolution = os.environ.get("EMU_DISPLAY", "1920x1080")
+    described = {
+        "id": "stb-simulator", "version": VERSION, "resolution": resolution,
+        "graphics": os.environ.get("EMU_GRAPHICS", "emulated"), "remote": bool(os.environ.get("EMU_REMOTE")),
+        "audio": simulator.audio, "browser": "WPE WebKit %s (Cog %s)" % (webkit, cog), "quick": args.quick,
+        "channels": [{"number": c["number"], "name": c["name"], "stream": c["stream"], "marker": c["marker"]}
+                     for c in simulator.channels],
+        "titles": [{"id": t.get("id"), "name": t.get("name"), "where": t.get("where"), "url": t.get("url")}
+                   for t in simulator.titles],
+        "workloads": [w["id"] for w in simulator.workloads]}
+    try:
+        with open(os.path.join(STB, "lib", "dash.version")) as handle:
+            described["dash_js"] = handle.read().strip()
+    except OSError:
+        described["dash_js"] = None
+
+    if subprocess.run(["/opt/emu/display", "start"]).returncode != 0:
+        emit("EMU-WORKLOAD", described)
+        emit("EMU-STB", {"event": "failure", "reason": "the display service did not start"})
+        return 1
+    for line in output_of(["/opt/emu/display", "env"]).splitlines():
+        for setting in line.replace("export ", "", 1).split():
+            name, _, value = setting.partition("=")
+            os.environ[name] = value
+    try:
+        described["display"] = json.loads(output_of(["emugfx", "info"]).strip().splitlines()[-1])
+    except (ValueError, IndexError):
+        described["display"] = None
+    emit("EMU-WORKLOAD", described)
+    if not described["remote"]:
+        emit("EMU-STB", {"event": "note", "text": "remote control input is off, so the user interface gets no keys; "
+                                                 "start with --remote-control keys or --window"})
+
+    Server(simulator)
+    signal.signal(signal.SIGTERM, lambda *_: simulator.off.set())
+    simulator.start_browser()
+    threading.Thread(target=simulator.watch_browser, daemon=True).start()
+    simulator.off.wait(args.seconds if args.seconds > 0 else None)
+    simulator.off.set()
+    emit("EMU-STB", {"event": "off"})
+    simulator.stop_browser()
+    subprocess.run(["/opt/emu/display", "stop"])
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

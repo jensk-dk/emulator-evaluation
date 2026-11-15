@@ -164,8 +164,20 @@ def launch(opts):
     # Full screen is a state of the window, and remote control keys are typed
     # into it or clicked beside it.
     shown = bool(opts.window or opts.fullscreen or opts.remote_control)
+    notes = []
+    if not shown and (catalog.workload(opts.workload) or {}).get("window"):
+        # A workload that is used through its display, with remote control
+        # keys: it gets the window without being asked, where there is one.
+        if window.gui_python():
+            shown = True
+            notes.append("the %s workload is used through its display, so it is shown in a window, with remote "
+                         "control keys from the keyboard" % opts.workload)
+        else:
+            notes.append("the %s workload is used through its display, which is not shown: Qt for Python (%s) is "
+                         "not installed, so the launcher has no window" % (opts.workload, window.PACKAGE))
 
     outcome = Outcome()
+    outcome.notes += notes
     outcome.run_id = _run_id()
     run_dir = BUILD_DIR / "run" / outcome.run_id
     run_dir.mkdir(parents=True)

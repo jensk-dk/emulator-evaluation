@@ -1,0 +1,47 @@
+{
+  "comment": "The titles of the STB simulator's video on demand application: MPEG-DASH streams, played with dash.js. The films are open films, freely available as DASH streams on the internet; each entry names who serves the stream and the film's licence. The test title is on the device (target/media/build-abr.sh), so that the application can be used, and checked, where the target cannot reach the internet; its second entry is the same title over a path that the simulator serves slowly.",
+  "titles": [
+    {
+      "id": "big-buck-bunny", "name": "Big Buck Bunny", "year": 2008, "minutes": 10, "where": "internet",
+      "about": "A giant rabbit takes on three bullying rodents. The Blender Foundation's second open film.",
+      "url": "https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps.mpd",
+      "served_by": "Akamai's DASH test content",
+      "licence": "(c) Blender Foundation, peach.blender.org, CC BY 3.0"
+    },
+    {
+      "id": "elephants-dream", "name": "Elephants Dream", "year": 2006, "minutes": 11, "where": "internet",
+      "about": "Two men explore a vast machine. The first open film, by the Orange Open Movie Project.",
+      "url": "https://rdmedia.bbc.co.uk/elephants_dream/1/client_manifest-all.mpd",
+      "served_by": "BBC Research & Development's DASH test streams",
+      "licence": "(c) Blender Foundation, Netherlands Media Art Institute, orange.blender.org, CC BY 2.5"
+    },
+    {
+      "id": "sintel", "name": "Sintel", "year": 2010, "minutes": 15, "where": "internet",
+      "about": "A girl searches for the baby dragon she befriended. The Blender Foundation's third open film.",
+      "url": "https://storage.googleapis.com/shaka-demo-assets/sintel/dash.mpd",
+      "served_by": "the Shaka Player demo assets",
+      "licence": "(c) Blender Foundation, durian.blender.org, CC BY 3.0"
+    },
+    {
+      "id": "tears-of-steel", "name": "Tears of Steel", "year": 2012, "minutes": 12, "where": "internet",
+      "about": "A group of warriors and scientists try to save the world from robots. The fourth open film.",
+      "url": "https://storage.googleapis.com/shaka-demo-assets/tos-ttml/dash.mpd",
+      "served_by": "the Shaka Player demo assets",
+      "licence": "(c) Blender Foundation, mango.blender.org, CC BY 3.0"
+    },
+    {
+      "id": "test-pattern", "name": "Test pattern", "minutes": 0.33, "where": "device",
+      "about": "A test stream on this device, in three sizes (240p, 480p, 720p). The colour of the block at the top centre names the size that is playing.",
+      "url": "/media/abr/manifest.mpd",
+      "served_by": "this device",
+      "licence": "made for this emulator"
+    },
+    {
+      "id": "test-pattern-slow", "name": "Test pattern, slow network", "minutes": 0.33, "where": "device",
+      "about": "The same test stream over a connection of 0.6 Mbit/s, which carries only its smallest size.",
+      "url": "/media/abr-limited/75000/manifest.mpd",
+      "served_by": "this device, slowed down",
+      "licence": "made for this emulator"
+    }
+  ]
+}

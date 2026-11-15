@@ -84,7 +84,7 @@ The STB simulator MUST play the video of the selected channel on the emulator's 
 
 ### Requirement: Launch applications from an app launcher
 
-The STB simulator MUST provide an app launcher from which the user starts applications. The app launcher MUST include a simulated video-on-demand (VOD) application that runs in the target OS's browser. The VOD application MUST offer titles that are adaptive bitrate (ABR) streams, for example links to freely available ABR content on the internet, and MUST play the title that the user selects.
+The STB simulator MUST provide an app launcher from which the user starts applications. The app launcher MUST include a simulated video-on-demand (VOD) application that runs in the target OS's browser. The VOD application MUST offer titles that are adaptive bitrate (ABR) streams and MUST play the title that the user selects.
 
 #### Scenario: Show the app launcher
 
@@ -105,6 +105,25 @@ The STB simulator MUST provide an app launcher from which the user starts applic
 
 - WHEN the user leaves an application that was started from the app launcher
 - THEN the STB simulator's user interface is shown again
+
+### Requirement: Stream VOD titles as MPEG-DASH with dash.js
+
+The titles of the VOD application MUST be MPEG-DASH streams, and the application MUST play them with the dash.js player library. The titles MUST be openly licensed films that are freely available as DASH streams on the internet: Big Buck Bunny, Elephants Dream, and similar open-source content.
+
+#### Scenario: Offer the open films
+
+- WHEN the VOD application shows its titles
+- THEN Big Buck Bunny and Elephants Dream are among them, each as a link to an MPEG-DASH stream of the film on the internet
+
+#### Scenario: Play a title with dash.js
+
+- WHEN the user selects a title
+- THEN the application plays its MPEG-DASH stream with dash.js, which chooses among the stream's representations as it plays
+
+#### Scenario: Title cannot be reached
+
+- WHEN the user selects a title whose stream the target cannot reach
+- THEN the application says that the title cannot be played and stays usable
 
 ### Requirement: Launch the performance workloads
 

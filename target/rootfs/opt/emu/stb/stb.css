@@ -1,0 +1,68 @@
+/* The STB simulator's user interface and its video on demand application
+   (target/rootfs/opt/emu/workloads/stb-simulator). Sizes follow the display's
+   height, so the layout is the same at 720p, 1080p and 4K. */
+:root {
+  --page: #0d1117; --panel: #161c26; --panel-2: #1f2835; --text: #eef1f5; --text-2: #a8b3c2; --muted: #6f7b8c;
+  --focus: #3d8bfd; --focus-text: #ffffff; --line: rgba(255, 255, 255, 0.10);
+  --red: #e5484d; --green: #30a46c; --yellow: #f5d90a; --blue: #3d8bfd;
+}
+* { box-sizing: border-box; }
+html { font-size: 2.6vh; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--page); color: var(--text);
+             font-family: "DejaVu Sans", system-ui, sans-serif; cursor: none; }
+h1 { font-size: 1.9rem; font-weight: 600; margin: 0; }
+h2 { font-size: 1.25rem; font-weight: 600; margin: 0 0 0.6rem; }
+p { margin: 0; }
+.muted { color: var(--text-2); }
+
+/* The safe area of a television picture: nothing important at the edge. */
+/* It has the page's colour itself: with the page's background alone, WPE
+   WebKit 2.48 leaves a black rectangle near the bottom right corner of a
+   page drawn by the CPU (seen on a page with nothing but a background). */
+#screen { position: fixed; inset: 0; padding: 7vh 7vw 6vh; display: flex; flex-direction: column;
+          background: var(--page); }
+header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 2.2rem; }
+header .where { color: var(--text-2); font-size: 0.95rem; }
+main { flex: 1; min-height: 0; display: flex; gap: 2.5rem; }
+footer { display: flex; gap: 1.6rem; color: var(--text-2); font-size: 0.8rem; margin-top: 1.2rem; }
+footer b { color: var(--text); font-weight: 600; }
+
+.list { flex: 1; display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; }
+.item { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1.1rem; border-radius: 0.5rem;
+        background: var(--panel); border: 0.12rem solid transparent; }
+.item .number { width: 2.2rem; font-variant-numeric: tabular-nums; color: var(--text-2); font-size: 1.15rem; }
+.item .name { font-size: 1.1rem; font-weight: 600; }
+.item .about { color: var(--text-2); font-size: 0.82rem; margin-top: 0.15rem; }
+.item .tag { margin-left: auto; color: var(--text-2); font-size: 0.78rem; white-space: nowrap; }
+.item.focus { background: var(--focus); border-color: #9cc4ff; color: var(--focus-text); }
+.item.focus .about, .item.focus .number, .item.focus .tag { color: #e3eeff; }
+.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; align-content: start; flex: 1; }
+.grid .item { flex-direction: column; align-items: flex-start; gap: 0.3rem; min-height: 9rem; justify-content: flex-end; }
+.side { width: 34%; background: var(--panel); border-radius: 0.5rem; padding: 1.2rem 1.3rem; font-size: 0.85rem;
+        color: var(--text-2); line-height: 1.5; }
+.side dl { display: grid; grid-template-columns: auto 1fr; gap: 0.25rem 0.9rem; margin: 0; }
+.side dt { color: var(--muted); } .side dd { margin: 0; color: var(--text); }
+
+table { border-collapse: collapse; width: 100%; font-size: 0.8rem; }
+th, td { text-align: left; padding: 0.3rem 0.7rem; border-bottom: 0.06rem solid var(--line); }
+th { color: var(--text-2); font-weight: 500; } td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.results { flex: 1; overflow: hidden; background: var(--panel); border-radius: 0.5rem; padding: 0.9rem 1rem; }
+.notice { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.8rem;
+          text-align: center; }
+.notice .big { font-size: 1.5rem; font-weight: 600; }
+
+/* Playback: the video fills the display; what is said about it lies over
+   the bottom of the picture, between the corners. */
+video { position: fixed; inset: 0; width: 100vw; height: 100vh; object-fit: contain; background: #000; }
+video.fill { object-fit: fill; }
+#banner { position: fixed; left: 22vw; right: 22vw; bottom: 7vh; padding: 0.8rem 1.2rem; border-radius: 0.5rem;
+          background: rgba(13, 17, 23, 0.88); border: 0.06rem solid var(--line); display: flex; align-items: center;
+          gap: 1rem; }
+#banner .number { font-size: 1.9rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+#banner .name { font-size: 1.1rem; font-weight: 600; }
+#banner .about { color: var(--text-2); font-size: 0.8rem; }
+#banner .right { margin-left: auto; text-align: right; color: var(--text-2); font-size: 0.8rem; }
+#message { position: fixed; left: 20vw; right: 20vw; top: 34vh; padding: 1.4rem 1.6rem; border-radius: 0.5rem;
+           background: var(--panel-2); border: 0.06rem solid var(--line); text-align: center; }
+#message .big { font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem; }
+[hidden] { display: none !important; }

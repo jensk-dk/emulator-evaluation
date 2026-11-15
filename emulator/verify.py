@@ -1403,6 +1403,549 @@ def _window_checks():
     return checks
 
 
+# ---------------------------------------------------------- STB simulator ---
+
+# The colours of the user interface (target/rootfs/opt/emu/stb/stb.css): the
+# page, and the item that is selected.
+STB_PAGE_COLOR = (13, 17, 23)
+STB_FOCUS_COLOR = (61, 139, 253)
+# The block at the top centre of the video on demand test title names the
+# representation that is shown (target/media/build-abr.sh).
+ABR_MARKERS = {"0": (255, 224, 0), "1": (0, 224, 160), "2": (255, 64, 160)}
+# The tone of each channel's audio codec (target/media/build-media.sh).
+CHANNEL_TONES = {1: ("mp2", 440), 2: ("aac", 880), 3: ("ac3", 660)}
+STB_HOW = {"host": "typed on the host keyboard", "click": "clicked on the on-screen remote control"}
+_stb_runs = {}
+
+
+class _Stb:
+    """One run of the STB simulator, operated as a person would: with remote
+    control keys, typed into the emulator's window on the host keyboard or
+    clicked on the on-screen remote control. What the user interface does is
+    read from the EMU-STB lines the workload prints."""
+
+    def __init__(self, viewer, seen, width, height, directory, slow):
+        self.viewer = viewer
+        self.seen = seen
+        self.width, self.height = width, height
+        self.directory = directory
+        self.patience = 1800 if slow else 240       # seconds to wait for a slow thing: a page, a stream
+        self.shots = 0
+
+    # ------------------------------------------------------------ events ---
+
+    def mark(self):
+        with self.seen["lock"]:
+            return len(self.seen["events"])
+
+    def wait(self, start, wanted, seconds=None):
+        """The first event since `start` that `wanted` accepts, or None."""
+        def found():
+            with self.seen["lock"]:
+                events = self.seen["events"][start:]
+            return next((event for event in events if wanted(event)), None)
+        return _wait(found, self.patience if seconds is None else seconds, 0.1)
+
+    def last(self, wanted):
+        with self.seen["lock"]:
+            return next((event for event in reversed(self.seen["events"]) if wanted(event)), None)
+
+    # -------------------------------------------------------------- keys ---
+
+    def press(self, key, how="host"):
+        if how == "click":
+            answer = self.viewer.ask(do="remote-click", key=key)
+        else:
+            answer = self.viewer.ask(do="host-key", key=remote.host_keys_of(key)[0])
+        if "error" in answer:
+            raise CheckFailed("the window did not take the %s key: %s" % (remote.LABELS[key], answer["error"]))
+
+    def press_for(self, key, wanted, what, how="host", seconds=None):
+        """Press a key and wait for what it should bring about."""
+        start = self.mark()
+        self.press(key, how)
+        event = self.wait(start, wanted, seconds)
+        if event is None:
+            raise CheckFailed("after %s (%s), %s did not happen; the user interface last reported: %r"
+                              % (remote.LABELS[key], STB_HOW[how], what, self.last(lambda event: True)))
+        return event
+
+    def screen(self, name):
+        return lambda event: event.get("event") == "screen" and event.get("screen") == name
+
+    def awake(self, how="host"):
+        """Wait until the user interface takes keys. A browser that has just
+        started shows its page a moment before it has the keyboard; the red
+        key has no function in the user interface, which reports such a key."""
+        for _ in range(60):
+            start = self.mark()
+            self.press("red", how)
+            if self.wait(start, lambda event: event.get("event") == "key", 3 if self.patience < 1000 else 20):
+                return
+        raise CheckFailed("the user interface takes no keys: none of 60 presses of the red key was reported")
+
+    def to_home(self, how="host"):
+        """EXIT goes home from anywhere. Right after the user interface has
+        appeared the browser may not have the keyboard yet, so a key that
+        brings nothing about is pressed again."""
+        for _ in range(5):
+            start = self.mark()
+            self.press("exit", how)
+            event = self.wait(start, self.screen("home"), 10 if self.patience < 1000 else 60)
+            if event is not None:
+                return event
+        return self.press_for("exit", self.screen("home"), "the home screen", how)
+
+    def select(self, shown, target, how="host"):
+        """Move the selection of a list to `target` with Up and Down. `shown`
+        is the event that listed it: its items, and which one is selected."""
+        items, focus = shown["items"], shown["focus"]
+        if target not in items:
+            raise CheckFailed("the %s screen does not list %r (it lists: %s)" % (shown["screen"], target,
+                                                                              ", ".join(items)))
+        steps = items.index(target) - items.index(focus)
+        for _ in range(abs(steps)):
+            focus = items[items.index(focus) + (1 if steps > 0 else -1)]
+            self.press_for("down" if steps > 0 else "up",
+                           lambda event, focus=focus: event.get("event") == "focus" and event.get("focus") == focus,
+                           "the selection moving to %r" % focus, how)
+
+    def open(self, shown, target, opens, how="host"):
+        """Select an item of a list and press OK; returns the screen event."""
+        self.select(shown, target, how)
+        return self.press_for("ok", self.screen(opens), "the %s screen" % opens, how)
+
+    # ---------------------------------------------------------- pictures ---
+
+    def picture(self):
+        self.shots += 1
+        path = os.path.join(self.directory, "stb-%d.ppm" % self.shots)
+        saved = self.viewer.ask(do="save-display", path=path)
+        if not saved.get("saved"):
+            raise CheckFailed("the window could not save the display's picture: %r" % saved)
+        return path
+
+    def video_problems(self, marker):
+        """What is wrong with the display as a picture of a full-screen video
+        with the reference streams' marker blocks and this one at the top."""
+        path = self.picture()
+        found = imagefile.size(path)
+        entry = {"file": path, "captured_width": found[0], "captured_height": found[1], "marker": tuple(marker)}
+        return graphics.capture_problems(entry, self.width, self.height, tolerance=graphics.VIDEO_COLOR_TOLERANCE)
+
+    def interface_problems(self):
+        """What is wrong with the display as a picture of the user interface:
+        its page colour at the edge, and a selected item."""
+        path = self.picture()
+        image = imagefile.load(path)
+        if (image.width, image.height) != (self.width, self.height):
+            return ["the display's picture is %dx%d, not %dx%d" % (image.width, image.height, self.width, self.height)]
+        close = lambda a, b: all(abs(x - y) <= 24 for x, y in zip(a, b))
+        problems = []
+        edge = image.pixel(self.width // 100, self.height // 2)
+        if not close(edge, STB_PAGE_COLOR):
+            problems.append("the left edge is %s, not the page's %s" % (edge, STB_PAGE_COLOR))
+        step = max(1, self.height // 90)
+        selected = sum(1 for y in range(0, self.height, step) for x in range(0, self.width, step)
+                       if close(image.pixel(x, y), STB_FOCUS_COLOR))
+        if selected < 40:
+            problems.append("no selected item is to be seen (%d sample points have its colour)" % selected)
+        return problems
+
+    # ---------------------------------------------------------- the tour ---
+
+    def tour(self, how):
+        """7.7: every part of the user interface, with keys alone."""
+        steps = []
+        self.awake(how)
+        home = self.to_home(how)
+        steps.append("EXIT: the home screen, listing %s" % ", ".join(home["items"]))
+        if how == "host":
+            problems = _wait(lambda: self.interface_problems() == [] or None, 30, 1.0)
+            _require(problems, "the display does not show the user interface: %s" % "; ".join(self.interface_problems()))
+            steps.append("a capture of the display shows the user interface: its page and a selected item")
+        for target, opens in (("channels", "channels"), ("apps", "apps"), ("performance", "performance")):
+            home = self.last(self.screen("home"))
+            home = dict(home, focus=(self.last(lambda e: e.get("event") in ("focus", "screen")
+                                               and e.get("screen") == "home") or home)["focus"])
+            shown = self.open(home, target, opens, how)
+            steps.append("Up/Down to %r and OK: the %s screen, listing %s" % (target, opens,
+                                                                             ", ".join(shown["items"]) or "nothing"))
+            self.press_for("back", self.screen("home"), "the home screen again", how)
+        steps.append("BACK returned to the home screen each time")
+        return steps
+
+    def home_now(self):
+        """The home screen as it is: its items, and the selection."""
+        home = self.last(self.screen("home"))
+        moved = self.last(lambda e: e.get("event") in ("focus", "screen") and e.get("screen") == "home")
+        return dict(home, focus=(moved or home)["focus"])
+
+    # ---------------------------------------------------------- channels ---
+
+    def channels(self):
+        """7.8: the channel list, a channel, another channel."""
+        found = {"played": []}
+        self.to_home()
+        listed = self.open(self.home_now(), "channels", "channels")
+        found["listed"] = listed["items"]
+        playing = lambda number: (lambda event: event.get("event") == "channel" and event.get("number") == number
+                                  and event.get("state") in ("playing", "error"))
+
+        def played(number, event, how):
+            if event["state"] != "playing":
+                raise CheckFailed("channel %d was not played: %s" % (number, event.get("reason")))
+            marker = next(c["marker"] for c in self.seen["described"]["channels"] if c["number"] == number)
+            time.sleep(1.0)
+            problems = _wait(lambda: self.video_problems(marker) == [] or None, 60, 1.0)
+            found["played"].append({"number": number, "how": how, "video": event.get("video"),
+                                    "sound": event.get("sound"), "at": time.time(),
+                                    "problems": [] if problems else self.video_problems(marker)})
+            time.sleep(4.0)         # its sound, for the recording on the host
+
+        self.select(listed, "2")
+        played(2, self.press_for("ok", playing(2), "channel 2 playing"), "selected in the channel list")
+        played(3, self.press_for("up", playing(3), "channel 3 playing"), "Up while channel 2 played")
+        played(1, self.press_for("1", playing(1), "channel 1 playing"), "the digit 1 while channel 3 played")
+        self.press_for("back", self.screen("channels"), "the channel list again")
+        found["ended"] = time.time()
+        return found
+
+    # --------------------------------------------------------------- vod ---
+
+    def vod(self):
+        """7.9: the app launcher, the video on demand application, an ABR
+        title, and back."""
+        found = {}
+        self.to_home()
+        apps = self.open(self.home_now(), "apps", "apps")
+        found["apps"] = apps["items"]
+        _require("vod" in apps["items"], "the app launcher does not list the video on demand application")
+        self.select(apps, "vod")
+        titles_shown = lambda event: event.get("event") == "vod" and event.get("state") == "titles"
+        titles = self.press_for("ok", titles_shown, "the video on demand application showing its titles")
+        found["titles"] = titles["titles"]
+        found["dash_js"] = (self.last(lambda e: e.get("event") == "vod" and e.get("state") == "ready") or {}).get("dash_js")
+
+        def choose(title):
+            shown = self.last(titles_shown)
+            items, focus = shown["titles"], shown["focus"]
+            steps = items.index(title) - items.index(focus)
+            for _ in range(abs(steps)):
+                focus = items[items.index(focus) + (1 if steps > 0 else -1)]
+                self.press_for("down" if steps > 0 else "up",
+                               lambda event, focus=focus: titles_shown(event) and event.get("focus") == focus,
+                               "the selection moving to %r" % focus)
+
+        def play(title, enough):
+            """Play a title until `enough` says so of its events; returns them."""
+            choose(title)
+            start = self.mark()
+            self.press("ok")
+            mine = lambda event: event.get("event") == "vod" and event.get("title") == title
+
+            def events():
+                with self.seen["lock"]:
+                    return [event for event in self.seen["events"][start:] if mine(event)]
+            _wait(lambda: enough(events()) or any(e["state"] == "error" for e in events()) or None, self.patience, 0.2)
+            return events()
+
+        def test_title(title, wanted):
+            happened = play(title, lambda events: wanted(events) and any(
+                e["state"] == "progress" and e.get("time", 0) >= 3 for e in events))
+            errors = [e.get("reason") for e in happened if e["state"] == "error"]
+            _require(not errors, "%s was not played: %s" % (title, errors))
+            if not any(e["state"] == "progress" and e.get("time", 0) >= 3 for e in happened):
+                with self.seen["lock"]:
+                    recent = [{k: v for k, v in e.items() if k not in ("representations", "titles", "user_agent")}
+                              for e in self.seen["events"][-12:]]
+                raise CheckFailed("%s did not play for three seconds; the last things reported: %r" % (title, recent))
+            representations = [e["representation"] for e in happened if e["state"] == "representation"]
+            stream = next((e for e in happened if e["state"] == "stream"), {})
+            # The picture names the representation that is shown; it may change
+            # between a look at the events and the capture.
+            problems = None
+            for _ in range(8):
+                shown = self.last(lambda e: e.get("event") == "vod" and e.get("state") == "representation")
+                marker = ABR_MARKERS.get(str(shown["representation"]["id"]))
+                problems = self.video_problems(marker) if marker else ["no marker for representation %r" % shown]
+                if not problems:
+                    break
+                time.sleep(1.0)
+            self.press_for("back", titles_shown, "the titles again")
+            return {"title": title, "representations": representations, "offered": stream.get("representations") or [],
+                    "shown": shown["representation"], "problems": problems}
+
+        only_smallest = lambda events: any(e["state"] == "representation" for e in events)
+        found["slow"] = test_title("test-pattern-slow", only_smallest)
+        found["fast"] = test_title("test-pattern", lambda events: any(
+            e["state"] == "representation" and str(e["representation"]["id"]) != "0" for e in events))
+
+        # A film on the internet: played where the target reaches it, and
+        # refused with a message where it does not.
+        film = "big-buck-bunny"
+        happened = play(film, lambda events: any(e["state"] == "progress" and e.get("time", 0) >= 3 for e in events))
+        error = next((e for e in happened if e["state"] == "error"), None)
+        progress = [e for e in happened if e["state"] == "progress"]
+        found["film"] = {"title": film, "error": error and error.get("reason"), "played": bool(progress) and not error,
+                         "representations": [e["representation"] for e in happened if e["state"] == "representation"],
+                         "offered": len((next((e for e in happened if e["state"] == "stream"), {})).get("representations") or []),
+                         "seconds": progress[-1].get("time") if progress else 0}
+        if error:
+            self.press("ok")        # the message goes; the titles are underneath
+            choose("elephants-dream")
+            found["film"]["usable_after_error"] = True
+        elif progress:
+            self.press_for("back", titles_shown, "the titles again")
+        else:
+            raise CheckFailed("%s neither played nor was refused: %r" % (film, happened[-3:]))
+        back = self.press_for("back", self.screen("apps"), "the simulator's app launcher again")
+        found["returned"] = back["screen"]
+        return found
+
+    # --------------------------------------------------------- workloads ---
+
+    def workloads(self):
+        """7.10: each performance workload, started from the user interface."""
+        found = {"runs": []}
+        self.to_home()
+        listed = self.open(self.home_now(), "performance", "performance")
+        found["listed"] = listed["items"]
+        for name in listed["items"]:
+            shown = self.last(self.screen("performance"))
+            moved = self.last(lambda e: e.get("event") in ("focus", "screen") and e.get("screen") == "performance")
+            self.select(dict(shown, focus=(moved or shown)["focus"]), name)
+            start = self.mark()
+            self.press("ok")
+            finished = self.wait(start, lambda event: event.get("event") == "workload" and event.get("id") == name
+                                 and event.get("state") == "finished", 4 * self.patience)
+            if finished is None:
+                raise CheckFailed("the %s workload, started from the user interface, did not finish" % name)
+            results = self.wait(start, self.screen("results"))
+            found["runs"].append(dict(finished, results_screen=bool(results)))
+            if results is None:
+                raise CheckFailed("after the %s workload the user interface did not show its results" % name)
+            self.awake()            # the browser was started again after a workload that took the display
+            self.press_for("back", self.screen("performance"), "the list of performance tests again")
+        return found
+
+    def off(self):
+        self.to_home()
+        self.select(self.home_now(), "off")
+        self.press("ok")
+
+
+def _stb_session(mode, arch):
+    """One run of the STB simulator per mode, with everything the checks look
+    at done in it. Returns what was observed."""
+    key = (mode, arch)
+    if key in _stb_runs:
+        return _stb_runs[key]
+    if not window.gui_python():
+        raise CheckUnavailable("Qt for Python (%s) is not installed on this host, so the launcher has no windows; %s"
+                               % (window.PACKAGE, host.SETUP_HINT))
+    width, height = graphics.resolution(WINDOW_RESOLUTION)
+    seen = {"events": [], "lock": threading.Lock(), "ready": threading.Event(), "described": None, "parts": {}}
+
+    def on_line(line):
+        for marker in ("EMU-STB: ", "EMU-WORKLOAD: "):
+            start = line.find(marker)
+            if start < 0:
+                continue
+            try:
+                data = json.loads(line[start + len(marker):])
+            except ValueError:
+                return
+            if marker == "EMU-WORKLOAD: ":
+                if data.get("id") == "stb-simulator":
+                    seen["described"] = data
+                return
+            with seen["lock"]:
+                seen["events"].append(data)
+            if data.get("event") == "screen" and data.get("screen") == "home":
+                seen["ready"].set()
+
+    sink = _HostSink()
+    with tempfile.TemporaryDirectory(prefix="emu-verify-") as directory:
+        def drive(viewer):
+            def work():
+                stb = _Stb(viewer, seen, width, height, directory, slow=arch != "native")
+                try:
+                    if not seen["ready"].wait(3600):
+                        seen["error"] = "the user interface never appeared: no home screen was reported"
+                        return
+                    seen["started"] = time.time()
+                    for name, part in (("tour-host", lambda: stb.tour("host")), ("tour-click", lambda: stb.tour("click")),
+                                       ("channels", stb.channels), ("vod", stb.vod), ("workloads", stb.workloads)):
+                        try:
+                            seen["parts"][name] = part()
+                        except CheckFailed as error:
+                            seen["parts"][name] = {"error": str(error)}
+                        except Exception as error:      # reported by the check of that part
+                            seen["parts"][name] = {"error": "%s: %s" % (type(error).__name__, error)}
+                    stb.off()
+                except Exception as error:
+                    seen["error"] = "%s: %s" % (type(error).__name__, error)
+                    try:
+                        viewer.ask(do="quit")           # closing the window ends the emulator
+                    except (EmuError, OSError, ValueError):
+                        pass
+            threading.Thread(target=work, daemon=True).start()
+
+        try:
+            _, outcome = _run(mode=mode, arch=arch, workload="stb-simulator", args=["--quick"],
+                              resolution=WINDOW_RESOLUTION, window=True, remote_control="window",
+                              drivers=driver_features.parse(["audio=host"]), options=sink.options(),
+                              on_line=on_line, on_audio=sink.watch, on_viewer=drive, timeout=4 * 3600)
+        finally:
+            seen["heard"] = sink.close()
+    seen["sink"] = sink
+    seen["trace"] = _trace(outcome)
+    seen["results"] = outcome.results
+    seen["emulator"] = outcome.environment["emulator"]
+    _stb_runs[key] = seen
+    return seen
+
+
+def _stb_part(mode, arch, name):
+    seen = _stb_session(mode, arch)
+    _require("error" not in seen or name in seen["parts"], seen.get("error"))
+    part = seen["parts"].get(name)
+    _require(part is not None, "this part of the run was not reached: %s" % seen.get("error"))
+    _require(not (isinstance(part, dict) and "error" in part), isinstance(part, dict) and part.get("error"))
+    return seen, part
+
+
+def _stb_start(mode, arch="native"):
+    """The simulator starts, shows its user interface, and every part of it
+    is reached with remote control keys from the keyboard and the on-screen
+    remote control."""
+    seen, by_keyboard = _stb_part(mode, arch, "tour-host")
+    _, by_clicks = _stb_part(mode, arch, "tour-click")
+    described = seen["described"] or {}
+    lines = ["the stb-simulator workload %s started: %s at %s, with %d channels, %d titles and the performance "
+             "workloads %s" % (described.get("version"), described.get("browser"), described.get("resolution"),
+                               len(described.get("channels") or []), len(described.get("titles") or []),
+                               ", ".join(described.get("workloads") or []))]
+    lines += ["%s: %s" % (STB_HOW["host"], step) for step in by_keyboard]
+    lines.append("%s: the same tour, with the same screens (%d steps)" % (STB_HOW["click"], len(by_clicks)))
+    lines.append("not covered: RedRat IR input, which is not implemented")
+    return lines + ["graphics provider: %s" % seen["emulator"]["graphics"]["provider"]]
+
+
+def _stb_channels(mode, arch="native"):
+    """The channel list plays the selected channel, and another one after it."""
+    seen, found = _stb_part(mode, arch, "channels")
+    _require(len(found["listed"]) >= 3, "the channel list has %d channels" % len(found["listed"]))
+    lines = ["the channel list has the channels %s" % ", ".join(found["listed"])]
+    for played in found["played"]:
+        _require(not played["problems"], "channel %d (%s) is not what the display shows: %s"
+                 % (played["number"], played["how"], "; ".join(played["problems"])))
+        lines.append("channel %d, %s: playing at %s; a capture of the display shows its video" % (
+            played["number"], played["how"], played["video"]))
+    # The sound: each channel's tone, in the order the channels were played.
+    received = [(row["level"], row["hz"]) for row in seen["trace"]]
+    sink = seen["sink"]
+    heard = seen["heard"] if sink.name else None
+    for windows, where in ((received, "the host-side audio process"), (heard, sink.where)):
+        if windows is None:
+            continue
+        first = {}
+        for played in found["played"]:
+            codec, hz = CHANNEL_TONES[played["number"]]
+            at = [index for index, (level, pitch) in enumerate(windows) if level >= LOUD and abs(pitch - hz) <= hz * 0.05]
+            _require(len(at) >= 5, "the %d Hz tone of channel %d (%s) did not reach %s"
+                     % (hz, played["number"], AUDIO_CODECS[codec], where))
+            first[played["number"]] = at[0]
+        order = [played["number"] for played in found["played"]]
+        _require(sorted(order, key=lambda number: first[number]) == order,
+                 "at %s the channels' tones came in another order than the channels were played" % where)
+        lines.append("at %s: the tones of the channels in the order they were played (%s)" % (
+            where, ", ".join("%d Hz for channel %d" % (CHANNEL_TONES[n][1], n) for n in order)))
+    if not sink.name:
+        lines.append("not recorded at the host's output: %s" % sink.reason)
+    return lines + sink.evidence()
+
+
+def _stb_vod(mode, arch="native"):
+    """The video on demand application starts from the app launcher, plays
+    adaptive bitrate titles with dash.js, and returns to the simulator."""
+    seen, found = _stb_part(mode, arch, "vod")
+    for film in ("big-buck-bunny", "elephants-dream"):
+        _require(film in found["titles"], "the video on demand application does not offer %s" % film)
+    _require(found["dash_js"], "the video on demand application did not load dash.js")
+    lines = ["the app launcher lists %s; OK started the video on demand application in the browser, with dash.js %s"
+             % (", ".join(found["apps"]), found["dash_js"]),
+             "its titles: %s" % ", ".join(found["titles"])]
+    slow, fast = found["slow"], found["fast"]
+    for played in (slow, fast):
+        _require(not played["problems"], "%s is not what the display shows: %s" % (played["title"],
+                                                                                   "; ".join(played["problems"])))
+    size = lambda r: "%sx%s at %.2f Mbit/s" % (r.get("width"), r.get("height"), (r.get("bandwidth") or 0) / 1e6)
+    _require(len(fast["offered"]) >= 3, "the test title offers %d representations" % len(fast["offered"]))
+    _require({str(r["id"]) for r in slow["representations"]} == {"0"},
+             "over the slow connection the player showed more than the smallest representation: %s"
+             % ", ".join(size(r) for r in slow["representations"]))
+    _require(str(fast["shown"]["id"]) != "0", "the player stayed at the smallest representation")
+    lines.append("the test title is an MPEG-DASH stream with %d video representations (%s)" % (
+        len(fast["offered"]), ", ".join(size(r) for r in fast["offered"])))
+    lines.append("over a connection of 0.6 Mbit/s the player showed %s only; a capture of the display shows that "
+                 "representation's picture" % size(slow["shown"]))
+    lines.append("without the limit it went from %s to %s; a capture shows that one" % (
+        size(fast["representations"][0]), size(fast["shown"])))
+    film = found["film"]
+    if film["played"]:
+        lines.append("from the internet, %s played for %.0f s: %d representations offered, shown at %s" % (
+            film["title"], film["seconds"], film["offered"],
+            ", then ".join(size(r) for r in film["representations"]) or "an unnamed one"))
+    else:
+        _require(film.get("usable_after_error"), "after a title that could not be played the application was stuck")
+        lines.append("from the internet, %s could not be played here (%s); the application said so and stayed usable"
+                     % (film["title"], film["error"]))
+    lines.append("BACK at the titles left the application: the simulator's %s screen was shown again" % found["returned"])
+    return lines + ["not played here: Elephants Dream, Sintel and Tears of Steel, which are offered the same way"]
+
+
+def _stb_workloads(mode, arch="native"):
+    """Each performance workload starts from the user interface, runs and
+    reports its results."""
+    seen, found = _stb_part(mode, arch, "workloads")
+    wanted = sorted(w["id"] for w in catalog.workloads()["workloads"] if w.get("kind") == "performance"
+                    and w.get("status") == "implemented")
+    _require(sorted(found["listed"]) == wanted, "the user interface offers %s, and the performance workloads are %s"
+             % (", ".join(found["listed"]), ", ".join(wanted)))
+    lines = ["the user interface offers every performance workload: %s" % ", ".join(found["listed"])]
+    for run in found["runs"]:
+        reported = [r for r in seen["results"] if r.get("launched_from") == "stb-simulator"
+                    and r.get("workload") == run["id"]]
+        measured = [r for r in reported if r.get("value") is not None]
+        _require(run["status"] == 0, "%s ended with status %s" % (run["id"], run["status"]))
+        _require(measured, "%s reported no measurement to the launcher (%d results, none with a value)"
+                 % (run["id"], len(reported)))
+        lines.append("%s: ran for %.0f s and reported %d results to the launcher, %d of them measurements (%s); the "
+                     "user interface then showed its results" % (
+                         run["id"], run["seconds"], len(reported), len(measured),
+                         ", ".join(sorted({r["test"] for r in measured}))[:160]))
+    return lines + ["these were short runs (--quick): they show that each workload runs and reports, and are not "
+                    "measurements to compare"]
+
+
+def _stb_checks():
+    variants = (("container", "container", "native", "container mode"),
+                ("vm", "vm", "native", "a host-native VM"),
+                ("vm-arm64", "vm", "arm64", "an ARM64 VM"),
+                ("vm-arm32", "vm", "arm32", "an ARM32 VM"))
+    checks = {}
+    for name, function, task, what in (
+            ("stb-start", _stb_start, "7.7", "the STB simulator starts and is operated with remote control keys in "),
+            ("stb-channels", _stb_channels, "7.8", "the STB simulator plays the selected channel, and another, in "),
+            ("stb-vod", _stb_vod, "7.9", "the VOD application plays an ABR title and returns to the simulator in "),
+            ("stb-workloads", _stb_workloads, "7.10", "the performance workloads run from the STB simulator in ")):
+        for suffix, mode, arch, where in variants:
+            checks["%s-%s" % (name, suffix)] = (lambda f=function, m=mode, a=arch: f(m, a), task, what + where)
+    return checks
+
+
 # name -> (function, the task in openspec/changes/staged-emulator-delivery/tasks.md it supports, description)
 CHECKS = {
     "matrix": (check_matrix, "1.1", "the host test matrix covers every declared host combination"),
@@ -1424,6 +1967,7 @@ CHECKS.update(_graphics_checks())
 CHECKS.update(_media_checks())
 CHECKS.update(_web_checks())
 CHECKS.update(_window_checks())
+CHECKS.update(_stb_checks())
 
 
 def _report_path():

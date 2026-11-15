@@ -265,6 +265,67 @@ ones. What each check goes by:
 Not checked: that keys stay away from the target while another window has the
 focus, and anything about RedRat IR input, which is not implemented.
 
+## STB simulator
+
+Functional checks of the `stb-simulator` workload (tasks 7.7 to 7.10);
+nothing here is a measurement. The workload shows a set-top-box-like user
+interface in the target's browser and prints a line for everything the user
+interface does:
+
+    EMU-STB: {"event": "screen", "screen": "channels", "focus": "1", "items": ["1", "2", "3"]}
+    EMU-STB: {"event": "channel", "state": "playing", "number": 2, "stream": "avc-fragments", ...}
+    EMU-STB: {"event": "vod", "state": "representation", "title": "test-pattern", "representation": {...}}
+
+    ./emu run --mode container --workload stb-simulator --remote-control window
+    ./emu verify stb-start-vm stb-channels-vm stb-vod-vm stb-workloads-vm
+
+`./emu verify` runs the workload once per mode, with the display window and
+the on-screen remote control, at 720p, and operates it with remote control
+keys alone, through the window's command channel as in the remote control
+checks: keys typed into the window and mouse clicks on the remote control's
+buttons. It waits for the line each key should bring about, and takes the
+display's picture from the window. A browser that has just started shows its
+page a moment before it has the keyboard, so the run first presses the red
+key, which has no function and is reported, until it arrives. What each check
+goes by:
+
+- **Start and keys** (`stb-start-*`). The home screen is reported, and a
+  capture of the display shows the user interface: its page colour and a
+  selected item. Then a tour, once with host keys and once with clicks on
+  the on-screen remote control: EXIT to the home screen; for each of the
+  channel list, the app launcher and the performance tests, Up or Down to
+  its entry (each move is reported), OK (its screen is reported), BACK (the
+  home screen again). RedRat IR input is not implemented and not covered.
+- **Channels** (`stb-channels-*`). Channel 2 is selected in the channel list
+  and played, then Up (channel 3), then the digit 1 (channel 1). Each time
+  the user interface must report the channel playing, a capture of the
+  display must show the corner blocks of the reference streams and the block
+  whose colour names that channel's video codec, and the channel's tone must
+  arrive on the host: the pitch names the audio codec (880 Hz AAC, 660 Hz
+  AC-3, 440 Hz MP2), and the three tones must come in the order the channels
+  were played, at the launcher's host-side audio process and in the
+  recording made on the host (as in "Audio and video decoding").
+- **Video on demand** (`stb-vod-*`). OK on the application in the app
+  launcher; the application must report dash.js and its titles, Big Buck
+  Bunny and Elephants Dream among them. The test title over the slow path
+  (0.6 Mbit/s) must play for three seconds showing only its smallest
+  representation, and without the limit the player must go on to a larger
+  one; each time a capture of the display must show the block whose colour
+  names the representation the player reports. Then Big Buck Bunny is
+  started from the internet: where the target reaches it, it must play for
+  three seconds, and the check says at which representations; where it does
+  not, the application must say so and still take keys. That is reported
+  either way and does not fail the check: the stream is not this project's.
+  BACK at the titles must bring the simulator's app launcher back.
+- **Performance workloads** (`stb-workloads-*`). The performance tests
+  screen must list every implemented performance workload of
+  `evaluation/workloads.json`. Each is started with OK and must end with
+  status 0, report at least one measurement to the launcher (an `EMU-RESULT`
+  line with `launched_from`), and be followed by the results screen. The
+  simulator is started with `--quick` for this, so each workload runs a
+  short part of its tests: the results show that it ran and reported, and
+  are not measurements to compare.
+
 ## Web
 
 Workload `web-bench`. The browser is WPE WebKit, started by its launcher Cog

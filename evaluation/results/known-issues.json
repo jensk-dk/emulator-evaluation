@@ -16,9 +16,9 @@
     },
     {
       "kind": "limit", "area": "Graphics",
-      "title": "The display service is unstable on the ARM32 target",
-      "detail": "The Wayland compositor ends without a message now and then, on every host. The media and browser workloads start the display again and repeat; the graphics workload does not, so a graphics check can fail on one run and pass on the next. The cause is not known.",
-      "hosts": "all", "modes": ["vm-arm32"], "task": "4.1"
+      "title": "The display service is unstable on the ARM32 target, and ended once in a host-native VM on Linux",
+      "detail": "The Wayland compositor ends without a message now and then on the ARM32 target, on every host. The media and browser workloads start the display again and repeat; the graphics workload does not, so a graphics check can fail on one run and pass on the next. In one complete verification run on Linux the same happened in the host-native VM: five graphics checks failed, and all five passed when run again. The cause is not known.",
+      "hosts": "all", "modes": ["vm-native", "vm-arm32"], "task": "4.1"
     },
     {
       "kind": "unverified", "area": "Graphics",
@@ -87,10 +87,28 @@
       "hosts": "all", "modes": "all", "task": "7.6"
     },
     {
-      "kind": "missing", "area": "Workloads",
-      "title": "STB simulator",
-      "detail": "The set-top-box user interface, its channel list with playback, the app launcher with the VOD application, and starting the performance workloads from it. Only the requirements exist.",
-      "hosts": "all", "modes": "all", "task": "7.7 to 7.10"
+      "kind": "limit", "area": "STB simulator",
+      "title": "P+, P-, TEXT and WEBTV do nothing in the simulator",
+      "detail": "The target's browser passes these four keys to a page as keys without a name, so the user interface cannot tell them apart. The channel is changed with Up and Down and with the digits.",
+      "hosts": "all", "modes": "all", "task": "7.7"
+    },
+    {
+      "kind": "limit", "area": "STB simulator",
+      "title": "The films of the video on demand application need the internet, and servers that are not this project's",
+      "detail": "Big Buck Bunny, Elephants Dream, Sintel and Tears of Steel are MPEG-DASH streams served by Akamai, BBC R&D and the Shaka Player project. A title the target cannot reach is refused with a message; a stream that moves has to be replaced in titles.json. The test title on the device plays without a network.",
+      "hosts": "all", "modes": "all", "task": "7.9"
+    },
+    {
+      "kind": "limit", "area": "STB simulator",
+      "title": "A video on demand title stalled once on the ARM64 target",
+      "detail": "In the first of two runs on Linux the test title stopped right after it started and reported nothing more; the user interface took keys again afterwards, and the second run passed. Not seen in the other modes. The cause is not known.",
+      "hosts": ["linux-x86_64"], "modes": ["vm-arm64"], "task": "7.9"
+    },
+    {
+      "kind": "limit", "area": "STB simulator",
+      "title": "A performance workload that uses the display cannot be ended from the simulator",
+      "detail": "The graphics, media and web workloads take over the display, and the user interface is stopped until they are done; no key ends them early. The channels are the five-second reference streams, played in a loop.",
+      "hosts": "all", "modes": "all", "task": "7.8, 7.10"
     },
     {
       "kind": "missing", "area": "Qualification",

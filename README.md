@@ -45,6 +45,7 @@ graphics acceleration, which the Linux host has in VM mode. The task list and
     ./emu run --mode vm --workload graphics-demo --window             # graphics, with the display in a window
     ./emu run --mode vm --workload media-decode --window              # decoding and playing video and sound
     ./emu run --workload remote-keys --remote-control window          # remote control keys, with the on-screen remote
+    ./emu run --workload stb-simulator --remote-control window        # a set-top box: channels, apps, video on demand
     ./emu audio mute                                                  # from another terminal, while it plays
 
 On Windows use `setup.cmd` and `emu.cmd`. (`setup.cmd` runs `setup.ps1`
@@ -281,8 +282,9 @@ ARM host. It is a diagnostic and not part of the test matrix.
 
 Workloads: `prompt` (interactive shell), `bench` (CPU, memory and I/O
 benchmarks), `driver-check`, `graphics-demo`, `media-decode`, `web-bench`
-(the WPE WebKit browser) and `remote-keys` (shows the remote control keys that
-arrive). `./emu workloads` lists them.
+(the WPE WebKit browser), `remote-keys` (shows the remote control keys that
+arrive) and `stb-simulator` (a set-top-box user interface with channels, an
+app launcher and video on demand; see [STB simulator](#stb-simulator)). `./emu workloads` lists them.
 
 Other commands: `./emu build`, `./emu doctor`, `./emu matrix`,
 `./emu workloads`, `./emu verify`, `./emu report`, `./emu audio`. Each has
@@ -782,6 +784,81 @@ the target's loopback interface:
   simulated ARM target the browser counts every frame of a stream while the
   display shows a handful
   ([procedures](evaluation/procedures.md#web)).
+
+## STB simulator
+
+    ./emu run --workload stb-simulator                         # in a window, keys from the keyboard
+    ./emu run --mode vm --workload stb-simulator --remote-control window   # with the on-screen remote control
+
+The `stb-simulator` workload shows a set-top-box-like user interface on the
+target's display and is operated with remote control keys alone
+([Remote control input](#remote-control-input)). It gets the launcher's
+window without being asked, since it is used through its display. The user
+interface is a web application
+([target/rootfs/opt/emu/stb](target/rootfs/opt/emu/stb)) shown full screen by
+the image's browser, WPE WebKit; the workload starts the browser, serves the
+application and its media over the target's loopback interface, and does
+what a page cannot.
+
+| Screen | What it does |
+|---|---|
+| TV channels | the channel list. OK plays the selected channel, full screen, with its sound; Up and Down change the channel, a digit selects one by number, BACK returns to the list |
+| Apps | the app launcher, with the video on demand application |
+| Performance tests | starts a workload of the performance evaluation: `bench`, `graphics-demo`, `media-decode` or `web-bench` |
+| Switch off | ends the simulator |
+
+The arrow keys move the selection, OK opens what is selected, BACK returns
+to where the user was, and EXIT goes to the home screen.
+
+- **Channels** are the reference streams of the media workload, one per
+  video codec (MPEG-2 with MP2, AVC with AAC, HEVC with AC-3), each played
+  in a loop through Media Source Extensions. They need no network. The
+  streams are five seconds long, so a channel repeats every five seconds.
+- **Video on demand** is a web application of its own
+  ([vod](target/rootfs/opt/emu/stb/vod)), started from the app launcher in
+  the same browser; BACK or EXIT at its titles returns to the simulator. Its
+  titles are MPEG-DASH streams, played with [dash.js](https://dashjs.org)
+  (version 5.3.0, BSD 3-Clause), which chooses among a stream's
+  representations as it plays, by the speed of the connection and no larger
+  than the display. The titles ([titles.json](target/rootfs/opt/emu/stb/vod/titles.json))
+  are the Blender open films, as DASH streams that others serve on the
+  internet: Big Buck Bunny (Akamai's DASH test content), Elephants Dream
+  (BBC Research & Development), Sintel and Tears of Steel (the Shaka Player
+  demo assets). The target reaches them through the host's network; a title
+  it cannot reach is refused with a message, and the application stays
+  usable. Two more titles are a 20 second test stream that is on the device,
+  in three sizes (240p, 480p, 720p; [build-abr.sh](target/media/build-abr.sh)):
+  once as it is, and once over a path the simulator serves at 0.6 Mbit/s,
+  which carries only the smallest size. A block at the top centre of its
+  picture names the size that is playing.
+- **Performance tests** run as they do when the launcher starts them, and
+  print their results as their own result lines, each marked as launched
+  from the simulator; the user interface shows them when the workload is
+  done. A workload that uses the display takes it over while it runs: the
+  user interface is stopped and comes back with the results, and there is no
+  key that ends such a workload early. `--record` records the run as one of
+  `stb-simulator`; results for the evaluation are recorded by running the
+  workloads themselves.
+- What the user interface does is printed as `EMU-STB` lines on the
+  launcher's terminal: every screen, selection, channel, title and
+  representation. The checks go by them.
+- dash.js is not in this repository: the image build fetches the release
+  that [target/image.json](target/image.json) names from the npm registry and
+  checks its SHA-256. The image also has the certificate authorities the
+  browser needs for HTTPS.
+
+Limits:
+
+- The browser does not tell a page about the P+, P-, TEXT and WEBTV keys
+  (they arrive as keys without a name), so the channel is changed with Up
+  and Down and with the digits, not with P+ and P-.
+- RedRat IR input is not implemented, so the simulator takes its keys from
+  the other two input modes.
+- With the CPU emulated (ARM64 and ARM32 targets) the browser draws far
+  below real time: the user interface answers slowly and video shows few of
+  its frames ([Web browser](#web-browser)).
+- The films depend on servers that are not this project's; a stream that
+  moves or goes away has to be replaced in `titles.json`.
 
 ## Evaluation
 

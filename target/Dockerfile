@@ -62,9 +62,11 @@ COPY src/emuscreen.c src/emukeys.c src/emu_remote.c src/build-display-tools.sh /
 RUN sh /src/build-display-tools.sh /src /out
 
 # -------------------------------------------------------------- media ---
-# The reference streams of the media-decode workload. They are data, the same
-# for every target architecture, so this stage runs on the building machine
-# rather than under emulation of the target's CPU.
+# The reference streams of the media-decode workload, and what the STB
+# simulator's video on demand application needs: its test title, an MPEG-DASH
+# stream, and dash.js, the player library. They are data, the same for every
+# target architecture, so this stage runs on the building machine rather than
+# under emulation of the target's CPU.
 FROM --platform=$BUILDPLATFORM ${BASE_IMAGE} AS media
 ARG APT_SNAPSHOT=""
 RUN set -eu; \
@@ -78,10 +80,15 @@ RUN set -eu; \
     echo 'Acquire::Retries "5";' > /etc/apt/apt.conf.d/80-retries; \
     export DEBIAN_FRONTEND=noninteractive; \
     apt-get update; \
-    apt-get install -y --no-install-recommends ffmpeg python3; \
+    apt-get install -y --no-install-recommends ffmpeg python3 ca-certificates; \
     rm -rf /var/lib/apt/lists/*
 COPY media/ /src/media/
 RUN sh /src/media/build-media.sh /src/media /out/media
+RUN sh /src/media/build-abr.sh /out/media/abr
+ARG DASHJS_PACKAGE
+ARG DASHJS_VERSION
+ARG DASHJS_SHA256
+RUN python3 /src/media/fetch-dashjs.py "$DASHJS_PACKAGE" "$DASHJS_VERSION" "$DASHJS_SHA256" /out/stb-lib
 
 # ------------------------------------------------------------ flutter ---
 # Builds the Flutter workload with a pinned Flutter SDK. The SDK builds Linux
@@ -156,6 +163,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       cog libwpewebkit-2.0-1 \
       gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-libav gstreamer1.0-alsa \
     && rm -rf /var/lib/apt/lists/*
+# The certificate authorities the browser trusts: the STB simulator's video
+# on demand application plays streams from the internet, over HTTPS.
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 # ------------------------------------------------------------- target ---
 # Container-mode image.
@@ -165,6 +176,7 @@ COPY --from=tools /out/emubench /out/emugfx /out/emuscreen /out/emukeys /usr/loc
 COPY --from=flutter /out/flutter/ /opt/emu/flutter/
 COPY --from=tools /out/lib/ /opt/emu/lib/
 COPY --from=media /out/media/ /opt/emu/media/
+COPY --from=media /out/stb-lib/ /opt/emu/stb/lib/
 ARG IMAGE_NAME=emu-target
 ARG IMAGE_VERSION=0.0.0
 ARG DEFINITION_SHA256=unknown
@@ -203,6 +215,7 @@ COPY --from=tools /out/emubench /out/emugfx /out/emuscreen /out/emukeys /usr/loc
 COPY --from=flutter /out/flutter/ /opt/emu/flutter/
 COPY --from=tools /out/lib/ /opt/emu/lib/
 COPY --from=media /out/media/ /opt/emu/media/
+COPY --from=media /out/stb-lib/ /opt/emu/stb/lib/
 ARG IMAGE_NAME=emu-target
 ARG IMAGE_VERSION=0.0.0
 ARG DEFINITION_SHA256=unknown
