@@ -105,6 +105,23 @@
         {"area": "audio_video_decoding", "test": "mse_playback_dropped_frames", "unit": "frames", "method": "WPE WebKit plays a reference stream of the media-decode workload (1280x720, 25 frames/s, 5 s, as fragmented MP4) in real time, full screen, with its sound on the target's audio device: a page appends the initialisation segment and the media fragments to a Media Source buffer, keeping two seconds ahead of the playback position; the stream's frames that did not reach the display: all of them, less the frames shown, which are the smaller of the browser's count (the frames it counted at its video output and did not drop there) and the display's (the repaints with new content that the target's compositor recorded while the stream played); once per stream (MPEG-2, AVC, HEVC)"},
         {"area": "graphics", "test": "web_render_fps", "unit": "frames/s", "method": "WPE WebKit shows a fixed animated page full screen for a fixed time at the display resolution: a rotating background, 64 blended shapes and a grid of 24 text elements, all page elements moved once per animation frame; the browser draws one frame per display refresh, so the frame rate is bounded by the 60 Hz display; frame rate and percentiles of the time between frames"}
       ]
+    },
+    {
+      "id": "remote-keys",
+      "version": "1.0.0",
+      "kind": "functional",
+      "status": "implemented",
+      "stage": 6,
+      "display": true,
+      "remote": true,
+      "launch": "./emu run --mode MODE --workload remote-keys --remote-control keys|window",
+      "source": "target/rootfs/opt/emu/workloads/remote-keys, target/src/emukeys.c, target/src/emu_remote.c",
+      "version_source": {
+        "file": "target/rootfs/opt/emu/workloads/remote-keys",
+        "pattern": "VERSION=\"([^\"]+)\""
+      },
+      "procedure": "evaluation/procedures.md#remote-control-input",
+      "measurements": []
     }
   ]
 }

@@ -30,8 +30,14 @@ DEFAULT_RESOLUTION = "1080p"
 CHOICES = ("auto", "host", "emulated")
 # How long a workload keeps its last frame on the display for a capture.
 SCREEN_HOLD_SECONDS = 4
+# The launcher's own window (emulator/gui/viewer.py): it has the toolbar, the
+# switch to full screen and remote control input, and shows the display in
+# both modes.
+LAUNCHER_WINDOW = "launcher"
 # QEMU's displays that open a window, in order of preference. SDL's window
 # takes the size of the target's display; GTK's gives the display its own.
+# One of these shows a VM's display where the launcher's window cannot (see
+# window_kind).
 WINDOWS = ("sdl", "cocoa", "gtk")
 # The ones that can show a display that is rendered on the host GPU, with the
 # option that turns that on. QEMU's Cocoa window cannot, except in builds that
@@ -72,6 +78,25 @@ def window_backend(binary):
         if name in displays:
             return name
     raise EmuError("this QEMU build has no display that opens a window (%s)" % ", ".join(WINDOWS))
+
+
+def window_kind(binary, requested):
+    """Which window shows a VM's display: the launcher's own, or QEMU's
+    (named by its display backend).
+
+    The launcher's window gets the display from QEMU's VNC server. That shows
+    a display rendered on the host GPU only where QEMU has a working display
+    backend that renders without a window (probe_vm). Where it has not, and
+    host acceleration is asked for or preferred, the display is shown in
+    QEMU's own window: that one can show it, but has no toolbar and takes no
+    remote control keys."""
+    if (requested or "auto") == "emulated" or probe_vm(binary)["available"]:
+        return LAUNCHER_WINDOW
+    try:
+        own = window_backend(binary)
+    except EmuError:
+        return LAUNCHER_WINDOW
+    return own if probe_vm(binary, own)["available"] else LAUNCHER_WINDOW
 
 
 def opengl_window(binary, window):
@@ -205,7 +230,8 @@ def vm_arguments(plan, width, height, memory_mb, options):
     backend, device description). The display is shown in a window when the
     plan names one, and nowhere otherwise."""
     size = "xres=%d,yres=%d" % (width, height)
-    window = plan.get("window")
+    # The launcher's own window is not a display backend of QEMU's.
+    window = plan.get("window") if plan.get("window") != LAUNCHER_WINDOW else None
     if plan["provider"] != "host":
         # An emulated display adapter without 3D. Its frame-buffer allowance
         # has to grow with the resolution.
@@ -376,37 +402,63 @@ class NoCapture:
         pass
 
 
-def capture_endpoint(plan):
+def _private_socket(name):
+    """A path for a socket of this run, in a directory to remove afterwards;
+    (None, None) on a host without such sockets. The path is short: socket
+    paths have a tight length limit."""
+    if host.host_os() == "windows" or not hasattr(socket, "AF_UNIX"):
+        return None, None
+    directory = tempfile.mkdtemp(prefix="emu-", dir="/tmp")
+    return os.path.join(directory, name), directory
+
+
+def _vnc_port():
+    """A free TCP port for a VNC display: QEMU counts those from port 5900."""
+    while True:
+        with socket.socket() as probe:
+            probe.bind(("127.0.0.1", 0))
+            port = probe.getsockname()[1]
+        if port >= 5900:
+            return port
+
+
+def vnc_endpoint():
+    """Where QEMU serves a VM's display for the launcher's window. Returns
+    (QEMU arguments, address for emulator/rfb.py, directory to remove
+    afterwards)."""
+    path, directory = _private_socket("vnc.sock")
+    if path:
+        return ["-vnc", "unix:" + path], path, directory
+    port = _vnc_port()
+    return ["-vnc", "127.0.0.1:%d" % (port - 5900)], ("127.0.0.1", port), None
+
+
+def capture_endpoint(plan, vnc=None):
     """How the display of a VM is captured during one run. Returns (QEMU
     arguments, a client with capture(path, format) and close(), directory to
-    remove afterwards).
+    remove afterwards). `vnc` is the address of a VNC server this QEMU already
+    has (vnc_endpoint), for a capture that has to come from one.
 
     QEMU writes the image itself when asked over its machine protocol. It
     refuses while the display is a texture on the host GPU; the image then
     comes from QEMU's VNC server, which the headless display feeds each frame.
     A window that shows such a display feeds nobody, so there is no capture.
     """
-    if plan["provider"] == "host" and plan.get("window"):
+    if plan["provider"] == "host" and plan.get("window") not in (None, LAUNCHER_WINDOW):
         return [], NoCapture("QEMU has no way to capture a display that is rendered on the host GPU and shown "
                              "in a window"), None
-    kind, client = ("vnc", Vnc) if plan["provider"] == "host" else ("qmp", Qmp)
-    if host.host_os() != "windows" and hasattr(socket, "AF_UNIX"):
-        # A short private path: socket paths have a tight length limit.
-        directory = tempfile.mkdtemp(prefix="emu-", dir="/tmp")
-        path = os.path.join(directory, kind + ".sock")
-        arguments = ["-vnc", "unix:" + path] if kind == "vnc" else ["-qmp", "unix:%s,server=on,wait=off" % path]
-        return arguments, client(path), directory
+    if plan["provider"] == "host":
+        if vnc:
+            return [], Vnc(vnc), None
+        arguments, address, directory = vnc_endpoint()
+        return arguments, Vnc(address), directory
+    path, directory = _private_socket("qmp.sock")
+    if path:
+        return ["-qmp", "unix:%s,server=on,wait=off" % path], Qmp(path), directory
     with socket.socket() as probe:
         probe.bind(("127.0.0.1", 0))
         port = probe.getsockname()[1]
-    if kind == "vnc":
-        # QEMU counts VNC displays from port 5900.
-        while port < 5900:
-            with socket.socket() as probe:
-                probe.bind(("127.0.0.1", 0))
-                port = probe.getsockname()[1]
-        return ["-vnc", "127.0.0.1:%d" % (port - 5900)], client(("127.0.0.1", port)), None
-    return ["-qmp", "tcp:127.0.0.1:%d,server=on,wait=off" % port], client(("127.0.0.1", port)), None
+    return ["-qmp", "tcp:127.0.0.1:%d,server=on,wait=off" % port], Qmp(("127.0.0.1", port)), None
 
 
 class Screens:

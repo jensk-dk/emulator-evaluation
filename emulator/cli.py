@@ -1,13 +1,19 @@
 """Command line of the startup launcher."""
 import argparse
 import json
+import os
 import statistics
 import sys
 
-from . import catalog, container, drivers as driver_features, graphics, host, hostaudio, image, report, results, verify, vm
+from . import catalog, container, drivers as driver_features, graphics, host, hostaudio, image, remote, report, results, \
+    verify, vm, window
 from .errors import EmuError
 from .paths import BUILD_DIR
 from .run import DEFAULT_CPUS, DEFAULT_MEMORY_MB, KNOWN_OPTIONS, RunOptions, launch
+
+# For the launcher's checks: what to set and press in the settings window, in
+# place of a person (emulator/gui/settings.py, --script).
+SETTINGS_SCRIPT_VARIABLE = "EMU_SETTINGS_SCRIPT"
 
 EPILOG = """\
 examples:
@@ -18,8 +24,10 @@ examples:
   emu run --mode vm --option accel=tcg --option cpu=max
   emu run --mode vm --workload graphics-demo --resolution 4k --record
   emu run --workload graphics-demo --graphics emulated --screenshot shots -- --tests gles,vulkan
+  emu run --mode vm --workload graphics-demo --window --remote-control window
   emu verify                                   run every verification check on this host
 
+Started without any arguments, emu shows a window with these settings.
 In an interactive VM prompt, Ctrl-A X quits the emulator.
 """
 
@@ -75,9 +83,12 @@ def cmd_run(args):
             memory_mb=args.memory, drivers=driver_features.parse(args.driver), options=_options(args.option),
             extra_args=args.emulator_arg or [], timeout=args.timeout, rebuild=args.rebuild and index == 0,
             resolution=args.resolution, graphics=args.graphics, screenshot_dir=args.screenshot,
-            window=args.window, muted=args.mute)
+            window=args.window, muted=args.mute, fullscreen=args.fullscreen, remote_control=args.remote_control)
         outcome = launch(opts)
         outcomes.append(outcome)
+        if outcome.window_closed:
+            print("emu: the display window was closed, which ended the emulator", file=sys.stderr)
+            return 0
         if outcome.attached:
             if outcome.process_exit > 255:
                 print("emu: the emulator ended with status %s" % _status(outcome.process_exit), file=sys.stderr)
@@ -216,13 +227,15 @@ def cmd_doctor(args):
         print("graphics    VM mode: %s" % ("host acceleration available: " + probe["reason"] if probe["available"]
                                            else "emulated only: " + probe["reason"]))
         try:
-            window = graphics.window_backend(binary)
-            probe = graphics.probe_vm(binary, window)
-            print("graphics    VM mode with --window (%s): %s" % (
-                window, "host acceleration available: " + probe["reason"] if probe["available"]
+            # QEMU's own window, which shows the display where the launcher's
+            # cannot (graphics.window_kind).
+            own = graphics.window_backend(binary)
+            probe = graphics.probe_vm(binary, own)
+            print("graphics    VM mode in QEMU's own window (%s): %s" % (
+                own, "host acceleration available: " + probe["reason"] if probe["available"]
                 else "emulated only: " + probe["reason"]))
         except EmuError as error:
-            print("graphics    VM mode with --window: not available: %s" % error)
+            print("graphics    VM mode in QEMU's own window: not available: %s" % error)
     if runtime:
         manifest = image.load_manifest("container", native)
         if manifest and runtime.image_id(manifest["image_tag"]):
@@ -230,6 +243,12 @@ def cmd_doctor(args):
             print("graphics    container mode: %s" % (
                 "host acceleration available: " + probe["reason"] if probe["available"]
                 else "emulated only: " + probe["reason"]))
+    python = window.gui_python()
+    print("windows     %s" % ("Qt for Python (%s)" % python if python else
+                              "MISSING %s: no display window, on-screen remote control or settings window"
+                              % window.PACKAGE))
+    if not python:
+        problems += 1
     for kind, archs in (("container", (native,)), ("vm", sorted({native, "arm32", "arm64"}))):
         for arch in archs:
             manifest = image.load_manifest(kind, arch)
@@ -319,7 +338,15 @@ def build_parser():
                           "emulated renders on the target CPU, auto prefers host and falls back to emulated "
                           "(default: auto)")
     run.add_argument("--window", action="store_true",
-                     help="VM mode: show the emulator's display in a window. Closing the window ends the emulator")
+                     help="show the emulator's display in a window, with a toolbar (mute, 1:1, full screen, remote "
+                          "control). Ctrl+Alt+F or F11 switches to full screen and back. Closing the window ends "
+                          "the emulator")
+    run.add_argument("--fullscreen", action="store_true",
+                     help="show the emulator's display full screen (the same keys switch to a window)")
+    run.add_argument("--remote-control", choices=remote.MODES, metavar="MODE",
+                     help="remote control input: keys maps host keyboard keys to remote control keys while the "
+                          "emulator's window has the focus (the default with a window), window adds an on-screen "
+                          "remote control, redrat takes infrared signals from a RedRat device (not implemented)")
     run.add_argument("--mute", action="store_true",
                      help="start with the emulator's audio muted (\"emu audio unmute\" turns it on while it runs)")
     run.add_argument("--screenshot", metavar="DIR",
@@ -374,8 +401,43 @@ def build_parser():
     return parser
 
 
+def run_parser():
+    """The parser of "emu run", whose arguments the settings window offers."""
+    return build_parser()._subparsers._group_actions[0].choices["run"]
+
+
+def _settings(parser):
+    """Started without arguments: the settings window, and then the run the
+    user starts from it."""
+    script = os.environ.get(SETTINGS_SCRIPT_VARIABLE)
+    try:
+        if script:
+            chosen = window.choose_settings(script=json.loads(script)).get("arguments")
+        else:
+            chosen = window.choose_settings()
+    except EmuError as error:
+        # No window can be shown on this host: say how the launcher is used.
+        parser.print_help()
+        print("\nemu: no settings window: %s" % error, file=sys.stderr)
+        if error.hint:
+            print("emu: %s" % error.hint, file=sys.stderr)
+        return None
+    if chosen is None:
+        return []
+    print("emu: emu " + " ".join(chosen), file=sys.stderr)
+    return chosen
+
+
 def main(argv=None):
     parser = build_parser()
+    if argv is None:
+        argv = sys.argv[1:]
+    if not argv:
+        argv = _settings(parser)
+        if argv is None:
+            return 2
+        if not argv:
+            return 0        # the window was closed without starting the emulator
     args = parser.parse_args(argv)
     if not args.command:
         parser.print_help()

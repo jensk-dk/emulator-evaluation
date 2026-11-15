@@ -28,6 +28,10 @@
 #   hardware virtualization   host-native VM mode (HVF on macOS, KVM on Linux)
 #   container runtime         container mode and target image builds
 #   foreign-arch emulation    building ARM32/ARM64/x86-64 target images
+#   Qt for Python (PySide6)   the launcher's windows: the display window, the
+#                             on-screen remote control and the settings window.
+#                             Installed with pip into a Python environment of
+#                             this project's own, build/host/gui
 #
 # Optional, installed where the package manager offers it:
 #   QEMU OpenGL modules       VM mode maps graphics to the host GPU; without
@@ -90,6 +94,11 @@ for d in /opt/homebrew/bin /opt/homebrew/sbin /usr/local/bin /home/linuxbrew/.li
   [ -d "$d" ] && case ":$PATH:" in *":$d:"*) ;; *) PATH="$d:$PATH" ;; esac
 done
 export PATH
+
+# The launcher's windows are built with Qt, which pip installs into a Python
+# environment of this project's own: the host's Python stays as it is.
+GUI_ENV="$(cd "$(dirname "$0")" && pwd)/build/host/gui"
+GUI_PACKAGE=PySide6-Essentials
 
 MISSING=""          # space-separated dependency keys still missing
 OPTIONAL=""         # optional extras this script could install
@@ -243,6 +252,64 @@ check_python() {
     ok "python3 $(python3 -c 'import platform; print(platform.python_version())') ($(command -v python3))"
   else
     missing python "python3 >= 3.9"
+  fi
+}
+
+has_qt() { [ -x "$1" ] && "$1" -c 'import PySide6.QtWidgets' >/dev/null 2>&1; }
+
+# System packages the Python environment and Qt need on Linux and an
+# installation may lack: the module that creates Python environments, where
+# the distribution packages it apart, and the libraries that Qt and its
+# display plugins (X11 and Wayland) load. A desktop has most of them.
+linux_gui_packages() {
+  if have apt-get; then
+    # GLib's package was renamed with Ubuntu 24.04.
+    local glib=libglib2.0-0
+    apt-cache show libglib2.0-0t64 >/dev/null 2>&1 && glib=libglib2.0-0t64
+    echo "python3-venv $glib libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 libxkbcommon-x11-0" \
+         "libice6 libsm6 libwayland-cursor0 libegl1 libgl1 libfontconfig1 libdbus-1-3"
+  elif have dnf; then
+    echo "glib2 xcb-util-cursor xcb-util-wm xcb-util-keysyms libxkbcommon-x11 libICE libSM libwayland-cursor" \
+         "libglvnd-egl libglvnd-glx fontconfig dbus-libs"
+  elif have pacman; then
+    echo "glib2 xcb-util-cursor xcb-util-wm xcb-util-keysyms libxkbcommon-x11 libice libsm wayland libglvnd" \
+         "fontconfig dbus"
+  elif have zypper; then
+    echo "libglib-2_0-0 libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 libxkbcommon-x11-0 libICE6 libSM6" \
+         "libwayland-cursor0 libglvnd fontconfig libdbus-1-3"
+  fi
+}
+
+check_gui() {
+  local python
+  for python in "$GUI_ENV/bin/python" "$(command -v python3 2>/dev/null)"; do
+    if has_qt "$python"; then
+      ok "Qt for Python $("$python" -c 'import PySide6; print(PySide6.__version__)') ($python)"
+      return 0
+    fi
+  done
+  missing gui "Qt for Python (PySide6), for the launcher's windows"
+}
+
+# Installs Qt into the project's own Python environment, which it creates.
+install_gui() {
+  is_missing gui || return 0
+  if ! have python3; then
+    info "  ! Qt for Python needs python3, which is missing."
+    return 1
+  fi
+  if [ ! -f "$GUI_ENV/pyvenv.cfg" ]; then
+    mkdir -p "$(dirname "$GUI_ENV")" || return 1
+    if ! run python3 -m venv "$GUI_ENV"; then
+      info "  ! python3 could not create the environment $GUI_ENV."
+      return 1
+    fi
+    record python-env "$GUI_ENV"
+  fi
+  if ! run "$GUI_ENV/bin/python" -m pip install --disable-pip-version-check "$GUI_PACKAGE"; then
+    info "  ! pip could not install $GUI_PACKAGE. It has ready-built packages for certain versions of"
+    info "    Python only: this one is $(python3 -c 'import platform; print(platform.python_version())')."
+    return 1
   fi
 }
 
@@ -441,6 +508,7 @@ run_checks() {
   check_accel
   check_container
   check_foreign_arch
+  check_gui
 }
 
 # ---------------------------------------------------------------- install ---
@@ -696,6 +764,7 @@ install_linux() {
     is_missing qemu && pkgs="$pkgs qemu-system-x86 qemu-system-arm qemu-utils"
     is_missing container && pkgs="$pkgs podman"
     is_missing binfmt && pkgs="$pkgs qemu-user-static binfmt-support"
+    is_missing gui && pkgs="$pkgs $(linux_gui_packages)"
     if [ -n "$pkgs" ]; then
       as_root apt-get update || return 1
       before=$(installed_packages)
@@ -707,6 +776,7 @@ install_linux() {
     is_missing qemu && pkgs="$pkgs qemu-system-x86 qemu-system-aarch64 qemu-system-arm qemu-img"
     is_missing container && pkgs="$pkgs podman"
     is_missing binfmt && pkgs="$pkgs qemu-user-static"
+    is_missing gui && pkgs="$pkgs $(linux_gui_packages)"
     before=$(installed_packages)
     # shellcheck disable=SC2086
     [ -z "$pkgs" ] || as_root dnf install -y $pkgs || status=1
@@ -715,6 +785,7 @@ install_linux() {
     is_missing qemu && pkgs="$pkgs qemu-system-x86 qemu-system-aarch64 qemu-system-arm qemu-img"
     is_missing container && pkgs="$pkgs podman"
     is_missing binfmt && pkgs="$pkgs qemu-user-static qemu-user-static-binfmt"
+    is_missing gui && pkgs="$pkgs $(linux_gui_packages)"
     before=$(installed_packages)
     # shellcheck disable=SC2086
     [ -z "$pkgs" ] || as_root pacman -S --needed --noconfirm $pkgs || status=1
@@ -723,6 +794,7 @@ install_linux() {
     is_missing qemu && pkgs="$pkgs qemu-x86 qemu-arm qemu-tools"
     is_missing container && pkgs="$pkgs podman"
     is_missing binfmt && pkgs="$pkgs qemu-linux-user"
+    is_missing gui && pkgs="$pkgs $(linux_gui_packages)"
     before=$(installed_packages)
     # shellcheck disable=SC2086
     [ -z "$pkgs" ] || as_root zypper --non-interactive install $pkgs || status=1
@@ -797,7 +869,7 @@ install_linux() {
 # remove them: what uses a thing goes before the thing. Homebrew itself is in
 # the record where this script installed it; it goes with all that is
 # installed with it, before the entries of that.
-REMOVE_ORDER="service group binfmt engine-image colima-vm link dir homebrew brew brew-tap brew-trust apt dnf pacman zypper"
+REMOVE_ORDER="service group binfmt engine-image colima-vm python-env link dir homebrew brew brew-tap brew-trust apt dnf pacman zypper"
 # The kinds it lists and leaves: other software on the host can have come to
 # use them, and removing them takes root rights.
 LEAVE_ORDER="xcode-select xcode-clt"
@@ -850,6 +922,7 @@ entry_present() {
     colima-vm) have colima && colima list 2>/dev/null | awk -v p="$2" 'NR > 1 && $1 == p { f = 1 } END { exit !f }' ;;
     link) [ -L "$2" ] ;;
     dir) [ -d "$2" ] ;;
+    python-env) [ -f "$2/pyvenv.cfg" ] ;;
     brew) have brew && brew_installed "$2" ;;
     brew-tap) have brew && [ -d "$(brew --repository "$2" 2>/dev/null)" ] ;;
     brew-trust) have brew && brew trust --json=v1 2>/dev/null | grep -q "\"$2\"" ;;
@@ -870,6 +943,7 @@ entry_text() {
     colima-vm) echo "the Colima virtual machine \"$2\", with every container, image and volume in it" ;;
     link) echo "the link $2" ;;
     dir) echo "the directory $2, if it is empty" ;;
+    python-env) echo "the Python environment $2, with Qt for Python (the launcher's windows)" ;;
     homebrew) echo "Homebrew itself, which this script installed, with every package installed with it: $(brew_packages | grep -c .) now" ;;
     brew) echo "the Homebrew package $2" ;;
     brew-tap) echo "the Homebrew tap $2" ;;
@@ -950,6 +1024,12 @@ remove_entry() {
         run colima delete --profile "$value" --force || status=1 ;;
     link) run rm "$value" || status=1 ;;
     dir) rmdir "$value" 2>/dev/null || info "  $value is not empty and stays." ;;
+    python-env)
+      # A Python environment and nothing else: it has the file that makes it one.
+      case "$value" in
+        /*/gui) [ -f "$value/pyvenv.cfg" ] && run rm -rf "$value" || status=1 ;;
+        *) info "  ! $value is not where this script makes its Python environment; it stays."; status=1 ;;
+      esac ;;
     brew)
       brew unpin "$value" >/dev/null 2>&1    # Homebrew does not uninstall a pinned package
       # This formula only: HOMEBREW_NO_AUTOREMOVE is set, and what came with it
@@ -1310,9 +1390,19 @@ fi
 info ""
 [ -z "$MISSING" ] || info "Missing:$MISSING"
 [ -z "$OPTIONAL" ] || info "Optional:$OPTIONAL"
-if [ "$OS" = Darwin ]; then
+# With nothing but Qt for Python missing, the system's package manager has
+# nothing to do on macOS.
+ONLY_GUI=0
+[ "$(echo $MISSING)" = gui ] && [ -z "$OPTIONAL" ] && ONLY_GUI=1
+if is_missing gui; then
+  info "Qt for Python is installed with pip, from the Python Package Index, into a Python"
+  info "environment of this project's own: $GUI_ENV"
+fi
+if [ "$ONLY_GUI" = 1 ] && [ "$OS" = Darwin ]; then
+  :
+elif [ "$OS" = Darwin ]; then
   if [ -n "$MISSING" ]; then
-    info "These are installed with Homebrew (installed first if absent); the container"
+    info "The others are installed with Homebrew (installed first if absent); the container"
     info "engine is Colima unless Docker is already installed."
   fi
   if is_optional experimental-qemu; then
@@ -1338,8 +1428,13 @@ else
 fi
 
 info ""
-if [ "$OS" = Darwin ]; then install_macos; else install_linux; fi
-install_status=$?
+if [ "$ONLY_GUI" = 1 ] && [ "$OS" = Darwin ]; then
+  install_status=0
+else
+  if [ "$OS" = Darwin ]; then install_macos; else install_linux; fi
+  install_status=$?
+fi
+install_gui || install_status=1
 
 info ""
 info "Re-checking host dependencies"

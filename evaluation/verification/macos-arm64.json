@@ -23,10 +23,10 @@
         "4 hosts x 4 modes = 16 combinations, each measuring 6 performance areas",
         "every declared host combination has a host entry: linux-x86_64, windows-x86_64, macos-x86_64, macos-arm64"
       ],
-      "checked_at": "2026-11-13T22:49:21Z",
+      "checked_at": "2026-11-15T12:58:33Z",
       "seconds": 0.0,
-      "revision": "2c41d98c6eece7fe98ede86aa6206ca9c1417451-dirty",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "workloads": {
       "status": "pass",
@@ -37,27 +37,27 @@
         "memory_allocation: bench 1.0.0 (implemented)",
         "memory_bandwidth: bench 1.0.0 (implemented)",
         "io: bench 1.0.0 (implemented)",
-        "graphics: graphics-demo 1.0.0 (implemented), web-bench 0.1.0 (defined)",
-        "audio_video_decoding: media-decode 1.0.0 (implemented), web-bench 0.1.0 (defined)"
+        "graphics: graphics-demo 1.0.0 (implemented), web-bench 1.1.0 (implemented)",
+        "audio_video_decoding: media-decode 1.0.0 (implemented), web-bench 1.1.0 (implemented)"
       ],
-      "checked_at": "2026-11-13T22:49:22Z",
+      "checked_at": "2026-11-15T12:58:34Z",
       "seconds": 0.0,
-      "revision": "2c41d98c6eece7fe98ede86aa6206ca9c1417451-dirty",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "image": {
       "status": "pass",
       "task": "1.2",
       "description": "the client OS image boots in VM mode and its revision is recorded",
       "details": [
-        "emu-target-debian 0.3.0 booted in 0.3s, kernel 6.12.115+deb13.1-arm64",
+        "emu-target-debian 0.5.0 booted in 0.5s, kernel 6.12.115+deb13.1-arm64",
         "source: Debian 13 (trixie), docker.io/library/debian:trixie-slim@sha256:a72b4433de1c, apt snapshot 20261104T212339Z",
-        "definition 79c8da60d1bd, build revision 2c41d98c6eece7fe98ede86aa6206ca9c1417451-dirty, rootfs sha256 6a70cb2ead9c"
+        "definition e1e6d3ddba76, build revision 3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty, rootfs sha256 6f5d3239ad7d"
       ],
-      "checked_at": "2026-11-13T22:49:22Z",
-      "seconds": 1.0,
-      "revision": "2c41d98c6eece7fe98ede86aa6206ca9c1417451-dirty",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T12:58:34Z",
+      "seconds": 1.1,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "prompt-container": {
       "status": "pass",
@@ -65,12 +65,12 @@
       "description": "the container image starts the target OS and a prompt",
       "details": [
         "target OS environment up in 0.1s; the prompt answered a typed command",
-        "image sha256:b9c9596d1100dd31437962f25cb7dacfda8e2d7a6fd391512d5f4b03918e177f"
+        "image sha256:8e501b204f9ee6a6d87c921e18dcbe1633d1a553d7b8780bde12f86509daf3e4"
       ],
-      "checked_at": "2026-11-13T22:49:23Z",
+      "checked_at": "2026-11-15T12:58:35Z",
       "seconds": 1.0,
-      "revision": "2c41d98c6eece7fe98ede86aa6206ca9c1417451-dirty",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "prompt-vm": {
       "status": "pass",
@@ -79,10 +79,10 @@
       "details": [
         "booted on hvf (aarch64, cpu host) in 0.4s; the prompt answered a typed command"
       ],
-      "checked_at": "2026-11-13T22:49:24Z",
-      "seconds": 1.0,
-      "revision": "2c41d98c6eece7fe98ede86aa6206ca9c1417451-dirty",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T12:58:36Z",
+      "seconds": 0.9,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "bench-container": {
       "status": "pass",
@@ -115,51 +115,51 @@
       "task": "2.5",
       "description": "recorded results carry their environment identity",
       "details": [
-        "84 records, all fully identified",
+        "144 records, all fully identified",
         "this host has bench results for: container, vm-arm32, vm-arm64, vm-native"
       ],
-      "checked_at": "2026-11-13T22:49:36Z",
+      "checked_at": "2026-11-15T12:58:36Z",
       "seconds": 0.1,
-      "revision": "2c41d98c6eece7fe98ede86aa6206ca9c1417451-dirty",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "vm-arm32": {
       "status": "pass",
       "task": "3.1",
       "description": "ARM32 VM guest mode starts the target OS workload",
       "details": [
-        "armv7l guest on tcg simulating cortex-a15 (CPU part 0xc0f) booted in 19.1s and ran the prompt workload"
+        "armv7l guest on tcg simulating cortex-a15 (CPU part 0xc0f) booted in 16.7s and ran the prompt workload"
       ],
-      "checked_at": "2026-11-13T22:49:56Z",
-      "seconds": 19.9,
-      "revision": "2c41d98c6eece7fe98ede86aa6206ca9c1417451-dirty",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T12:58:59Z",
+      "seconds": 17.5,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "vm-arm64": {
       "status": "pass",
       "task": "3.1",
       "description": "ARM64 VM guest mode starts the target OS workload",
       "details": [
-        "aarch64 guest on tcg simulating cortex-a53 (CPU part 0xd03) booted in 4.7s and ran the prompt workload"
+        "aarch64 guest on tcg simulating cortex-a53 (CPU part 0xd03) booted in 4.9s and ran the prompt workload"
       ],
-      "checked_at": "2026-11-13T22:50:01Z",
-      "seconds": 5.4,
-      "revision": "2c41d98c6eece7fe98ede86aa6206ca9c1417451-dirty",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T12:58:42Z",
+      "seconds": 5.6,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "drivers-container": {
       "status": "pass",
       "task": "3.2",
       "description": "emulated, mocked and host-routed drivers in container mode",
       "details": [
-        "emulated: no host-side process ran; provider model:emu-swrng-1; 118821.5 bytes/s",
-        "mocked: sample is the stub's fixed pattern; provider mock:fixed-pattern; 3865758656.1 bytes/s",
-        "host: sample found in the 1605632 bytes served by the host-side process; provider host:host.docker.internal:52282; 3202361.8 bytes/s"
+        "emulated: no host-side process ran; provider model:emu-swrng-1; 119463.0 bytes/s",
+        "mocked: sample is the stub's fixed pattern; provider mock:fixed-pattern; 3968354366.4 bytes/s",
+        "host: sample found in the 1593344 bytes served by the host-side process; provider host:host.docker.internal:55867; 3170671.2 bytes/s"
       ],
-      "checked_at": "2026-11-13T22:50:03Z",
+      "checked_at": "2026-11-15T12:59:01Z",
       "seconds": 2.3,
-      "revision": "2c41d98c6eece7fe98ede86aa6206ca9c1417451-dirty",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "drivers-vm": {
       "status": "pass",
@@ -236,23 +236,23 @@
       "task": "4.3",
       "description": "720p, 1080p and 4K are rendered and displayed in container mode",
       "details": [
-        "Wayland at 1280x720: 3355.1 frames/s on cpu; the display capture is 1280x720 and shows its frame",
-        "OpenGL ES at 1280x720: 416.8 frames/s on llvmpipe (LLVM 19.1.7, 128 bits); the display capture is 1280x720 and shows its frame",
-        "Vulkan at 1280x720: 412.1 frames/s on llvmpipe (LLVM 19.1.7, 128 bits) (CPU); the display capture is 1280x720 and shows its frame",
-        "Flutter at 1280x720: 33.3 frames/s on llvmpipe (LLVM 19.1.7, 128 bits); the display capture is 1280x720 and shows its frame",
-        "Wayland at 1920x1080: 1604.2 frames/s on cpu; the display capture is 1920x1080 and shows its frame",
-        "OpenGL ES at 1920x1080: 178.5 frames/s on llvmpipe (LLVM 19.1.7, 128 bits); the display capture is 1920x1080 and shows its frame",
-        "Vulkan at 1920x1080: 186.3 frames/s on llvmpipe (LLVM 19.1.7, 128 bits) (CPU); the display capture is 1920x1080 and shows its frame",
-        "Flutter at 1920x1080: 16.9 frames/s on llvmpipe (LLVM 19.1.7, 128 bits); the display capture is 1920x1080 and shows its frame",
+        "Wayland at 1280x720: 3258.6 frames/s on cpu; the display capture is 1280x720 and shows its frame",
+        "OpenGL ES at 1280x720: 418.8 frames/s on llvmpipe (LLVM 19.1.7, 128 bits); the display capture is 1280x720 and shows its frame",
+        "Vulkan at 1280x720: 409.9 frames/s on llvmpipe (LLVM 19.1.7, 128 bits) (CPU); the display capture is 1280x720 and shows its frame",
+        "Flutter at 1280x720: 32.3 frames/s on llvmpipe (LLVM 19.1.7, 128 bits); the display capture is 1280x720 and shows its frame",
+        "Wayland at 1920x1080: 1604.7 frames/s on cpu; the display capture is 1920x1080 and shows its frame",
+        "OpenGL ES at 1920x1080: 177.8 frames/s on llvmpipe (LLVM 19.1.7, 128 bits); the display capture is 1920x1080 and shows its frame",
+        "Vulkan at 1920x1080: 185.9 frames/s on llvmpipe (LLVM 19.1.7, 128 bits) (CPU); the display capture is 1920x1080 and shows its frame",
+        "Flutter at 1920x1080: 16.4 frames/s on llvmpipe (LLVM 19.1.7, 128 bits); the display capture is 1920x1080 and shows its frame",
         "Wayland at 3840x2160: 332.8 frames/s on cpu; the display capture is 3840x2160 and shows its frame",
-        "OpenGL ES at 3840x2160: 34.9 frames/s on llvmpipe (LLVM 19.1.7, 128 bits); the display capture is 3840x2160 and shows its frame",
-        "Vulkan at 3840x2160: 44.3 frames/s on llvmpipe (LLVM 19.1.7, 128 bits) (CPU); the display capture is 3840x2160 and shows its frame",
-        "Flutter at 3840x2160: 5.4 frames/s on llvmpipe (LLVM 19.1.7, 128 bits); the display capture is 3840x2160 and shows its frame"
+        "OpenGL ES at 3840x2160: 33.9 frames/s on llvmpipe (LLVM 19.1.7, 128 bits); the display capture is 3840x2160 and shows its frame",
+        "Vulkan at 3840x2160: 43.6 frames/s on llvmpipe (LLVM 19.1.7, 128 bits) (CPU); the display capture is 3840x2160 and shows its frame",
+        "Flutter at 3840x2160: 4.7 frames/s on llvmpipe (LLVM 19.1.7, 128 bits); the display capture is 3840x2160 and shows its frame"
       ],
-      "checked_at": "2026-11-13T22:55:27Z",
-      "seconds": 62.1,
-      "revision": "2c41d98c6eece7fe98ede86aa6206ca9c1417451-dirty",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T13:01:42Z",
+      "seconds": 62.8,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "resolution-vm": {
       "status": "pass",
@@ -282,14 +282,14 @@
       "task": "4.2",
       "description": "graphics are emulated on request and as the fallback, in container mode",
       "details": [
-        "requested emulation: OpenGL ES at 1280x720: 418.6 frames/s on llvmpipe (LLVM 19.1.7, 128 bits); the display capture is 1280x720 and shows its frame",
-        "requested emulation: Vulkan at 1280x720: 412.6 frames/s on llvmpipe (LLVM 19.1.7, 128 bits) (CPU); the display capture is 1280x720 and shows its frame",
+        "requested emulation: OpenGL ES at 1280x720: 415.1 frames/s on llvmpipe (LLVM 19.1.7, 128 bits); the display capture is 1280x720 and shows its frame",
+        "requested emulation: Vulkan at 1280x720: 410.8 frames/s on llvmpipe (LLVM 19.1.7, 128 bits) (CPU); the display capture is 1280x720 and shows its frame",
         "auto fell back to emulation: no compatible host graphics acceleration: the container engine has no GPU render node (/dev/dri); the engine runs in a virtual machine that offers none"
       ],
-      "checked_at": "2026-11-13T22:54:01Z",
-      "seconds": 25.1,
-      "revision": "2c41d98c6eece7fe98ede86aa6206ca9c1417451-dirty",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T13:00:16Z",
+      "seconds": 25.3,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "graphics-host-container": {
       "status": "unavailable",
@@ -308,14 +308,14 @@
       "task": "4.2",
       "description": "graphics are emulated on request and as the fallback, in VM mode",
       "details": [
-        "requested emulation: OpenGL ES at 1280x720: 334.7 frames/s on llvmpipe (LLVM 19.1.7, 128 bits); the display capture is 1280x720 and shows its frame",
-        "requested emulation: Vulkan at 1280x720: 407.9 frames/s on llvmpipe (LLVM 19.1.7, 128 bits) (CPU); the display capture is 1280x720 and shows its frame",
+        "requested emulation: OpenGL ES at 1280x720: 332.1 frames/s on llvmpipe (LLVM 19.1.7, 128 bits); the display capture is 1280x720 and shows its frame",
+        "requested emulation: Vulkan at 1280x720: 409.3 frames/s on llvmpipe (LLVM 19.1.7, 128 bits) (CPU); the display capture is 1280x720 and shows its frame",
         "auto fell back to emulation: no compatible host graphics acceleration: this QEMU build has no GPU-accelerated display device (virtio-gpu-gl); it was built without virglrenderer"
       ],
-      "checked_at": "2026-11-13T22:54:25Z",
+      "checked_at": "2026-11-15T13:00:39Z",
       "seconds": 23.4,
-      "revision": "2c41d98c6eece7fe98ede86aa6206ca9c1417451-dirty",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "graphics-host-vm": {
       "status": "unavailable",
@@ -401,28 +401,28 @@
       "task": "4.1",
       "description": "a Wayland workload renders in container mode",
       "details": [
-        "Wayland at 1280x720: 3355.1 frames/s on cpu; the display capture is 1280x720 and shows its frame",
-        "wl_shm XRGB8888; frame time p99 0.4 ms",
+        "Wayland at 1280x720: 3258.6 frames/s on cpu; the display capture is 1280x720 and shows its frame",
+        "wl_shm XRGB8888; frame time p99 0.5 ms",
         "graphics provider: emulated"
       ],
-      "checked_at": "2026-11-13T22:51:46Z",
-      "seconds": 25.1,
-      "revision": "2c41d98c6eece7fe98ede86aa6206ca9c1417451-dirty",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T12:59:26Z",
+      "seconds": 25.0,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "wayland-vm": {
       "status": "pass",
       "task": "4.1",
       "description": "a Wayland workload renders in a host-native VM",
       "details": [
-        "Wayland at 1280x720: 3326.2 frames/s on cpu; the display capture is 1280x720 and shows its frame",
+        "Wayland at 1280x720: 3312.7 frames/s on cpu; the display capture is 1280x720 and shows its frame",
         "wl_shm XRGB8888; frame time p99 0.5 ms",
         "graphics provider: emulated"
       ],
-      "checked_at": "2026-11-13T22:52:10Z",
-      "seconds": 23.5,
-      "revision": "2c41d98c6eece7fe98ede86aa6206ca9c1417451-dirty",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T12:59:50Z",
+      "seconds": 23.8,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "wayland-vm-arm64": {
       "status": "pass",
@@ -457,14 +457,14 @@
       "task": "4.1",
       "description": "a OpenGL ES workload renders in container mode",
       "details": [
-        "OpenGL ES at 1280x720: 416.8 frames/s on llvmpipe (LLVM 19.1.7, 128 bits); the display capture is 1280x720 and shows its frame",
-        "OpenGL ES 3.2 Mesa 25.0.7-2+deb13u1; frame time p99 4.5 ms",
+        "OpenGL ES at 1280x720: 418.8 frames/s on llvmpipe (LLVM 19.1.7, 128 bits); the display capture is 1280x720 and shows its frame",
+        "OpenGL ES 3.2 Mesa 25.0.7-2+deb13u1; frame time p99 4.6 ms",
         "graphics provider: emulated"
       ],
-      "checked_at": "2026-11-13T22:53:36Z",
+      "checked_at": "2026-11-15T12:59:50Z",
       "seconds": 0.0,
-      "revision": "2c41d98c6eece7fe98ede86aa6206ca9c1417451-dirty",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "gles-vm": {
       "status": "pass",
@@ -607,10 +607,10 @@
         "recorded at the host's audio output: the tone, 2.1 s of silence, the tone again",
         "host output device: H\u00f8jttalere i Mac mini, at volume 0; it played for 7.5 s by its own clock, 7.0 s of that the target's sound"
       ],
-      "checked_at": "2026-11-13T23:14:48Z",
-      "seconds": 8.2,
-      "revision": "2c41d98c6eece7fe98ede86aa6206ca9c1417451-dirty",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T13:05:47Z",
+      "seconds": 8.4,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "audio-mute-vm": {
       "status": "pass",
@@ -619,12 +619,12 @@
       "details": [
         "while the target played a 880 Hz tone for 6.8 s, the sound sent to the host was: sound for 1.6 s, silent for 1.9 s, sound for 3.3 s",
         "recorded at the host's audio output: the tone, 2.1 s of silence, the tone again",
-        "host output device: H\u00f8jttalere i Mac mini, at volume 0; it played for 10.2 s by its own clock, 6.9 s of that the target's sound"
+        "host output device: H\u00f8jttalere i Mac mini, at volume 0; it played for 10.5 s by its own clock, 6.9 s of that the target's sound"
       ],
-      "checked_at": "2026-11-13T23:15:05Z",
-      "seconds": 11.1,
-      "revision": "2c41d98c6eece7fe98ede86aa6206ca9c1417451-dirty",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T13:05:59Z",
+      "seconds": 11.4,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "audio-strategies-container": {
       "status": "pass",
@@ -794,10 +794,10 @@
         "HEVC from MSE-style fragments: played on cpu, 0 of 125 frames dropped; a capture of the display shows the video",
         "graphics provider: emulated; sound: the target's audio device"
       ],
-      "checked_at": "2026-11-13T23:05:08Z",
-      "seconds": 120.1,
-      "revision": "2c41d98c6eece7fe98ede86aa6206ca9c1417451-dirty",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T13:03:42Z",
+      "seconds": 120.2,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "video-wayland-vm": {
       "status": "pass",
@@ -809,10 +809,10 @@
         "HEVC from MSE-style fragments: played on cpu, 0 of 125 frames dropped; a capture of the display shows the video",
         "graphics provider: emulated; sound: the target's audio device"
       ],
-      "checked_at": "2026-11-13T23:07:04Z",
-      "seconds": 116.3,
-      "revision": "2c41d98c6eece7fe98ede86aa6206ca9c1417451-dirty",
-      "image_definition_sha256": "79c8da60d1bd672ec5d0998a339d90888bf6cba839f0845797536c659db9c098"
+      "checked_at": "2026-11-15T13:05:39Z",
+      "seconds": 116.8,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "video-wayland-vm-arm64": {
       "status": "pass",
@@ -1059,14 +1059,14 @@
       "task": "6.1",
       "description": "WPE WebKit launches in container mode",
       "details": [
-        "WPE WebKit 2.48.3 (Cog 0.18.4) started, loaded a page and ran its script in 4.3 s; a capture of the display shows the page, full screen at 1280x720",
+        "WPE WebKit 2.48.3 (Cog 0.18.4) started, loaded a page and ran its script in 4.2 s; a capture of the display shows the page, full screen at 1280x720",
         "Media Source Extensions: available; drawn on llvmpipe (LLVM 19.1.7, 128 bits)",
         "graphics provider: emulated"
       ],
-      "checked_at": "2026-11-15T01:18:52Z",
-      "seconds": 7.3,
-      "revision": "4fafa5bb67025da866f6588018ec6966ee992c58-dirty",
-      "image_definition_sha256": "3f8d671910b921b0de01b8daa8c5e526b1ddee20feb3dac2db7c0c85518085df"
+      "checked_at": "2026-11-15T13:06:05Z",
+      "seconds": 6.2,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "web-launch-vm": {
       "status": "pass",
@@ -1077,10 +1077,10 @@
         "Media Source Extensions: available; drawn on llvmpipe (LLVM 19.1.7, 128 bits)",
         "graphics provider: emulated"
       ],
-      "checked_at": "2026-11-15T01:19:31Z",
-      "seconds": 39.2,
-      "revision": "4fafa5bb67025da866f6588018ec6966ee992c58-dirty",
-      "image_definition_sha256": "3f8d671910b921b0de01b8daa8c5e526b1ddee20feb3dac2db7c0c85518085df"
+      "checked_at": "2026-11-15T13:06:11Z",
+      "seconds": 6.2,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     },
     "web-launch-vm-arm64": {
       "status": "pass",
@@ -1225,6 +1225,375 @@
       "seconds": 0.0,
       "revision": "4fafa5bb67025da866f6588018ec6966ee992c58-dirty",
       "image_definition_sha256": "3f8d671910b921b0de01b8daa8c5e526b1ddee20feb3dac2db7c0c85518085df"
+    },
+    "window-display-container": {
+      "status": "pass",
+      "task": "7.1",
+      "description": "the launcher's window shows the display of container mode",
+      "details": [
+        "the window got the target's 1280x720 display and shows its picture: the marker blocks are where the target drew them, pixel for pixel",
+        "windowed, with its toolbar; the display took 1280x720 of the window at a pixel ratio of 1.0",
+        "graphics provider: emulated"
+      ],
+      "checked_at": "2026-11-15T13:06:21Z",
+      "seconds": 9.4,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "window-fullscreen-container": {
+      "status": "pass",
+      "task": "7.1",
+      "description": "the hotkey switches to full screen and back, with container mode",
+      "details": [
+        "Ctrl+Alt+F: full screen, without the toolbar; F11: back to the 1280x752 window with its toolbar",
+        "full screen the window covered the 2560x1440 screen, and the display in it, scaled to 2560x1440, shows the target's picture"
+      ],
+      "checked_at": "2026-11-15T13:06:21Z",
+      "seconds": 0.0,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "window-scaling-container": {
+      "status": "pass",
+      "task": "7.2",
+      "description": "the display scales with the window, with container mode",
+      "details": [
+        "window resized to 640x360: the 720p display is drawn 640x360, all of it, in its own shape",
+        "window resized to 900x700: the 720p display is drawn 900x506, all of it, in its own shape"
+      ],
+      "checked_at": "2026-11-15T13:07:18Z",
+      "seconds": 0.0,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "window-toolbar-container": {
+      "status": "pass",
+      "task": "7.2",
+      "description": "the toolbar's 1:1 and mute buttons work, with container mode",
+      "details": [
+        "1:1: the 1280x720 display is drawn on 1280x720 screen pixels, after the window had been another size",
+        "mute: the button muted the run's audio process and then unmuted it (asked of the process itself each time)"
+      ],
+      "checked_at": "2026-11-15T13:07:18Z",
+      "seconds": 0.0,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "remote-keys-container": {
+      "status": "pass",
+      "task": "7.4",
+      "description": "host keyboard keys reach the target as remote control keys in container mode",
+      "details": [
+        "typed into the emulator's window on the host keyboard: all 32 remote control keys reached a program on the target's display, each pressed and released with its own Linux key code",
+        "key symbols in the target: up Up, ok Return, back XF86Back, red XF86Red, play XF86AudioPlay, channel_up XF86ChannelUp, exit XF86Close",
+        "with a key code but no symbol in the target's keymap: text",
+        "host keys: Up for Up, Down for Down, Left for Left, Right for Right, Return for OK, Backspace for BACK, 0 for 0, 1 for 1, 2 for 2, 3 for 3, 4 for 4, 5 for 5, 6 for 6, 7 for 7, 8 for 8, 9 for 9, R for Red, G for Green, Y for Yellow, B for Blue, P for Play, U for Pause, Space for Play/pause, S for Stop, F for Fast forward, W for Rewind, C for Record, T for TEXT, PageUp for P+, PageDown for P-, H for WEBTV, Escape for EXIT",
+        "not checked: that the keys stay away from the target while another window has the focus"
+      ],
+      "checked_at": "2026-11-15T13:07:24Z",
+      "seconds": 0.0,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "remote-window-container": {
+      "status": "pass",
+      "task": "7.5",
+      "description": "the on-screen remote control's buttons reach the target in container mode",
+      "details": [
+        "the remote control has a window of its own (232x548), with a button for each of the 32 keys",
+        "clicked on the on-screen remote control: all 32 remote control keys reached a program on the target's display, each pressed and released with its own Linux key code",
+        "key symbols in the target: up Up, ok Return, back XF86Back, red XF86Red, play XF86AudioPlay, channel_up XF86ChannelUp, exit XF86Close",
+        "with a key code but no symbol in the target's keymap: text",
+        "with the remote control shown, the host keys still worked in the emulator's window (32 keys) and in the remote control's own"
+      ],
+      "checked_at": "2026-11-15T13:07:24Z",
+      "seconds": 0.0,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "settings-window": {
+      "status": "pass",
+      "task": "7.3",
+      "description": "the settings window offers every launcher setting and gives its arguments",
+      "details": [
+        "the window has a field for every argument of \"emu run\": arch, cpus, driver, emulator_arg, graphics, memory, mode, mute, option, rebuild, record, remote_control, repeat, resolution, screenshot, timeout, window_mode, workload, workload_args",
+        "mode, VM guest CPU (off in container mode), workload, window mode and the others set as a person would; Start gave: emu run --mode vm --arch arm64 --workload graphics-demo --cpus 2 --memory 1024 --resolution 4k --graphics emulated --fullscreen --remote-control window --mute --driver hwrng=mocked --option accel=tcg --option verbose-boot=yes --record --repeat 2 --timeout 120 -- --tests wayland --seconds 1",
+        "the launcher's own parser reads those arguments as what was set",
+        "unchanged, Start gives \"emu run\"; a timeout of \"soon\" is refused with the launcher's reason (Argument --timeout: invalid float value: 'soon'); closing the window starts nothing"
+      ],
+      "checked_at": "2026-11-15T13:07:22Z",
+      "seconds": 3.2,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "settings-launch": {
+      "status": "pass",
+      "task": "7.3",
+      "description": "without arguments the launcher shows the settings window and starts from it",
+      "details": [
+        "\"emu\" without arguments showed the settings window; the driver check was chosen in it and started, and the launcher ran: emu run --workload driver-check --driver hwrng=mocked",
+        "its results are those of the same arguments on the command line: [('hwrng', 'mocked', 'mock:fixed-pattern', '4d4f434b45442d4857524e472d56312e', True)]",
+        "with arguments (\"emu workloads\") the launcher did as they say, without the window"
+      ],
+      "checked_at": "2026-11-15T13:07:24Z",
+      "seconds": 2.4,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "window-display-vm": {
+      "status": "pass",
+      "task": "7.1",
+      "description": "the launcher's window shows the display of a host-native VM",
+      "details": [
+        "the window got the target's 1280x720 display and shows its picture: the marker blocks are where the target drew them, pixel for pixel",
+        "windowed, with its toolbar; the display took 1280x720 of the window at a pixel ratio of 1.0",
+        "graphics provider: emulated"
+      ],
+      "checked_at": "2026-11-15T13:06:31Z",
+      "seconds": 10.1,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "window-fullscreen-vm": {
+      "status": "pass",
+      "task": "7.1",
+      "description": "the hotkey switches to full screen and back, with a host-native VM",
+      "details": [
+        "Ctrl+Alt+F: full screen, without the toolbar; F11: back to the 1280x752 window with its toolbar",
+        "full screen the window covered the 2560x1440 screen, and the display in it, scaled to 2560x1440, shows the target's picture"
+      ],
+      "checked_at": "2026-11-15T13:06:31Z",
+      "seconds": 0.0,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "window-scaling-vm": {
+      "status": "pass",
+      "task": "7.2",
+      "description": "the display scales with the window, with a host-native VM",
+      "details": [
+        "window resized to 640x360: the 720p display is drawn 640x360, all of it, in its own shape",
+        "window resized to 900x700: the 720p display is drawn 900x506, all of it, in its own shape"
+      ],
+      "checked_at": "2026-11-15T13:07:18Z",
+      "seconds": 0.0,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "window-toolbar-vm": {
+      "status": "pass",
+      "task": "7.2",
+      "description": "the toolbar's 1:1 and mute buttons work, with a host-native VM",
+      "details": [
+        "1:1: the 1280x720 display is drawn on 1280x720 screen pixels, after the window had been another size",
+        "mute: the button muted the run's audio process and then unmuted it (asked of the process itself each time)"
+      ],
+      "checked_at": "2026-11-15T13:07:18Z",
+      "seconds": 0.0,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "remote-keys-vm": {
+      "status": "pass",
+      "task": "7.4",
+      "description": "host keyboard keys reach the target as remote control keys in a host-native VM",
+      "details": [
+        "typed into the emulator's window on the host keyboard: all 32 remote control keys reached a program on the target's display, each pressed and released with its own Linux key code",
+        "key symbols in the target: up Up, ok Return, back XF86Back, red XF86Red, play XF86AudioPlay, channel_up XF86ChannelUp, exit XF86Close",
+        "with a key code but no symbol in the target's keymap: text",
+        "host keys: Up for Up, Down for Down, Left for Left, Right for Right, Return for OK, Backspace for BACK, 0 for 0, 1 for 1, 2 for 2, 3 for 3, 4 for 4, 5 for 5, 6 for 6, 7 for 7, 8 for 8, 9 for 9, R for Red, G for Green, Y for Yellow, B for Blue, P for Play, U for Pause, Space for Play/pause, S for Stop, F for Fast forward, W for Rewind, C for Record, T for TEXT, PageUp for P+, PageDown for P-, H for WEBTV, Escape for EXIT",
+        "not checked: that the keys stay away from the target while another window has the focus"
+      ],
+      "checked_at": "2026-11-15T13:07:24Z",
+      "seconds": 0.0,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "remote-window-vm": {
+      "status": "pass",
+      "task": "7.5",
+      "description": "the on-screen remote control's buttons reach the target in a host-native VM",
+      "details": [
+        "the remote control has a window of its own (232x548), with a button for each of the 32 keys",
+        "clicked on the on-screen remote control: all 32 remote control keys reached a program on the target's display, each pressed and released with its own Linux key code",
+        "key symbols in the target: up Up, ok Return, back XF86Back, red XF86Red, play XF86AudioPlay, channel_up XF86ChannelUp, exit XF86Close",
+        "with a key code but no symbol in the target's keymap: text",
+        "with the remote control shown, the host keys still worked in the emulator's window (32 keys) and in the remote control's own"
+      ],
+      "checked_at": "2026-11-15T13:07:24Z",
+      "seconds": 0.0,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "window-display-vm-arm64": {
+      "status": "pass",
+      "task": "7.1",
+      "description": "the launcher's window shows the display of an ARM64 VM",
+      "details": [
+        "the window got the target's 1280x720 display and shows its picture: the marker blocks are where the target drew them, pixel for pixel",
+        "windowed, with its toolbar; the display took 1280x720 of the window at a pixel ratio of 1.0",
+        "graphics provider: emulated"
+      ],
+      "checked_at": "2026-11-15T13:06:46Z",
+      "seconds": 15.2,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "window-fullscreen-vm-arm64": {
+      "status": "pass",
+      "task": "7.1",
+      "description": "the hotkey switches to full screen and back, with an ARM64 VM",
+      "details": [
+        "Ctrl+Alt+F: full screen, without the toolbar; F11: back to the 1280x752 window with its toolbar",
+        "full screen the window covered the 2560x1440 screen, and the display in it, scaled to 2560x1440, shows the target's picture"
+      ],
+      "checked_at": "2026-11-15T13:06:46Z",
+      "seconds": 0.0,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "window-scaling-vm-arm64": {
+      "status": "pass",
+      "task": "7.2",
+      "description": "the display scales with the window, with an ARM64 VM",
+      "details": [
+        "window resized to 640x360: the 720p display is drawn 640x360, all of it, in its own shape",
+        "window resized to 900x700: the 720p display is drawn 900x506, all of it, in its own shape"
+      ],
+      "checked_at": "2026-11-15T13:07:18Z",
+      "seconds": 0.0,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "window-toolbar-vm-arm64": {
+      "status": "pass",
+      "task": "7.2",
+      "description": "the toolbar's 1:1 and mute buttons work, with an ARM64 VM",
+      "details": [
+        "1:1: the 1280x720 display is drawn on 1280x720 screen pixels, after the window had been another size",
+        "mute: the button muted the run's audio process and then unmuted it (asked of the process itself each time)"
+      ],
+      "checked_at": "2026-11-15T13:07:18Z",
+      "seconds": 0.0,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "remote-keys-vm-arm64": {
+      "status": "pass",
+      "task": "7.4",
+      "description": "host keyboard keys reach the target as remote control keys in an ARM64 VM",
+      "details": [
+        "typed into the emulator's window on the host keyboard: all 32 remote control keys reached a program on the target's display, each pressed and released with its own Linux key code",
+        "key symbols in the target: up Up, ok Return, back XF86Back, red XF86Red, play XF86AudioPlay, channel_up XF86ChannelUp, exit XF86Close",
+        "with a key code but no symbol in the target's keymap: text",
+        "host keys: Up for Up, Down for Down, Left for Left, Right for Right, Return for OK, Backspace for BACK, 0 for 0, 1 for 1, 2 for 2, 3 for 3, 4 for 4, 5 for 5, 6 for 6, 7 for 7, 8 for 8, 9 for 9, R for Red, G for Green, Y for Yellow, B for Blue, P for Play, U for Pause, Space for Play/pause, S for Stop, F for Fast forward, W for Rewind, C for Record, T for TEXT, PageUp for P+, PageDown for P-, H for WEBTV, Escape for EXIT",
+        "not checked: that the keys stay away from the target while another window has the focus"
+      ],
+      "checked_at": "2026-11-15T13:07:24Z",
+      "seconds": 0.0,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "remote-window-vm-arm64": {
+      "status": "pass",
+      "task": "7.5",
+      "description": "the on-screen remote control's buttons reach the target in an ARM64 VM",
+      "details": [
+        "the remote control has a window of its own (232x548), with a button for each of the 32 keys",
+        "clicked on the on-screen remote control: all 32 remote control keys reached a program on the target's display, each pressed and released with its own Linux key code",
+        "key symbols in the target: up Up, ok Return, back XF86Back, red XF86Red, play XF86AudioPlay, channel_up XF86ChannelUp, exit XF86Close",
+        "with a key code but no symbol in the target's keymap: text",
+        "with the remote control shown, the host keys still worked in the emulator's window (32 keys) and in the remote control's own"
+      ],
+      "checked_at": "2026-11-15T13:07:24Z",
+      "seconds": 0.0,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "window-display-vm-arm32": {
+      "status": "pass",
+      "task": "7.1",
+      "description": "the launcher's window shows the display of an ARM32 VM",
+      "details": [
+        "the window got the target's 1280x720 display and shows its picture: the marker blocks are where the target drew them, pixel for pixel",
+        "windowed, with its toolbar; the display took 1280x720 of the window at a pixel ratio of 1.0",
+        "graphics provider: emulated"
+      ],
+      "checked_at": "2026-11-15T13:07:18Z",
+      "seconds": 32.2,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "window-fullscreen-vm-arm32": {
+      "status": "pass",
+      "task": "7.1",
+      "description": "the hotkey switches to full screen and back, with an ARM32 VM",
+      "details": [
+        "Ctrl+Alt+F: full screen, without the toolbar; F11: back to the 1280x752 window with its toolbar",
+        "full screen the window covered the 2560x1440 screen, and the display in it, scaled to 2560x1440, shows the target's picture"
+      ],
+      "checked_at": "2026-11-15T13:07:18Z",
+      "seconds": 0.0,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "window-scaling-vm-arm32": {
+      "status": "pass",
+      "task": "7.2",
+      "description": "the display scales with the window, with an ARM32 VM",
+      "details": [
+        "window resized to 640x360: the 720p display is drawn 640x360, all of it, in its own shape",
+        "window resized to 900x700: the 720p display is drawn 900x506, all of it, in its own shape"
+      ],
+      "checked_at": "2026-11-15T13:07:18Z",
+      "seconds": 0.0,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "window-toolbar-vm-arm32": {
+      "status": "pass",
+      "task": "7.2",
+      "description": "the toolbar's 1:1 and mute buttons work, with an ARM32 VM",
+      "details": [
+        "1:1: the 1280x720 display is drawn on 1280x720 screen pixels, after the window had been another size",
+        "mute: the button muted the run's audio process and then unmuted it (asked of the process itself each time)"
+      ],
+      "checked_at": "2026-11-15T13:07:18Z",
+      "seconds": 0.0,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "remote-keys-vm-arm32": {
+      "status": "pass",
+      "task": "7.4",
+      "description": "host keyboard keys reach the target as remote control keys in an ARM32 VM",
+      "details": [
+        "typed into the emulator's window on the host keyboard: all 32 remote control keys reached a program on the target's display, each pressed and released with its own Linux key code",
+        "key symbols in the target: up Up, ok Return, back XF86Back, red XF86Red, play XF86AudioPlay, channel_up XF86ChannelUp, exit XF86Close",
+        "with a key code but no symbol in the target's keymap: text",
+        "host keys: Up for Up, Down for Down, Left for Left, Right for Right, Return for OK, Backspace for BACK, 0 for 0, 1 for 1, 2 for 2, 3 for 3, 4 for 4, 5 for 5, 6 for 6, 7 for 7, 8 for 8, 9 for 9, R for Red, G for Green, Y for Yellow, B for Blue, P for Play, U for Pause, Space for Play/pause, S for Stop, F for Fast forward, W for Rewind, C for Record, T for TEXT, PageUp for P+, PageDown for P-, H for WEBTV, Escape for EXIT",
+        "not checked: that the keys stay away from the target while another window has the focus"
+      ],
+      "checked_at": "2026-11-15T13:07:24Z",
+      "seconds": 0.0,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "remote-window-vm-arm32": {
+      "status": "pass",
+      "task": "7.5",
+      "description": "the on-screen remote control's buttons reach the target in an ARM32 VM",
+      "details": [
+        "the remote control has a window of its own (232x548), with a button for each of the 32 keys",
+        "clicked on the on-screen remote control: all 32 remote control keys reached a program on the target's display, each pressed and released with its own Linux key code",
+        "key symbols in the target: up Up, ok Return, back XF86Back, red XF86Red, play XF86AudioPlay, channel_up XF86ChannelUp, exit XF86Close",
+        "with a key code but no symbol in the target's keymap: text",
+        "with the remote control shown, the host keys still worked in the emulator's window (32 keys) and in the remote control's own"
+      ],
+      "checked_at": "2026-11-15T13:07:24Z",
+      "seconds": 0.0,
+      "revision": "3b28ea451b13be65b4e33a0b57078d4a8e7c8ac8-dirty",
+      "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
     }
   }
 }

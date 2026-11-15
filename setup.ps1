@@ -26,6 +26,10 @@
     Windows Hypervisor Platform   host-native VM mode (WHPX)
     container runtime         container mode and target image builds
     foreign-arch emulation    building ARM32/ARM64 target images
+    Qt for Python (PySide6)   the launcher's windows: the display window, the
+                              on-screen remote control and the settings window.
+                              Installed with pip into a Python environment of
+                              this project's own, build\host\gui
 
   Nothing to install, only reported:
     audio player              plays the target's sound through the Windows
@@ -56,6 +60,11 @@ param(
 $ErrorActionPreference = 'Stop'
 $script:Missing = @()
 $script:RestartNeeded = $false
+# The launcher's windows are built with Qt, which pip installs into a Python
+# environment of this project's own: the host's Python stays as it is.
+$script:GuiEnv = Join-Path $PSScriptRoot 'build\host\gui'
+$script:GuiPython = Join-Path $script:GuiEnv 'Scripts\python.exe'
+$script:GuiPackage = 'PySide6-Essentials'
 
 function Write-Ok($text)      { Write-Host "  [ ok ]  $text" }
 function Write-Missing($key, $text) { Write-Host "  [MISS]  $text"; $script:Missing += $key }
@@ -221,6 +230,15 @@ function Test-PythonDep {
   else { Write-Missing 'python' 'Python >= 3.9' }
 }
 
+function Test-GuiDep {
+  if ((Test-Path $script:GuiPython) -and (Test-Run $script:GuiPython @('-c', 'import PySide6.QtWidgets'))) {
+    $version = Get-Output $script:GuiPython @('-c', 'import PySide6; print(PySide6.__version__)')
+    Write-Ok "Qt for Python $version ($($script:GuiPython))"
+  } else {
+    Write-Missing 'gui' "Qt for Python (PySide6), for the launcher's windows"
+  }
+}
+
 function Test-QemuDep {
   $native = Get-NativeQemu
   $absent = @($native, 'qemu-system-aarch64', 'qemu-system-arm') | Select-Object -Unique | Where-Object { -not (Test-Command $_) }
@@ -372,6 +390,7 @@ function Invoke-Checks {
   Test-AccelDep
   Test-ContainerDep
   Test-ForeignArchDep
+  Test-GuiDep
 }
 
 # ---------------------------------------------------------------- install ---
@@ -390,6 +409,20 @@ function Install-WingetPackage($id) {
   } finally {
     if (-not $had -and (Test-WingetPackage $id)) { Add-Record 'winget' $id }
   }
+}
+
+# Installs Qt into the project's own Python environment, which it creates.
+function Install-Gui {
+  if (-not (Test-Missing 'gui')) { return }
+  Update-Path
+  $python = Find-Python
+  if (-not $python) { throw 'Qt for Python needs Python, which is still missing' }
+  if (-not (Test-Path (Join-Path $script:GuiEnv 'pyvenv.cfg'))) {
+    $command = @($python.Command -split ' ')
+    Invoke-Step $command[0] (@($command | Select-Object -Skip 1) + @('-m', 'venv', $script:GuiEnv))
+    Add-Record 'python-env' $script:GuiEnv
+  }
+  Invoke-Step $script:GuiPython @('-m', 'pip', 'install', '--disable-pip-version-check', $script:GuiPackage)
 }
 
 function Install-Missing {
@@ -488,7 +521,7 @@ function Install-Missing {
 
 # The kinds of entry in the record that this script removes, in the order to
 # remove them: what uses a thing goes before the thing.
-$script:RemoveOrder = @('binfmt', 'engine-image', 'podman-machine', 'winget')
+$script:RemoveOrder = @('binfmt', 'engine-image', 'podman-machine', 'python-env', 'winget')
 # The kinds it lists and leaves: removing them takes an elevated PowerShell and
 # a restart, and other software may have come to use them.
 $script:LeaveOrder = @('feature', 'wsl')
@@ -526,6 +559,7 @@ function Test-EntryPresent($entry) {
   $value = $entry.Value
   switch ($entry.Kind) {
     'winget'         { return (Test-Command winget) -and (Test-WingetPackage $value) }
+    'python-env'     { return Test-Path (Join-Path $value 'pyvenv.cfg') }
     'podman-machine' { return (Test-Command podman) -and (@(Get-PodmanMachines) -contains $value) }
     'feature'        { return Test-Feature $value }
     'wsl'            { return (Test-Command wsl) -and (Test-Run wsl @('--status')) }
@@ -548,6 +582,7 @@ function Get-EntryText($entry) {
   $value = $entry.Value
   switch ($entry.Kind) {
     'winget'         { return "the winget package $value" }
+    'python-env'     { return "the Python environment $value, with Qt for Python (the launcher's windows)" }
     'podman-machine' { return "the Podman machine `"$value`", with every container, image and volume in it" }
     'binfmt'         { return "the emulation of other CPU architectures registered in the container engine ($value)" }
     'engine-image'   { return "the container image $(($value -split ' ', 2)[1])" }
@@ -580,6 +615,12 @@ function Remove-Entry($entry) {
         Invoke-Step $cli (Get-RootEngineArguments $cli @('rmi', $image))
       }
       'podman-machine' { Invoke-Step podman @('machine', 'rm', '--force', $value) }
+      'python-env' {
+        # A Python environment and nothing else: it has the file that makes it one.
+        if ((Split-Path $value -Leaf) -ne 'gui') { throw "$value is not where this script makes its Python environment; it stays" }
+        Write-Host "  + remove $value"
+        Remove-Item -LiteralPath $value -Recurse -Force
+      }
       'winget'         { Invoke-Step winget @('uninstall', '--exact', '--id', $value, '--accept-source-agreements', '--disable-interactivity') }
     }
   } catch {
@@ -673,7 +714,12 @@ if ($Check) {
 }
 
 Write-Host "`nMissing: $($script:Missing -join ' ')"
-Write-Host 'These are installed with winget; the container runtime is Podman unless Docker is already installed.'
+if (Test-Missing 'gui') {
+  Write-Host "Qt for Python is installed with pip, from the Python Package Index, into a Python environment of this project's own: $($script:GuiEnv)"
+}
+if (@($script:Missing | Where-Object { $_ -ne 'gui' }).Count -gt 0) {
+  Write-Host 'The others are installed with winget; the container runtime is Podman unless Docker is already installed.'
+}
 if (-not $Yes) {
   if (-not (Confirm-Step 'Install the missing dependencies?' 're-run with -Yes to install')) { exit 1 }
 }
@@ -681,6 +727,7 @@ if (-not $Yes) {
 Write-Host ''
 $installError = $null
 try { Install-Missing } catch { $installError = $_ }
+try { Install-Gui } catch { if (-not $installError) { $installError = $_ } }
 
 Write-Host "`nRe-checking host dependencies"
 Invoke-Checks

@@ -1,0 +1,85 @@
+#!/usr/bin/env python3
+"""Passes remote control key commands from the launcher on to the compositor.
+
+    remote stdin                commands from standard input. Container mode:
+                                the launcher runs this in the container.
+    remote connect HOST:PORT    commands from a connection to the launcher.
+                                VM mode: the display service starts this when
+                                the launcher gave the address (EMU_REMOTE).
+
+A command is one line, "press CODE" or "release CODE", CODE a Linux key code.
+The compositor's remote control module takes them on a socket
+(target/src/emu_remote.c). The display service may be stopped and started
+again while this runs; the commands then go to the new compositor.
+"""
+import socket
+import sys
+import time
+
+SOCKET = "/run/emu/remote.sock"
+
+
+class Compositor:
+    def __init__(self):
+        self.connection = None
+
+    def send(self, line):
+        """Give the compositor one command. A command that cannot be
+        delivered within a few seconds is dropped: a key press that arrives
+        late is worse than one that is lost."""
+        deadline = time.monotonic() + 5
+        while True:
+            try:
+                if self.connection is None:
+                    found = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                    found.connect(SOCKET)
+                    self.connection = found
+                self.connection.sendall(line)
+                return
+            except OSError:
+                if self.connection is not None:
+                    self.connection.close()
+                    self.connection = None
+                if time.monotonic() > deadline:
+                    return
+                time.sleep(0.1)
+
+
+def lines_of(read):
+    """Complete lines from a function that returns what has arrived."""
+    pending = b""
+    while True:
+        chunk = read()
+        if not chunk:
+            return
+        pending += chunk
+        while b"\n" in pending:
+            line, _, pending = pending.partition(b"\n")
+            yield line + b"\n"
+
+
+def main():
+    compositor = Compositor()
+    if sys.argv[1:] == ["stdin"]:
+        for line in lines_of(lambda: sys.stdin.buffer.read1(4096)):
+            compositor.send(line)
+        return 0
+    if len(sys.argv) == 3 and sys.argv[1] == "connect":
+        host, _, port = sys.argv[2].rpartition(":")
+        while True:
+            # The launcher's window may open after the target is up, and be
+            # closed and opened again.
+            try:
+                with socket.create_connection((host, int(port)), timeout=10) as connection:
+                    connection.settimeout(None)
+                    for line in lines_of(lambda: connection.recv(4096)):
+                        compositor.send(line)
+            except OSError:
+                pass
+            time.sleep(0.5)
+    print(__doc__.strip(), file=sys.stderr)
+    return 64
+
+
+if __name__ == "__main__":
+    sys.exit(main())

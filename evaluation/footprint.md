@@ -72,6 +72,7 @@ The host-native VM and the ARM64 target use the same VM image here.
 | What | Disk space | Time | Taken |
 |---|---|---|---|
 | Host installation | not measured | not measured | |
+| of that: Qt for Python, in `build/host/gui` | 329 MB | not measured | 2026-11-15, `du -sh` after `./setup.sh` installed PySide6-Essentials 6.10.3 |
 | Target: container image (ARM64) | not measured | not measured | |
 | Target: VM image, ARM64 (host-native and ARM64 target) | not measured | not measured | |
 | Target: VM image, ARM32 | not measured | not measured | |

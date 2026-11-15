@@ -1,0 +1,40 @@
+#!/bin/bash
+# Workload "remote-keys": shows which remote control keys reach a program on
+# the target's display.
+#
+#   remote-keys [--seconds N]
+#
+# A functional check for remote control input (evaluation/procedures.md
+# #remote-control-input). It puts one full-screen window on the display and
+# prints a line for every key that window gets, as any program would get it:
+#
+#   EMU-KEY: {"ready": true}
+#   EMU-KEY: {"code": 398, "state": "pressed", "symbol": "XF86Red"}
+#
+# It ends when the power key (Linux key code 116, which no remote control
+# input mode maps a key to) is released, or after N seconds (default 600).
+#
+# Remote control input is the launcher's to turn on (emu run --remote-control,
+# or --window); without it the display has no keyboard and the workload says
+# so.
+
+VERSION="1.0.0"
+END_KEY=116
+
+seconds=600
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --seconds) seconds=$2; shift 2 ;;
+    *) echo "usage: remote-keys [--seconds N]" >&2; exit 64 ;;
+  esac
+done
+
+printf 'EMU-WORKLOAD: {"id": "remote-keys", "version": "%s", "end_key": %d, "remote": %s}\n' \
+  "$VERSION" "$END_KEY" "$([ -n "${EMU_REMOTE:-}" ] && echo true || echo false)"
+
+/opt/emu/display start || exit 1
+eval "$(/opt/emu/display env)"
+emukeys --until "$END_KEY" --seconds "$seconds"
+status=$?
+/opt/emu/display stop
+exit $status

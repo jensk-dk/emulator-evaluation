@@ -5,9 +5,11 @@
 #                   workload comes from the kernel command line:
 #                   emu.workload=NAME emu.args=BASE64 emu.drivers=F=S,F=S
 #                   emu.display=WIDTHxHEIGHT emu.graphics=emulated|host
+#                   emu.remote=HOST:PORT
 #   Container mode  the image entrypoint: init WORKLOAD [ARGS...], with driver
 #                   strategies in $EMU_DRIVERS and the display in
-#                   $EMU_DISPLAY and $EMU_GRAPHICS.
+#                   $EMU_DISPLAY, $EMU_GRAPHICS, $EMU_REMOTE and
+#                   $EMU_SCREEN_PORT.
 #
 # It brings up the target OS environment, starts the driver-feature providers,
 # runs one workload on the console and reports its exit status. Lines that
@@ -74,7 +76,7 @@ if [ "$$" = 1 ] && [ "${EMU_MODE:-}" != container ]; then
   EMU_DRIVERS=$(cmdline_get emu.drivers || true)
   # The emulator's display, when it has one (see /opt/emu/display).
   for setting in display:EMU_DISPLAY graphics:EMU_GRAPHICS screenhold:EMU_SCREEN_HOLD \
-                 audiohost:EMU_DRIVER_AUDIO_HOST; do
+                 remote:EMU_REMOTE audiohost:EMU_DRIVER_AUDIO_HOST; do
     if value=$(cmdline_get "emu.${setting%%:*}") && [ -n "$value" ]; then
       export "${setting#*:}=$value"
     fi

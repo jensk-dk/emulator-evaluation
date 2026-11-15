@@ -14,6 +14,7 @@ This repo contains a generic device emulator for Linux-based TVs and set-top box
 * Supports Wayland, OpenGL ES, Vulkan and Flutter graphics on target OS.
 * Supports A/V decoding in emulator with common broadcast and broadband A/V formats and codecs
 * Unified command line command regardless of the underlying emulator technology used.
+* A settings window when started without arguments, a display window with a toolbar, and remote control keys from the keyboard or an on-screen remote control.
 * Comprehensive performance analysis and reporting
 
 The requirements live in the [openspec](openspec) folder. Delivery is staged
@@ -27,18 +28,24 @@ implemented and verified on the Windows and macOS hosts: the browser
 launches, renders the workload's page and plays the reference streams through
 Media Source Extensions in every mode the image is built for, and the
 workload's measurements are recorded for both. The Linux host has not run it
-yet. macOS has no host
+yet. Of stage 6, the launcher's own windows are implemented and verified on
+the macOS host: the display window (toolbar, scaling, full screen), remote
+control keys from the host keyboard and from an on-screen remote control, and
+the settings window. They have not run on Windows or Linux yet, and RedRat IR
+input is not implemented. macOS has no host
 graphics acceleration, which the Linux host has in VM mode. The task list and
 `evaluation/verification/` show what has been verified, and on which hosts.
 
 ## Quick start
 
     ./setup.sh              # Linux and macOS: check and install host dependencies
+    ./emu                   # a window with the settings below, and a Start button
     ./emu run               # interactive prompt on the target OS, container mode
     ./emu run --mode vm     # the same in a host-native VM
     ./emu run --mode vm --workload graphics-demo --screenshot shots   # graphics, with display captures
     ./emu run --mode vm --workload graphics-demo --window             # graphics, with the display in a window
     ./emu run --mode vm --workload media-decode --window              # decoding and playing video and sound
+    ./emu run --workload remote-keys --remote-control window          # remote control keys, with the on-screen remote
     ./emu audio mute                                                  # from another terminal, while it plays
 
 On Windows use `setup.cmd` and `emu.cmd`. (`setup.cmd` runs `setup.ps1`
@@ -62,6 +69,7 @@ dependency and install what is missing. `--check` / `-Check` only reports.
 | Hardware virtualization | host-native VM mode | Hypervisor.framework | KVM | Windows Hypervisor Platform |
 | Container runtime | container mode, image builds | Colima + Docker CLI (Homebrew) | Podman | Podman |
 | Foreign-architecture emulation | building ARM target images | registered in the engine VM | `qemu-user-static` | registered in the engine VM |
+| Qt for Python (`PySide6-Essentials`) | the launcher's windows: display window, on-screen remote control, settings window | pip, into a Python environment of the project's own (`build/host/gui`) | the same; the libraries Qt loads come as system packages | pip, into `build\host\gui` |
 | Audio player (optional) | playing the target's sound on the host | built by the launcher with the Command Line Tools' compiler | `pacat`, `pw-cat` or `aplay`; system package | the launcher's own, run by Python; nothing to install |
 | QEMU OpenGL modules (optional) | mapping VM graphics to the host GPU | not in Homebrew's QEMU; an experimental build has them, installed only with `./setup.sh --experimental-qemu` (see [Experimental: host graphics on macOS](#experimental-host-graphics-on-macos)) | system package | in winget's QEMU; used when the display is in a window (see [Display and graphics](#display-and-graphics)) |
 
@@ -73,6 +81,23 @@ launcher and `setup.ps1` read it.
 The launcher starts a stopped container engine itself. On macOS, restarting
 Colima drops the ARM32 build emulation; `./setup.sh` restores it, and it is
 only needed to rebuild the ARM32 image.
+
+Qt is the one part of the launcher that is not Python's standard library. It
+is installed with pip from the Python Package Index into a Python environment
+of its own inside the repository, so the host's Python stays as it is; the
+launcher itself runs without it, and says what is missing when a window is
+asked for. On the macOS host the environment takes 329 MB. `EMU_GUI_PYTHON`
+names another Python that has PySide6, to use in its place. pip picks the
+newest version that fits the host's Python: 6.10.3 for the Python 3.9 of the
+macOS host, 6.12.0 for the newer ones tried.
+
+Installed and run on macOS. On Linux the package lists were tried in
+containers, not on a desktop: on Ubuntu 22.04 and 24.04, Fedora and openSUSE
+Tumbleweed Qt installed, its X11 and Wayland plugins found their libraries
+(looked at on the two Ubuntus), and the settings window ran without a
+display. On Arch the installation stopped on a file conflict among the
+image's own packages and was not carried further. The Windows script was
+changed likewise and parses; it has not been run.
 
 ### Removing what setup installed
 
@@ -114,7 +139,10 @@ removes it. With `--check` (`-Check`) it only lists.
   takes root rights. On macOS: the Xcode Command Line Tools that Homebrew's
   installer adds, and the developer directory that installer selects. On
   Windows: the Windows Hypervisor Platform feature and WSL 2.
-- This repository is not touched, nor `build/` in it.
+- The Python environment with Qt, which the script creates in `build/host/gui`,
+  is removed whole. A recorded environment that is not in a folder of that
+  name stays.
+- Apart from that, this repository is not touched, nor `build/` in it.
 
 The record is `~/.local/state/emulator-evaluation/setup-installed` (under
 `$XDG_STATE_HOME` where that is set; on Windows
@@ -124,6 +152,9 @@ record has none, and there `--uninstall` finds nothing to remove.
 
 How far this has been run:
 
+- macOS: removing the Python environment with Qt was run on a stand-in, with
+  a record made for the test: the stand-in went, and a folder of another name
+  that the record also listed stayed.
 - macOS: the script installed the experimental QEMU and removed it again,
   with its tap and the trust in it. It deleted a second Colima virtual
   machine made for the purpose, removed the ARM build emulation and its image
@@ -215,10 +246,21 @@ creates Podman's engine, which runs in WSL 2.
 
 ## Launcher
 
+    ./emu
     ./emu run [--mode container|vm] [--arch native|arm32|arm64] [--workload NAME]
               [--cpus N] [--memory MIB] [--resolution 720p|1080p|4k] [--graphics auto|host|emulated]
-              [--window] [--driver FEATURE=STRATEGY] [--option KEY=VALUE] [--screenshot DIR]
+              [--window] [--fullscreen] [--remote-control keys|window]
+              [--driver FEATURE=STRATEGY] [--option KEY=VALUE] [--screenshot DIR]
               [--mute] [--record] [--repeat N] [-- WORKLOAD_ARGS]
+
+Started without any arguments, the launcher shows a settings window: a field
+for every argument of `emu run` (the mode, the VM guest CPU, the workload, the
+window mode, the options and the rest), the command line those settings make,
+and a Start button. Start runs the emulator as that command line would, in
+the terminal the launcher was started from; closing the window starts
+nothing. The fields are made from the launcher's own argument list, so a new
+argument has a field without further work. Where no window can be shown (Qt
+is not installed), the launcher prints its usage, as it did before.
 
 | Mode | What runs |
 |---|---|
@@ -232,8 +274,9 @@ creates Podman's engine, which runs in WSL 2.
 ARM host. It is a diagnostic and not part of the test matrix.
 
 Workloads: `prompt` (interactive shell), `bench` (CPU, memory and I/O
-benchmarks), `driver-check`, `graphics-demo`, `media-decode` and `web-bench`
-(the WPE WebKit browser). `./emu workloads` lists them.
+benchmarks), `driver-check`, `graphics-demo`, `media-decode`, `web-bench`
+(the WPE WebKit browser) and `remote-keys` (shows the remote control keys that
+arrive). `./emu workloads` lists them.
 
 Other commands: `./emu build`, `./emu doctor`, `./emu matrix`,
 `./emu workloads`, `./emu verify`, `./emu report`, `./emu audio`. Each has
@@ -297,13 +340,13 @@ involved.
 ## Display and graphics
 
 The emulator has a display when the workload uses one, or when `--resolution`,
-`--graphics` or `--window` is given. `--resolution` selects 720p, 1080p (the
-default) or 4K.
+`--graphics`, `--window`, `--fullscreen` or `--remote-control` is given.
+`--resolution` selects 720p, 1080p (the default) or 4K.
 
 | | VM mode | Container mode |
 |---|---|---|
 | Display | QEMU's emulated display adapter, driven by the target kernel's DRM/KMS driver | none; the compositor renders to a headless output of the selected size |
-| `--window` | the display is shown in a window of its size | not available |
+| `--window` | the display is shown in the launcher's window, which gets it from QEMU | the same window; a program in the target serves the display to it |
 | `--graphics emulated` | the target CPU renders OpenGL ES and Vulkan (Mesa llvmpipe and lavapipe) | the same |
 | `--graphics host` | QEMU's virtio-gpu maps OpenGL ES, and Vulkan where QEMU offers it, to the host GPU | the container gets the engine's GPU render node (`/dev/dri`) |
 
@@ -311,12 +354,8 @@ default) or 4K.
 compatible one and otherwise emulates; the launcher prints which it chose and
 why. `--graphics host` fails rather than silently emulating.
 
-Without `--window` a VM's display is not shown anywhere; `--screenshot`
-captures it. `--window` shows it in QEMU's SDL window, or in QEMU's Cocoa or
-GTK window where the build has no SDL. Closing the window ends the emulator.
-The SDL window has been run on Windows and on Linux (X11), the Cocoa window
-on macOS. The windowed display of the later stage (full screen, scaling,
-toolbar) is not part of this.
+Without a window the display is not shown anywhere; `--screenshot` captures
+it. [Display window](#display-window) below describes the window.
 
 What the verified hosts offer; `./emu doctor` shows it for any host:
 
@@ -324,10 +363,10 @@ What the verified hosts offer; `./emu doctor` shows it for any host:
   acceleration, in either mode. Homebrew's QEMU is built without the
   GPU-accelerated display device, and QEMU itself has no OpenGL display for
   macOS. The container engine's virtual machine has no GPU. `--window` shows
-  the emulated display in QEMU's Cocoa window, and such a display can be
+  the emulated display in the launcher's window, and such a display can be
   captured.
 - macOS on ARM64, with an experimental QEMU build: host acceleration in VM
-  mode with `--window`. See
+  mode with `--window`, in QEMU's own window. See
   [Experimental: host graphics on macOS](#experimental-host-graphics-on-macos).
 - Linux on x86-64 (Kubuntu 24.04, QEMU 8.2.2, NVIDIA GPU with NVIDIA's own
   driver), VM mode: host acceleration, with and without a window. QEMU maps
@@ -345,7 +384,8 @@ What the verified hosts offer; `./emu doctor` shows it for any host:
   node, but it belongs to NVIDIA's driver, which the target's graphics stack
   (Mesa) cannot render with. A GPU with a Mesa driver (Intel, AMD) is still to
   be run.
-- Windows on x86-64, VM mode with `--window`: host acceleration. QEMU 11.1.0
+- Windows on x86-64, VM mode with `--window`: host acceleration, in QEMU's
+  own window. QEMU 11.1.0
   maps OpenGL ES to the host GPU and shows it in its window. On an NVIDIA GPU
   the OpenGL ES test ran at 175 frames/s and the Flutter test at 59, against
   99 and 17 emulated in the same window. A simulated ARM64 target gets it as
@@ -365,6 +405,50 @@ The launcher captures a VM's display through QEMU's machine protocol. QEMU
 refuses that while the display is a texture on the host GPU. Without a window
 the capture is then read from QEMU's VNC server. That works on Linux, up to
 2560x2048 pixels; on Windows it returns the black display described above.
+
+### Display window
+
+`--window` shows the emulator's display in a window of the launcher's own,
+in both modes; `--fullscreen` starts it full screen. Closing the window ends
+the emulator.
+
+- **Toolbar** (windowed only): mute, 1:1, full screen, and the on-screen
+  remote control. Mute switches the run's audio as `./emu audio mute` does;
+  it is off for a run that plays no sound through the host.
+- **Scaling.** The display is scaled to the window and keeps its shape. The
+  window opens at 1:1, one pixel of the display on one pixel of the screen, or
+  as large as the screen allows. The 1:1 button returns to that.
+- **Hotkeys.** Ctrl+Alt+F or F11 switches between the window and full screen;
+  Ctrl+Alt+M mutes, Ctrl+Alt+1 is 1:1, Ctrl+Alt+R shows or hides the remote
+  control. On a Mac the Control or the Command key, with Option.
+- **How the display gets there.** In VM mode QEMU serves it (its VNC server,
+  on a socket of the run, or on a loopback port on Windows). In container mode
+  a program in the target captures the compositor's output and serves it the
+  same way on a port published on the host's loopback address
+  ([target/src/emuscreen.c](target/src/emuscreen.c)). Either way it costs the
+  target nothing in VM mode and a copy of each changed frame in container
+  mode, and only while a window is open.
+- **QEMU's own window.** Where QEMU can show a display that is rendered on
+  the host GPU only in a window of its own (the experimental QEMU on macOS,
+  and QEMU on Windows), and host acceleration is asked for or preferred, the
+  display is shown there, as before: without toolbar, scaling control or
+  remote control keys. `--graphics emulated` gets the launcher's window;
+  `--option window=qemu` gets QEMU's.
+
+Limits:
+
+- Run on the macOS host only, with emulated graphics, in all four modes at
+  720p, and once at 4K in a host-native VM. Not run on Windows or Linux.
+- On Linux with host graphics the launcher's window reads the display from
+  QEMU's VNC server, which in QEMU 8.2 shows no more than 2560x2048 pixels of
+  a 4K display (see the captures below). Not run.
+- Full screen is the window system's: on macOS it worked when the system had
+  made the window the active application, and a window that was started from
+  a background session and not made active reported full screen without
+  growing.
+- Pixels travel unpacked. That is fine on one machine; a container engine
+  inside a virtual machine (macOS, Windows) carries them over its network
+  path, and how smooth full-screen video is there has not been measured.
 
 ### Experimental: host graphics on macOS
 
@@ -472,6 +556,88 @@ What was seen, in single runs that were not recorded as results:
 test. On the target, [`/opt/emu/display`](target/rootfs/opt/emu/display)
 (`emu-display start`) starts the compositor, for running other Wayland
 programs from the prompt.
+
+## Remote control input
+
+The emulator takes the keys of a remote control and gives them to the target
+as keys of a keyboard, each with the Linux key code that names it; a program
+on the target's display gets them like any other key. `--remote-control`
+selects how they are given:
+
+| Mode | What it is |
+|---|---|
+| `keys` | Host keyboard keys, while the emulator's window has the input focus. The default with a window |
+| `window` | An on-screen remote control in a window of its own: a picture of a TV remote control whose buttons are clicked with the mouse and held as long as the mouse button is. The host keys work as well, in both windows |
+| `redrat` | Infrared signals of a real remote control, received by a RedRat device. Not implemented |
+
+Either mode shows the display in a window. The keys are HbbTV's list of
+buttons (ETSI TS 102 796 V1.7.1, Table 12):
+
+| Remote control key | HbbTV key event | Host key | Linux key code | Symbol in the target |
+|---|---|---|---|---|
+| Up | VK_UP | `Up` | 103 | `Up` |
+| Down | VK_DOWN | `Down` | 108 | `Down` |
+| Left | VK_LEFT | `Left` | 105 | `Left` |
+| Right | VK_RIGHT | `Right` | 106 | `Right` |
+| OK | VK_ENTER | `Return`, `Enter` | 28 | `Return` |
+| BACK | VK_BACK | `Backspace` | 158 | `XF86Back` |
+| 0 | VK_0 | `0` | 11 | `0` |
+| 1 | VK_1 | `1` | 2 | `1` |
+| 2 | VK_2 | `2` | 3 | `2` |
+| 3 | VK_3 | `3` | 4 | `3` |
+| 4 | VK_4 | `4` | 5 | `4` |
+| 5 | VK_5 | `5` | 6 | `5` |
+| 6 | VK_6 | `6` | 7 | `6` |
+| 7 | VK_7 | `7` | 8 | `7` |
+| 8 | VK_8 | `8` | 9 | `8` |
+| 9 | VK_9 | `9` | 10 | `9` |
+| Red | VK_RED | `R` | 398 | `XF86Red` |
+| Green | VK_GREEN | `G` | 399 | `XF86Green` |
+| Yellow | VK_YELLOW | `Y` | 400 | `XF86Yellow` |
+| Blue | VK_BLUE | `B` | 401 | `XF86Blue` |
+| Play | VK_PLAY | `P` | 207 | `XF86AudioPlay` |
+| Pause | VK_PAUSE | `U` | 201 | `XF86AudioPause` |
+| Play/pause | VK_PLAY_PAUSE | `Space` | 164 | `XF86AudioPlay` |
+| Stop | VK_STOP | `S` | 166 | `XF86AudioStop` |
+| Fast forward | VK_FAST_FWD | `F` | 208 | `XF86AudioForward` |
+| Rewind | VK_REWIND | `W` | 168 | `XF86AudioRewind` |
+| Record | VK_RECORD | `C` | 167 | `XF86AudioRecord` |
+| TEXT | none: handled by the terminal | `T` | 388 | none |
+| P+ | none: handled by the terminal | `PageUp` | 402 | `XF86ChannelUp` |
+| P- | none: handled by the terminal | `PageDown` | 403 | `XF86ChannelDown` |
+| WEBTV | none: handled by the terminal | `H` | 150 | `XF86WWW` |
+| EXIT | none: handled by the terminal | `Escape` | 174 | `XF86Close` |
+
+The last column is what the target's keymap calls the key, as a program in
+the target saw it. TEXT has a key code and no symbol. Play and play/pause have
+different key codes and the same symbol.
+
+    ./emu run --workload remote-keys --remote-control window
+
+The `remote-keys` workload shows a still picture on the display and prints
+every key that arrives, with its code and symbol.
+
+How the keys travel: the target's compositor gets a keyboard of its own, the
+"remote control" ([target/src/emu_remote.c](target/src/emu_remote.c), a Weston
+module), and the launcher's window tells it which keys to press and release:
+through a program it runs in the container, or, in VM mode, down a connection
+the target opens to the window. An emulated PC keyboard or a VNC connection
+could not carry them: the colour keys, say, have key codes that no PC
+keyboard sends. The compositor gets that keyboard only when remote control
+input is on, so runs without a window are as they were.
+
+Limits:
+
+- Verified on the macOS host, in all four modes: each of the 32 keys by its
+  host key and by its button. Not run on Windows or Linux.
+- That host keys stay away from the target while another window has the focus
+  follows from how windows get keys, and was not checked.
+- A key reaches the target as a key code. Turning the codes into HbbTV's key
+  events is the job of an HbbTV application's browser; the image's browser is
+  not one, and what it makes of each key was not looked at.
+- The module uses three functions that Weston exports for its own backends
+  and does not declare in the headers it installs. They are declared in the
+  module as Weston 14 has them, the version the image pins.
 
 ## Media playback
 

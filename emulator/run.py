@@ -8,7 +8,7 @@ import sys
 import threading
 import time
 
-from . import catalog, container, drivers as driver_features, graphics, host, image, vm
+from . import catalog, container, drivers as driver_features, graphics, host, image, remote, vm, window
 from .errors import EmuError
 from .paths import BUILD_DIR
 
@@ -24,6 +24,8 @@ KNOWN_OPTIONS = {
     "host-address": "container mode: name or address containers use to reach the host",
     "host-bind": "container mode: address host-side processes listen on",
     "venus": "VM mode with host graphics: map Vulkan to the host GPU too (yes/no, default: when QEMU offers it on Linux)",
+    "window": "VM mode with a window: qemu shows the display in QEMU's own window, which has no toolbar and takes "
+              "no remote control keys (default: the launcher's window wherever it can show the display)",
 }
 KNOWN_OPTIONS.update(driver_features.AUDIO_OPTIONS)
 
@@ -32,7 +34,8 @@ class RunOptions:
     def __init__(self, mode, workload="prompt", args=(), arch="native", cpus=DEFAULT_CPUS,
                  memory_mb=DEFAULT_MEMORY_MB, drivers=None, options=None, extra_args=(), timeout=None,
                  echo=True, stdin_script=None, quiet_build=False, rebuild=False, resolution=None, graphics=None,
-                 screenshot_dir=None, screenshot_format="png", window=False, muted=False, on_audio=None):
+                 screenshot_dir=None, screenshot_format="png", window=False, muted=False, on_audio=None,
+                 fullscreen=False, remote_control=None, on_line=None, on_viewer=None):
         self.mode = mode
         self.workload = workload
         self.args = list(args)
@@ -51,9 +54,15 @@ class RunOptions:
         self.graphics = graphics                # auto, host or emulated
         self.screenshot_dir = screenshot_dir    # capture the display here when a workload shows a finished frame
         self.screenshot_format = screenshot_format
-        self.window = window                    # show a VM's display in a window
+        self.window = window                    # show the display in a window
+        self.fullscreen = fullscreen            # ... that starts full screen
+        self.remote_control = remote_control    # remote control input mode: keys, window or redrat
         self.muted = muted                      # start with the emulator's audio muted
         self.on_audio = on_audio                # called with the audio host process's details once it runs
+        self.on_line = on_line                  # called with each line of the target's console
+        # Called with the display window (window.Viewer) once it runs; the
+        # window then takes commands, for a check that drives it.
+        self.on_viewer = on_viewer
 
 
 class Outcome:
@@ -77,11 +86,12 @@ class Outcome:
         self.started_at = None
         self.duration_seconds = None
         self.attached = False           # ran attached to the terminal, nothing captured
+        self.window_closed = False      # the display window was closed, which ended the emulator
 
     @property
     def ok(self):
         if self.attached:
-            return self.process_exit == 0
+            return self.process_exit == 0 or self.window_closed
         return self.exit_code == 0 and not self.timed_out
 
 
@@ -145,6 +155,15 @@ def launch(opts):
             raise EmuError("unknown --option %r (known: %s)" % (name, ", ".join(sorted(KNOWN_OPTIONS))))
     if opts.workload != "prompt" and opts.stdin_script is not None:
         raise EmuError("only the prompt workload reads input")
+    if opts.remote_control not in (None,) + remote.MODES:
+        raise EmuError("unknown remote control input mode %r (one of: %s)"
+                       % (opts.remote_control, ", ".join(remote.MODES)))
+    if opts.remote_control == "redrat":
+        raise EmuError("RedRat IR input is not implemented yet",
+                       hint="use --remote-control keys (host keyboard) or window (on-screen remote control)")
+    # Full screen is a state of the window, and remote control keys are typed
+    # into it or clicked beside it.
+    shown = bool(opts.window or opts.fullscreen or opts.remote_control)
 
     outcome = Outcome()
     outcome.run_id = _run_id()
@@ -166,13 +185,15 @@ def launch(opts):
     capturer = None
     capture_directory = None
     console = None
+    viewer = None
+    viewer_plan = None      # what the display window is started with
+    stop_emulator = []      # ends the emulator when the display window is closed
     try:
+        if shown:
+            window.require_python("showing the display in a window")
         if opts.mode == "container":
             if opts.arch != "native":
                 raise EmuError("container mode runs the host's CPU architecture; --arch applies to VM mode")
-            if opts.window:
-                raise EmuError("--window shows the display of a VM; in container mode the target renders to an "
-                               "output that is not shown anywhere", hint="add --mode vm")
             runtime = container.detect()
             arch = host.host_arch()
             manifest = image.ensure("container", lambda: runtime, arch, quiet=opts.quiet_build, rebuild=opts.rebuild)
@@ -183,16 +204,29 @@ def launch(opts):
                 env["EMU_DRIVERS"] = ",".join("%s=%s" % item for item in sorted(opts.drivers.items()))
             name = "emu-" + outcome.run_id.lower()
             display = _display_plan(opts, lambda: graphics.probe_container(runtime, manifest["image_tag"],
-                                                                           manifest["platform"]))
+                                                                           manifest["platform"]),
+                                    graphics.LAUNCHER_WINDOW if shown else None)
             display_args = []
             if display:
                 env["EMU_DISPLAY"] = "%dx%d" % (display["width"], display["height"])
                 env["EMU_GRAPHICS"] = display["provider"]
+                if shown:
+                    # The target serves its display on a port of the container
+                    # (emuscreen), published on this host for the window, and
+                    # takes remote control keys from a program the window runs
+                    # in the container.
+                    port = window.free_port()
+                    env["EMU_SCREEN_PORT"] = "5900"
+                    env["EMU_REMOTE"] = "exec"
+                    display_args += ["--publish", "127.0.0.1:%d:5900" % port]
+                    viewer_plan = {"display": ("127.0.0.1", port),
+                                   "keys_exec": [runtime.cli, "exec", "-i", name, "/opt/emu/remote", "stdin"]}
+                    stop_emulator.append(lambda: runtime.run("kill", name, timeout=30))
                 if display["screen_hold"]:
                     env["EMU_SCREEN_HOLD"] = str(display["screen_hold"])
                     screens = graphics.Screens(opts.screenshot_dir, outcome.run_id, "png",
                                                graphics.container_capture(runtime, name))
-                display_args = graphics.container_arguments(display)
+                display_args += graphics.container_arguments(display)
             command = container.run_command(
                 runtime, manifest["image_tag"], manifest["platform"], opts.workload, opts.args, opts.cpus,
                 opts.memory_mb, env, interactive, attached, display_args + opts.extra_args, name)
@@ -225,14 +259,39 @@ def launch(opts):
                 name = os.environ.get("TERM", "")
                 terminal = (name if name.replace("-", "").isalnum() else "vt100", size.columns, size.lines)
             qemu = host.require_tool(vm.QEMU_BINARY[guest], "VM mode with a %s guest" % guest)
-            window = graphics.window_backend(qemu) if opts.window else None
-            display = _display_plan(opts, lambda: graphics.probe_vm(qemu, window), window)
+            # The launcher's own window, or QEMU's where only that one can
+            # show a display rendered on the host GPU.
+            kind = None
+            if shown:
+                kind = graphics.window_backend(qemu) if opts.options.get("window") == "qemu" else \
+                    graphics.window_kind(qemu, opts.graphics)
+            own = kind == graphics.LAUNCHER_WINDOW
+            if kind and not own and opts.remote_control:
+                asked = opts.options.get("window") == "qemu"
+                raise EmuError("remote control input needs the launcher's own window, and this run shows the "
+                               "display in QEMU's (%s): %s" % (kind, "--option window=qemu asks for that" if asked
+                                                               else "with host graphics acceleration this QEMU "
+                                                                    "can show the display nowhere else"),
+                               hint="leave out --option window=qemu" if asked else "add --graphics emulated")
+            display = _display_plan(opts, lambda: graphics.probe_vm(qemu, None if own else kind), kind)
             display_args, display_backend, display_device = [], "none", None
+            vnc = None
             if display:
                 display_args, display_backend, display_device = graphics.vm_arguments(
                     display, display["width"], display["height"], opts.memory_mb, opts.options)
+                if own:
+                    # QEMU serves the display for the window, and the target
+                    # fetches remote control keys from a port the window
+                    # listens on (10.0.2.2 is this host, seen from the target).
+                    vnc_args, vnc, vnc_directory = graphics.vnc_endpoint()
+                    display_args += vnc_args
+                    port = window.free_port()
+                    plan.kernel_settings["remote"] = "10.0.2.2:%d" % port
+                    viewer_plan = {"display": vnc, "keys_listen": port, "directory": vnc_directory}
+                elif kind and opts.fullscreen:
+                    display_args.append("-full-screen")
                 if display["screen_hold"]:
-                    capture_args, capturer, capture_directory = graphics.capture_endpoint(display)
+                    capture_args, capturer, capture_directory = graphics.capture_endpoint(display, vnc)
                     display_args += capture_args
                     screens = graphics.Screens(opts.screenshot_dir, outcome.run_id, opts.screenshot_format,
                                                lambda path: capturer.capture(path, opts.screenshot_format))
@@ -271,21 +330,61 @@ def launch(opts):
         outcome.environment = {"host": host.describe(), "emulator": emulator, "image": image_identity,
                                "drivers": dict(opts.drivers), "launcher_revision": image.git_revision()}
         if emulator.get("graphics"):
-            shown = " in a window" if emulator["display"].get("window") else ""
+            where = {None: "", graphics.LAUNCHER_WINDOW: " in a window"}.get(
+                emulator["display"].get("window"), " in QEMU's own window (no toolbar, no remote control keys)")
             outcome.notes.append("display %s%s, graphics %s (%s)" % (
-                emulator["display"]["resolution"], shown, emulator["graphics"]["provider"],
+                emulator["display"]["resolution"], where, emulator["graphics"]["provider"],
                 emulator["graphics"]["reason"]))
+        if viewer_plan:
+            emulator["display"]["remote_control"] = opts.remote_control or "keys"
         if opts.echo:
             for note in outcome.notes:
                 print("emu: " + note, file=sys.stderr, flush=True)
 
+        if viewer_plan:
+            viewer = window.start_viewer(
+                viewer_plan["display"], "Emulator: %s, %s" % (opts.workload, emulator["variant"]),
+                fullscreen=opts.fullscreen, remote_control=opts.remote_control or "keys",
+                keys_exec=viewer_plan.get("keys_exec"), keys_listen=viewer_plan.get("keys_listen"),
+                audio_port=plan.audio["control_port"] if plan.audio else None, control=bool(opts.on_viewer))
+            if opts.on_viewer:
+                opts.on_viewer(viewer)
+
+        def started(process):
+            """Closing the display window ends the emulator."""
+            if not viewer:
+                return
+
+            def watch():
+                viewer.process.wait()
+                if process.poll() is None:
+                    outcome.window_closed = True
+                    for stop in stop_emulator:
+                        try:
+                            stop()
+                        except (OSError, subprocess.SubprocessError):
+                            pass
+                    process.terminate()
+                    try:
+                        process.wait(timeout=10)
+                    except subprocess.TimeoutExpired:
+                        process.kill()
+
+            threading.Thread(target=watch, daemon=True).start()
+
         if attached:
             outcome.attached = True
             outcome.started_at = time.time()
-            outcome.process_exit = subprocess.call(command, env=host.tool_env())
+            process = subprocess.Popen(command, env=host.tool_env())
+            started(process)
+            try:
+                outcome.process_exit = process.wait()
+            except KeyboardInterrupt:
+                process.kill()
+                raise
             outcome.duration_seconds = time.time() - outcome.started_at
         else:
-            _capture(command, opts, outcome, interactive, None if attached else screens, console)
+            _capture(command, opts, outcome, interactive, None if attached else screens, console, started)
         if screens:
             outcome.screens = screens.captures
         for process in plan.host_processes:
@@ -296,6 +395,10 @@ def launch(opts):
             {key: value for key, value in process.items() if key != "trace"} for process in plan.host_processes]
         return outcome
     finally:
+        if viewer:
+            viewer.close()
+        if viewer_plan:
+            graphics.remove_directory(viewer_plan.get("directory"))
         if plan:
             plan.stop()
         if capturer:
@@ -331,13 +434,16 @@ def _forward_input(process, sink, source, ready, end_with_eot):
         pass
 
 
-def _capture(command, opts, outcome, interactive, screens=None, console=None):
+def _capture(command, opts, outcome, interactive, screens=None, console=None, started=None):
     """Run the emulator and take in what it and the target print. The target's
-    console is on the emulator's standard streams, or on `console`."""
+    console is on the emulator's standard streams, or on `console`. `started`
+    is called with the emulator's process once it runs."""
     stdin = subprocess.PIPE if interactive and not console else subprocess.DEVNULL
     outcome.started_at = time.time()
     process = subprocess.Popen(command, stdin=stdin, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                env=host.tool_env())
+    if started:
+        started(process)
     ready = threading.Event()
     lock = threading.Lock()
 
@@ -350,6 +456,8 @@ def _capture(command, opts, outcome, interactive, screens=None, console=None):
                     if opts.echo:
                         print(line, flush=True)
                     _parse(line, outcome, ready, screens)
+                    if opts.on_line:
+                        opts.on_line(line)
                     if opts.mode == "vm" and any(text in line for text in vm.GAVE_UP):
                         outcome.notes.append("the hypervisor stopped running the target; the emulator was ended")
                         process.kill()

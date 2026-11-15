@@ -53,6 +53,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends libwpewebkit-2.
 COPY src/emu_web_autoplay.c /src/
 RUN gcc -O2 -Wall -Wextra -shared -fPIC -o /out/lib/libemu_web_autoplay.so /src/emu_web_autoplay.c \
          $(pkgconf --cflags --libs wpe-webkit-2.0) -ldl
+# For the launcher's display window and remote control input: the program
+# that serves the display in container mode, the one that shows which keys
+# arrive, and the compositor's remote control keyboard (a Weston module).
+RUN apt-get update && apt-get install -y --no-install-recommends libweston-14-dev libxkbcommon-dev \
+    && rm -rf /var/lib/apt/lists/*
+COPY src/emuscreen.c src/emukeys.c src/emu_remote.c src/build-display-tools.sh /src/
+RUN sh /src/build-display-tools.sh /src /out
 
 # -------------------------------------------------------------- media ---
 # The reference streams of the media-decode workload. They are data, the same
@@ -154,7 +161,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Container-mode image.
 FROM os AS target
 COPY --from=rootfs /rootfs/ /
-COPY --from=tools /out/emubench /out/emugfx /usr/local/bin/
+COPY --from=tools /out/emubench /out/emugfx /out/emuscreen /out/emukeys /usr/local/bin/
 COPY --from=flutter /out/flutter/ /opt/emu/flutter/
 COPY --from=tools /out/lib/ /opt/emu/lib/
 COPY --from=media /out/media/ /opt/emu/media/
@@ -192,7 +199,7 @@ RUN set -eu; \
 # VM-mode root filesystem: the same files as the container image, plus kernel.
 FROM vmos AS vmroot
 COPY --from=rootfs /rootfs/ /
-COPY --from=tools /out/emubench /out/emugfx /usr/local/bin/
+COPY --from=tools /out/emubench /out/emugfx /out/emuscreen /out/emukeys /usr/local/bin/
 COPY --from=flutter /out/flutter/ /opt/emu/flutter/
 COPY --from=tools /out/lib/ /opt/emu/lib/
 COPY --from=media /out/media/ /opt/emu/media/

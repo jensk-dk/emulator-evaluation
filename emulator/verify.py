@@ -14,7 +14,8 @@ import tempfile
 import threading
 import time
 
-from . import catalog, container, drivers as driver_features, graphics, host, hostaudio, image, results, vm
+from . import catalog, container, drivers as driver_features, graphics, host, hostaudio, image, imagefile, remote, \
+    results, vm, window
 from .errors import EmuError
 from .paths import ROOT, VERIFICATION_DIR
 from .run import RunOptions, launch
@@ -963,6 +964,445 @@ def _web_checks():
     return checks
 
 
+
+# ------------------------------------- display window, remote control keys ---
+
+WINDOW_RESOLUTION = "720p"
+KEYS_PICTURE_MARKER = (255, 0, 255)     # the block at the top centre of emukeys' picture
+_window_runs = {}
+
+
+def _picture_problems(path, width, height):
+    """Whether a picture saved by the display window shows the target's
+    picture (emukeys' marker blocks) at this size."""
+    try:
+        found = imagefile.size(path)
+    except (OSError, ValueError) as error:
+        return ["the picture could not be read: %s" % error]
+    entry = {"file": path, "captured_width": found[0], "captured_height": found[1], "marker": KEYS_PICTURE_MARKER}
+    return graphics.capture_problems(entry, width, height)
+
+
+def _wait(condition, seconds, pause=0.2):
+    deadline = time.time() + seconds
+    while time.time() < deadline:
+        found = condition()
+        if found:
+            return found
+        time.sleep(pause)
+    return condition()
+
+
+def _drive_window(viewer, seen, width, height, directory):
+    """What a person would do with the display window and the on-screen
+    remote control, and what was observed each time (into `seen`)."""
+    ask = viewer.ask
+    state = _wait(lambda: (lambda s: s if s["connected"] and s["display"] == [width, height] else None)(ask(do="state")),
+                  180)
+    if not state:
+        seen["error"] = "the window did not get the target's %dx%d display: %r" % (width, height, ask(do="state"))
+        return
+    ratio = state["pixel_ratio"]
+
+    def shown_picture(name):
+        """Save the part of the window that shows the display; returns
+        (state, problems of the picture)."""
+        current = ask(do="state")
+        path = os.path.join(directory, name + ".ppm")
+        saved = ask(do="save-shown", path=path)
+        if not saved.get("saved"):
+            return current, ["the window could not save what it shows: %r" % saved]
+        return current, _picture_problems(path, round(current["shown"][0] * ratio), round(current["shown"][1] * ratio))
+
+    # The display as it arrived, pixel for pixel. The picture may be a
+    # moment behind the display's size.
+    path = os.path.join(directory, "display.ppm")
+    problems = _wait(lambda: (ask(do="save-display", path=path), _picture_problems(path, width, height))[1] == [] or None,
+                     120, 0.5)
+    seen["display"] = {"problems": [] if problems else _picture_problems(path, width, height), "state": ask(do="state")}
+
+    # Scaling: smaller with the display's shape, then a window of another shape.
+    scaling = []
+    for wanted in ([width // 2, height // 2], [900, 700]):
+        ask(do="resize", display=wanted)
+        scale = min(wanted[0] / width, wanted[1] / height)
+        expected = [round(width * scale), round(height * scale)]
+        _wait(lambda: ask(do="state")["widget"] == wanted, 10)
+        time.sleep(0.5)
+        current, problems = shown_picture("scaled-%dx%d" % tuple(wanted))
+        scaling.append({"widget": current["widget"], "wanted": wanted, "shown": current["shown"], "expected": expected,
+                        "problems": problems})
+    seen["scaling"] = scaling
+
+    # The toolbar: 1:1, then mute and unmute.
+    ask(do="toolbar", action="one-to-one")
+    _wait(lambda: ask(do="state")["widget"] == ask(do="state")["natural"], 10)
+    time.sleep(0.5)
+    current, problems = shown_picture("one-to-one")
+    seen["one_to_one"] = {"widget": current["widget"], "natural": current["natural"], "shown": current["shown"],
+                          "pixel_ratio": ratio, "toolbar": current["toolbar"], "problems": problems}
+    mute = []
+    port = (seen.get("audio") or {}).get("control_port")
+    for _ in range(2):
+        ask(do="toolbar", action="mute")
+        time.sleep(0.3)
+        try:
+            switch = hostaudio.control(port, "status")["muted"] if port else None
+        except (OSError, ValueError, KeyError) as error:
+            switch = "no answer: %s" % error
+        mute.append({"window": ask(do="state")["muted"], "switch": switch})
+    seen["mute"] = mute
+
+    # Full screen with the hotkey, and back with the other one.
+    before = ask(do="state")
+    ask(**{"do": "host-key", "key": "F", "with": ["ctrl", "alt"]})
+    _wait(lambda: ask(do="state")["widget"] != before["widget"], 6)
+    time.sleep(1.0)
+    full, problems = shown_picture("full-screen")
+    answer = ask(do="host-key", key="F11")
+    if "error" in answer:
+        raise CheckFailed("the window did not take the F11 key: %s" % answer["error"])
+    _wait(lambda: ask(do="state")["widget"] == before["widget"], 6)
+    time.sleep(1.0)
+    after = ask(do="state")
+    seen["full_screen"] = {"before": before, "full": full, "after": after, "problems": problems}
+
+    # Every remote control key: by its host key, typed into the display
+    # window, and by its button on the on-screen remote control.
+    def press(command, code):
+        with seen["lock"]:
+            start = len(seen["keys"])
+        ask(**command)
+        wanted = [(code, "pressed"), (code, "released")]
+
+        def arrived():
+            with seen["lock"]:
+                got = [(key["code"], key["state"]) for key in seen["keys"][start:]]
+            return got if got[:2] == wanted or len(got) >= 2 else None
+        got = _wait(arrived, 60, 0.05)
+        with seen["lock"]:
+            symbol = seen["keys"][start]["symbol"] if len(seen["keys"]) > start else None
+        return {"code": code, "arrived": got, "ok": got == wanted, "symbol": symbol}
+
+    seen["remote"] = ask(do="state")
+    seen["host_keys"] = {}
+    seen["buttons"] = {}
+    for key, _, code, _ in remote.KEYS:
+        seen["host_keys"][key] = dict(press({"do": "host-key", "key": remote.host_keys_of(key)[0]}, code),
+                                      host=remote.host_keys_of(key)[0])
+    for key, _, code, _ in remote.KEYS:
+        if key in seen["remote"]["remote_buttons"]:
+            seen["buttons"][key] = press({"do": "remote-click", "key": key}, code)
+    # A host key typed while the remote control's window has the keyboard.
+    seen["key_in_remote"] = press({"do": "host-key", "key": "Return", "in": "remote"}, remote.CODES["ok"])
+    path = os.path.join(directory, "remote.ppm")
+    seen["remote_picture"] = bool(ask(do="save-remote", path=path).get("saved")) and imagefile.size(path)
+
+
+def _window_session(mode, arch):
+    """One run with the display window and the on-screen remote control, on
+    the remote-keys workload: its window shows a still picture with marker
+    blocks and reports every key it gets. Returns what was observed."""
+    key = (mode, arch)
+    if key in _window_runs:
+        return _window_runs[key]
+    if not window.gui_python():
+        raise CheckUnavailable("Qt for Python (%s) is not installed on this host, so the launcher has no windows; %s"
+                               % (window.PACKAGE, host.SETUP_HINT))
+    width, height = graphics.resolution(WINDOW_RESOLUTION)
+    seen = {"keys": [], "lock": threading.Lock(), "ready": threading.Event()}
+
+    def on_line(line):
+        start = line.find("EMU-KEY: ")
+        if start < 0:
+            return
+        try:
+            data = json.loads(line[start + 9:])
+        except ValueError:
+            return
+        if data.get("ready"):
+            seen["ready"].set()
+        elif "code" in data:
+            with seen["lock"]:
+                seen["keys"].append(data)
+
+    def on_audio(info):
+        seen["audio"] = info
+
+    with tempfile.TemporaryDirectory(prefix="emu-verify-") as directory:
+        def drive(viewer):
+            def work():
+                try:
+                    if not seen["ready"].wait(1800):
+                        seen["error"] = "the target's window never got the keyboard focus"
+                        return
+                    _drive_window(viewer, seen, width, height, directory)
+                except Exception as error:      # reported by the checks, whatever it was
+                    seen["error"] = "%s: %s" % (type(error).__name__, error)
+                finally:
+                    try:
+                        viewer.ask(do="send-key", code=remote.END_KEY)
+                    except (EmuError, OSError, ValueError):
+                        pass
+            threading.Thread(target=work, daemon=True).start()
+
+        # The sound is taken in and not played: the window's mute button
+        # needs the run's audio process, not its sound.
+        _, outcome = _run(mode=mode, arch=arch, workload="remote-keys", resolution=WINDOW_RESOLUTION, window=True,
+                          remote_control="window", drivers=driver_features.parse(["audio=host"]),
+                          options={"audio-output": "none"}, on_line=on_line, on_audio=on_audio, on_viewer=drive,
+                          timeout=3600)
+    seen["emulator"] = outcome.environment["emulator"]
+    _window_runs[key] = seen
+    return seen
+
+
+def _window(mode, arch):
+    seen = _window_session(mode, arch)
+    _require("error" not in seen, seen.get("error"))
+    return seen
+
+
+def _window_display(mode, arch="native"):
+    """The launcher's window shows the target's display."""
+    seen = _window(mode, arch)
+    display = seen["display"]
+    _require(not display["problems"], "the display in the window is not the target's picture: %s"
+             % "; ".join(display["problems"]))
+    state = display["state"]
+    _require(seen["emulator"]["display"].get("window") == graphics.LAUNCHER_WINDOW,
+             "the display was not shown in the launcher's own window: %r" % seen["emulator"]["display"])
+    return ["the window got the target's %dx%d display and shows its picture: the marker blocks are where the "
+            "target drew them, pixel for pixel" % tuple(state["display"]),
+            "windowed, with its toolbar; the display took %dx%d of the window at a pixel ratio of %s"
+            % (state["shown"][0], state["shown"][1], state["pixel_ratio"]),
+            "graphics provider: %s" % seen["emulator"]["graphics"]["provider"]]
+
+
+def _window_fullscreen(mode, arch="native"):
+    """The hotkey switches the window to full screen and back."""
+    seen = _window(mode, arch)
+    found = seen["full_screen"]
+    before, full, after = found["before"], found["full"], found["after"]
+    _require(not before["full_screen"] and before["toolbar"], "the window did not start windowed with its toolbar")
+    _require(full["full_screen"], "Ctrl+Alt+F did not switch the window to full screen")
+    _require(not full["toolbar"], "the toolbar stayed up in full screen")
+    _require(not after["full_screen"] and after["toolbar"], "F11 did not switch back to the window with its toolbar")
+    _require(after["widget"] == before["widget"], "back from full screen the display has %r of the window, not %r "
+             "as before" % (after["widget"], before["widget"]))
+    lines = ["Ctrl+Alt+F: full screen, without the toolbar; F11: back to the %dx%d window with its toolbar"
+             % tuple(before["window"])]
+    if full["window"] != full["screen"]:
+        # The window says it is full screen and did not grow. Seen on macOS
+        # with a window that the system has not made the active application,
+        # as it does not for one started from a session in the background.
+        raise CheckUnavailable("\n".join(lines + [
+            "the window reported full screen but kept its size (%dx%d on a %dx%d screen): this host's window "
+            "system did not carry the switch out%s. That the display fills the screen was not observed"
+            % (full["window"][0], full["window"][1], full["screen"][0], full["screen"][1],
+               "" if full["active"] else ", and had not made the window the active one")]))
+    _require(not found["problems"], "full screen does not show the target's picture: %s" % "; ".join(found["problems"]))
+    return lines + ["full screen the window covered the %dx%d screen, and the display in it, scaled to %dx%d, "
+                    "shows the target's picture" % (full["screen"][0], full["screen"][1], full["shown"][0],
+                                                    full["shown"][1])]
+
+
+def _window_scaling(mode, arch="native"):
+    """The display scales with the window."""
+    seen = _window(mode, arch)
+    lines = []
+    for step in seen["scaling"]:
+        _require(step["widget"] == step["wanted"], "the window did not take the size %r (it has %r)"
+                 % (step["wanted"], step["widget"]))
+        _require(all(abs(a - b) <= 1 for a, b in zip(step["shown"], step["expected"])),
+                 "in a %dx%d window the display is drawn %dx%d, not %dx%d"
+                 % tuple(step["wanted"] + step["shown"] + step["expected"]))
+        _require(not step["problems"], "the display scaled to %dx%d does not show the target's picture: %s"
+                 % (step["shown"][0], step["shown"][1], "; ".join(step["problems"])))
+        lines.append("window resized to %dx%d: the %s display is drawn %dx%d, all of it, in its own shape"
+                     % (step["wanted"][0], step["wanted"][1], WINDOW_RESOLUTION, step["shown"][0], step["shown"][1]))
+    return lines
+
+
+def _window_toolbar(mode, arch="native"):
+    """The toolbar's 1:1 and mute buttons."""
+    seen = _window(mode, arch)
+    one = seen["one_to_one"]
+    width, height = graphics.resolution(WINDOW_RESOLUTION)
+    _require(one["toolbar"], "the window has no toolbar")
+    _require(one["widget"] == one["natural"] == one["shown"], "after 1:1 the display is drawn %r in a %r area, not %r"
+             % (one["shown"], one["widget"], one["natural"]))
+    _require([round(side * one["pixel_ratio"]) for side in one["shown"]] == [width, height],
+             "1:1 draws the %dx%d display on %r pixels at a pixel ratio of %s"
+             % (width, height, one["shown"], one["pixel_ratio"]))
+    _require(not one["problems"], "at 1:1 the window does not show the target's picture: %s"
+             % "; ".join(one["problems"]))
+    _require(seen.get("audio"), "the run had no audio process for the mute button to switch")
+    _require(seen["mute"] == [{"window": True, "switch": True}, {"window": False, "switch": False}],
+             "the mute button did not mute and unmute the run's audio: %r" % (seen["mute"],))
+    return ["1:1: the %dx%d display is drawn on %dx%d screen pixels, after the window had been another size"
+            % (width, height, width, height),
+            "mute: the button muted the run's audio process and then unmuted it (asked of the process itself each "
+            "time)"]
+
+
+def _key_lines(found, how):
+    wrong = ["%s (%s)" % (key, "nothing arrived" if not entry["arrived"] else
+                          "arrived as %r" % (entry["arrived"],)) for key, entry in found.items() if not entry["ok"]]
+    _require(not wrong, "%s, these remote control keys did not reach the target as their own key: %s"
+             % (how, ", ".join(wrong)))
+    missing = [key for key, _, _, _ in remote.KEYS if key not in found]
+    _require(not missing, "%s, there is no way to press: %s" % (how, ", ".join(missing)))
+    unnamed = sorted(key for key, entry in found.items() if entry["symbol"] in (None, "", "NoSymbol"))
+    lines = ["%s: all %d remote control keys reached a program on the target's display, each pressed and released "
+             "with its own Linux key code" % (how, len(found))]
+    lines.append("key symbols in the target: " + ", ".join(
+        "%s %s" % (key, found[key]["symbol"]) for key in ("up", "ok", "back", "red", "play", "channel_up", "exit")))
+    if unnamed:
+        lines.append("with a key code but no symbol in the target's keymap: " + ", ".join(unnamed))
+    return lines
+
+
+def _remote_keys(mode, arch="native"):
+    """Host keyboard keys are remote control keys while the window has the focus."""
+    seen = _window(mode, arch)
+    _require(not remote.problems(), "; ".join(remote.problems()))
+    lines = _key_lines(seen["host_keys"], "typed into the emulator's window on the host keyboard")
+    lines.append("host keys: " + ", ".join("%s for %s" % (entry["host"], remote.LABELS[key])
+                                           for key, entry in seen["host_keys"].items()))
+    return lines + ["not checked: that the keys stay away from the target while another window has the focus"]
+
+
+def _remote_window(mode, arch="native"):
+    """The on-screen remote control."""
+    seen = _window(mode, arch)
+    state = seen["remote"]
+    _require(state["remote_window"], "the on-screen remote control's window is not shown")
+    lines = _key_lines(seen["buttons"], "clicked on the on-screen remote control")
+    _require(seen["remote_picture"], "the on-screen remote control did not draw itself")
+    _require(seen["key_in_remote"]["ok"], "a host key typed into the remote control's window did not reach the "
+             "target: %r" % (seen["key_in_remote"],))
+    return ["the remote control has a window of its own (%dx%d), with a button for each of the %d keys"
+            % (seen["remote_picture"][0], seen["remote_picture"][1], len(state["remote_buttons"]))] + lines + [
+        "with the remote control shown, the host keys still worked in the emulator's window (%d keys) and in the "
+        "remote control's own" % len(seen["host_keys"])]
+
+
+def _settings_fields():
+    """The settings window's fields, as the arguments of "emu run" make them."""
+    from .cli import run_parser
+    merged = {"window", "fullscreen"}
+    names = {action.dest for action in run_parser()._actions if action.dest != "help"}
+    return sorted((names - merged) | {"window_mode"})
+
+
+def check_settings_window():
+    """The settings window offers every launcher setting and produces the
+    arguments for it."""
+    from .cli import run_parser
+    if not window.gui_python():
+        raise CheckUnavailable("Qt for Python (%s) is not installed on this host; %s" % (window.PACKAGE, host.SETUP_HINT))
+    chosen = {"mode": "vm", "arch": "arm64", "workload": "graphics-demo", "window_mode": "full screen",
+              "remote_control": "window", "resolution": "4k", "graphics": "emulated", "cpus": 2, "memory": 1024,
+              "mute": True, "option": "accel=tcg verbose-boot=yes", "driver": "hwrng=mocked", "repeat": 2,
+              "timeout": "120", "record": True, "workload_args": "--tests wayland --seconds 1"}
+    answer = window.choose_settings(script={"set": chosen, "press": "start"})
+    _require(answer.get("visible"), "the settings window was not shown")
+    _require(answer["fields"] == _settings_fields(), "the window's fields are not the launcher's arguments: it has %r, "
+             "the launcher takes %r" % (answer["fields"], _settings_fields()))
+    _require(answer["arguments"] and answer["arguments"][0] == "run", "Start produced %r" % (answer["arguments"],))
+    parsed = run_parser().parse_args(answer["arguments"][1:])
+    expected = {"mode": "vm", "arch": "arm64", "workload": "graphics-demo", "fullscreen": True, "window": False,
+                "remote_control": "window", "resolution": "4k", "graphics": "emulated", "cpus": 2, "memory": 1024,
+                "mute": True, "option": ["accel=tcg", "verbose-boot=yes"], "driver": ["hwrng=mocked"], "repeat": 2,
+                "timeout": 120.0, "record": True, "workload_args": ["--", "--tests", "wayland", "--seconds", "1"]}
+    wrong = {name: getattr(parsed, name) for name, value in expected.items() if getattr(parsed, name) != value}
+    _require(not wrong, "the arguments from the window do not say what was set: %r" % wrong)
+    plain = window.choose_settings(script={"press": "start"})
+    _require(plain["arguments"] == ["run"], "with nothing changed, Start produced %r" % (plain["arguments"],))
+    _require(plain["enabled"]["arch"] is False, "the VM guest CPU can be chosen in container mode")
+    refused = window.choose_settings(script={"set": {"timeout": "soon"}, "press": "start"})
+    _require(refused["arguments"] is None and refused["problem"], "a setting the launcher refuses was accepted")
+    closed = window.choose_settings(script={"press": "close"})
+    _require(closed["arguments"] is None, "closing the window produced %r" % (closed["arguments"],))
+    return ["the window has a field for every argument of \"emu run\": %s" % ", ".join(answer["fields"]),
+            "mode, VM guest CPU (off in container mode), workload, window mode and the others set as a person "
+            "would; Start gave: %s" % answer["command"],
+            "the launcher's own parser reads those arguments as what was set",
+            "unchanged, Start gives \"emu run\"; a timeout of \"soon\" is refused with the launcher's reason (%s); "
+            "closing the window starts nothing" % refused["problem"]]
+
+
+def check_settings_launch():
+    """Started without arguments, the launcher shows the settings window, and
+    starting from it runs what the same arguments run."""
+    if not window.gui_python():
+        raise CheckUnavailable("Qt for Python (%s) is not installed on this host; %s" % (window.PACKAGE, host.SETUP_HINT))
+    arguments = ["run", "--workload", "driver-check", "--driver", "hwrng=mocked"]
+    script = {"set": {"workload": "driver-check", "driver": "hwrng=mocked"}, "press": "start"}
+    launcher = [sys.executable, "-m", "emulator"]
+    environment = host.tool_env({"PYTHONPATH": str(ROOT), "PYTHONDONTWRITEBYTECODE": "1"})
+
+    def results_of(command, extra=None):
+        done = subprocess.run(command, capture_output=True, text=True, timeout=900, cwd=str(ROOT),
+                              env=dict(environment, **(extra or {})), stdin=subprocess.DEVNULL)
+        found = [json.loads(line.split("EMU-RESULT: ", 1)[1]) for line in done.stdout.splitlines()
+                 if "EMU-RESULT: " in line]
+        return done, [(item.get("feature"), item.get("strategy"), item.get("provider"), item.get("sample_hex"),
+                       item.get("ok")) for item in found]
+
+    from_window, shown = results_of(launcher, {cli_settings_variable(): json.dumps(script)})
+    _require(from_window.returncode == 0, "started without arguments, the launcher ended with status %d: %s"
+             % (from_window.returncode, from_window.stderr.strip()[-300:]))
+    said = [line for line in from_window.stderr.splitlines() if line.startswith("emu: emu run")]
+    _require(said == ["emu: emu " + " ".join(arguments)], "the launcher did not start what the window gave it: %r"
+             % (said or from_window.stderr.strip()[-200:],))
+    direct, plain = results_of(launcher + arguments)
+    _require(direct.returncode == 0, "the same arguments on the command line ended with status %d" % direct.returncode)
+    _require(shown and shown == plain, "from the window the workload reported %r, from the command line %r"
+             % (shown, plain))
+    with_arguments, _ = results_of(launcher + ["workloads"], {cli_settings_variable(): json.dumps({"press": "close"})})
+    _require("remote-keys" in with_arguments.stdout, "with arguments the launcher did not do as they say")
+    return ["\"emu\" without arguments showed the settings window; the driver check was chosen in it and started, "
+            "and the launcher ran: %s" % said[0][5:],
+            "its results are those of the same arguments on the command line: %r" % (shown,),
+            "with arguments (\"emu workloads\") the launcher did as they say, without the window"]
+
+
+def cli_settings_variable():
+    from .cli import SETTINGS_SCRIPT_VARIABLE
+    return SETTINGS_SCRIPT_VARIABLE
+
+
+def _window_checks():
+    variants = (("container", "container", "native", "container mode"),
+                ("vm", "vm", "native", "a host-native VM"),
+                ("vm-arm64", "vm", "arm64", "an ARM64 VM"),
+                ("vm-arm32", "vm", "arm32", "an ARM32 VM"))
+    checks = {}
+    for suffix, mode, arch, where in variants:
+        checks["window-display-" + suffix] = (lambda m=mode, a=arch: _window_display(m, a), "7.1",
+                                              "the launcher's window shows the display of " + where)
+        checks["window-fullscreen-" + suffix] = (lambda m=mode, a=arch: _window_fullscreen(m, a), "7.1",
+                                                 "the hotkey switches to full screen and back, with " + where)
+    for suffix, mode, arch, where in variants:
+        checks["window-scaling-" + suffix] = (lambda m=mode, a=arch: _window_scaling(m, a), "7.2",
+                                              "the display scales with the window, with " + where)
+        checks["window-toolbar-" + suffix] = (lambda m=mode, a=arch: _window_toolbar(m, a), "7.2",
+                                              "the toolbar's 1:1 and mute buttons work, with " + where)
+    checks["settings-window"] = (check_settings_window, "7.3",
+                                 "the settings window offers every launcher setting and gives its arguments")
+    checks["settings-launch"] = (check_settings_launch, "7.3",
+                                 "without arguments the launcher shows the settings window and starts from it")
+    for suffix, mode, arch, where in variants:
+        checks["remote-keys-" + suffix] = (lambda m=mode, a=arch: _remote_keys(m, a), "7.4",
+                                           "host keyboard keys reach the target as remote control keys in " + where)
+    for suffix, mode, arch, where in variants:
+        checks["remote-window-" + suffix] = (lambda m=mode, a=arch: _remote_window(m, a), "7.5",
+                                             "the on-screen remote control's buttons reach the target in " + where)
+    return checks
+
+
 # name -> (function, the task in openspec/changes/staged-emulator-delivery/tasks.md it supports, description)
 CHECKS = {
     "matrix": (check_matrix, "1.1", "the host test matrix covers every declared host combination"),
@@ -983,6 +1423,7 @@ CHECKS = {
 CHECKS.update(_graphics_checks())
 CHECKS.update(_media_checks())
 CHECKS.update(_web_checks())
+CHECKS.update(_window_checks())
 
 
 def _report_path():

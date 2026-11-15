@@ -217,6 +217,54 @@ they run. Where the recording is made depends on the host:
   check also asks the Windows audio service whether it has a session of the
   player process that is playing, and on which device.
 
+## Remote control input
+
+Functional checks of the launcher's windows and of remote control input
+(tasks 7.1 to 7.5); nothing here is a measurement. The `remote-keys` workload
+is their target side: it puts one full-screen window on the target's display,
+a still picture with the marker blocks of the graphics workloads, and prints
+a line for every key that window gets, with the key's Linux code and the
+symbol the target's keymap gives it.
+
+    ./emu run --mode container --workload remote-keys --remote-control window
+    ./emu verify window-display-vm window-scaling-vm window-toolbar-vm window-fullscreen-vm
+    ./emu verify remote-keys-vm remote-window-vm settings-window settings-launch
+
+`./emu verify` runs the workload once per mode with the display window and
+the on-screen remote control, and drives the window as a person would,
+through the window's own command channel (`--control`): keys typed into it
+and mouse clicks on its buttons go through Qt's event handling like real
+ones. What each check goes by:
+
+- **The display in the window** (`window-display-*`). The window saves the
+  display as it arrived; the marker blocks must be where the target drew
+  them. This is the picture the window holds, not a photograph of the screen:
+  what is on the physical screen is not captured.
+- **Scaling** (`window-scaling-*`). The window is given two sizes, one of the
+  display's shape and one of another; each time it saves the part that shows
+  the display, which must have the expected size and all the marker blocks.
+- **Toolbar** (`window-toolbar-*`). After the 1:1 button the display must be
+  drawn on as many screen pixels as it has. The mute button is pressed twice;
+  each time the run's audio process is asked whether it is muted.
+- **Full screen** (`window-fullscreen-*`). Ctrl+Alt+F and then F11 are typed
+  into the window. It must report full screen without its toolbar, cover the
+  screen and show the whole picture scaled to it, and come back as it was. A
+  window that reports full screen without growing makes the check
+  "unavailable", with the reason: the window system did not carry it out.
+- **Host keys** (`remote-keys-*`) and **the on-screen remote control**
+  (`remote-window-*`). For each of the 32 keys, its host key is typed into
+  the display window, and its button is clicked; each time the target must
+  print that key's code, pressed and released, and nothing else.
+- **Settings window** (`settings-window`, `settings-launch`). Fields are set
+  and Start is clicked; the arguments must be what the launcher's parser reads
+  as those settings, and there must be a field for every argument of
+  `emu run`. Then the launcher is started without arguments, a workload is
+  chosen in the window, and its results must be those of the same arguments
+  on the command line.
+
+Not checked: that keys stay away from the target while another window has the
+focus, and anything about RedRat IR input, which is not implemented.
+
 ## Web
 
 Workload `web-bench`. The browser is WPE WebKit, started by its launcher Cog

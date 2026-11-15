@@ -11,6 +11,14 @@
 #   EMU_DISPLAY=WIDTHxHEIGHT     the display resolution
 #   EMU_GRAPHICS=emulated|host   graphics rendered by the target's CPU, or
 #                                mapped to the host's graphics acceleration
+#   EMU_REMOTE=exec|HOST:PORT    remote control input is on: the compositor
+#                                gets a keyboard that the launcher presses
+#                                keys on (target/src/emu_remote.c). The
+#                                commands come through /opt/emu/remote: run by
+#                                the launcher in the container (exec), or
+#                                started here to fetch them from HOST:PORT
+#   EMU_SCREEN_PORT=PORT         container mode: serve the display to the
+#                                launcher's window on this port (emuscreen)
 #
 # VM mode: the display is the emulator's display device, driven through the
 # target kernel's DRM/KMS driver. Container mode: there is no display device,
@@ -40,6 +48,7 @@ start() {
   [ "$graphics" = host ] && renderer=gl
   local options=(--config="$state/weston.ini" --shell=kiosk --renderer="$renderer" --socket="$WAYLAND_DISPLAY"
                  --idle-time=0 --log="$state/weston.log" --debug)
+  [ -n "${EMU_REMOTE:-}" ] && options+=(--modules=/opt/emu/lib/emu-remote.so)
   {
     echo "[core]"
     echo "idle-time=0"
@@ -78,7 +87,10 @@ start() {
   echo "$pid" > "$state/weston.pid"
   # Generous: under CPU emulation the compositor takes a while to come up.
   for _ in $(seq 1800); do
-    [ -S /run/emu/xdg/wayland-0 ] && return 0
+    if [ -S /run/emu/xdg/wayland-0 ]; then
+      helpers
+      return 0
+    fi
     kill -0 "$pid" 2>/dev/null || break
     sleep 0.1
   done
@@ -88,9 +100,23 @@ start() {
   return 1
 }
 
+# What the launcher's window needs beside the compositor.
+helpers() {
+  if [ -n "${EMU_SCREEN_PORT:-}" ] && [ "$EMU_MODE" != vm ]; then
+    emuscreen --port "$EMU_SCREEN_PORT" > "$state/emuscreen.log" 2>&1 &
+    echo $! > "$state/emuscreen.pid"
+  fi
+  case "${EMU_REMOTE:-}" in
+    *:*)
+      /opt/emu/remote connect "$EMU_REMOTE" > "$state/remote.log" 2>&1 &
+      echo $! > "$state/remote.pid"
+      ;;
+  esac
+}
+
 stop() {
   local name pid
-  for name in weston seatd; do
+  for name in remote emuscreen weston seatd; do
     [ -f "$state/$name.pid" ] || continue
     pid=$(cat "$state/$name.pid")
     kill "$pid" 2>/dev/null
