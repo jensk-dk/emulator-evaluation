@@ -27,6 +27,14 @@ context: |
   full screen, and provide a hotkey to switch between those display modes.
   Windowed mode must support display scaling and include a compact icon toolbar
   with audio mute and 1:1 pixel-density controls.
+  The emulator must accept the key input of a remote control in three
+  selectable modes: host keyboard keys mapped to remote control keys while the
+  emulator window has the input focus (the arrow keys for the D-pad, Enter for
+  select, and a host key for every other remote control key); a graphical
+  remote control in a window of its own, a picture of a TV remote control whose
+  buttons are clicked with the mouse, with the host key mapping still applying
+  when the emulator window is focused; and RedRat IR input. Every mode must
+  support all HbbTV input keys.
   The emulator must support MPEG-2 Transport Stream (MP2TS) and MP4 containers,
   MSE-style fragment injection, MPEG-2/AVC/HEVC video, and MP2/AC-3/AAC/HE-AAC
   audio. It

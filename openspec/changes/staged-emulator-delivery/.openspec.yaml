@@ -11,4 +11,5 @@ affected_areas:
   - media-playback
   - performance-evaluation
   - performance-reporting
+  - remote-control-input
 skip_specs: true
