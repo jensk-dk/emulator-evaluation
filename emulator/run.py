@@ -165,6 +165,9 @@ def launch(opts):
     # into it or clicked beside it.
     shown = bool(opts.window or opts.fullscreen or opts.remote_control)
     notes = []
+    # Whether the run needs remote control keys: they were asked for, or the
+    # workload is operated with them.
+    keyed = bool(opts.remote_control or (catalog.workload(opts.workload) or {}).get("window"))
     if not shown and (catalog.workload(opts.workload) or {}).get("window"):
         # A workload that is used through its display, with remote control
         # keys: it gets the window without being asked, where there is one.
@@ -278,11 +281,12 @@ def launch(opts):
             if shown:
                 kind = graphics.window_backend(qemu) if opts.options.get("window") == "qemu" else \
                     graphics.window_kind(qemu, opts.graphics)
-                if kind != graphics.LAUNCHER_WINDOW and opts.remote_control and opts.options.get("window") != "qemu" \
+                if kind != graphics.LAUNCHER_WINDOW and keyed and opts.options.get("window") != "qemu" \
                         and (opts.graphics or "auto") == "auto":
-                    # Remote control input was asked for and host graphics
-                    # only preferred: the launcher's window, which takes the
-                    # keys, with the graphics it can show.
+                    # Remote control input was asked for, or the workload
+                    # is operated with it, and host graphics only preferred:
+                    # the launcher's window, which takes the keys, with the
+                    # graphics it can show.
                     kind = graphics.LAUNCHER_WINDOW
                     keys_first = True
             own = kind == graphics.LAUNCHER_WINDOW
@@ -358,9 +362,11 @@ def launch(opts):
         if viewer_plan:
             emulator["display"]["remote_control"] = opts.remote_control or "keys"
             if keys_first:
-                outcome.notes.append("remote control input was asked for, so the display is in the launcher's "
-                                     "window; QEMU's own window would show it rendered on the host GPU and take no "
-                                     "remote control keys (--graphics host asks for that)")
+                outcome.notes.append("%s, so the display is in the launcher's window; QEMU's own window would "
+                                     "show it rendered on the host GPU and take no remote control keys (--graphics "
+                                     "host asks for that)" % (
+                                         "remote control input was asked for" if opts.remote_control else
+                                         "the %s workload is operated with remote control keys" % opts.workload))
         if opts.echo:
             for note in outcome.notes:
                 print("emu: " + note, file=sys.stderr, flush=True)

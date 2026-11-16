@@ -1595,6 +1595,296 @@
       "seconds": 0.0,
       "revision": "3b84c22bbd275cb068733bd01df133afa52a3ab6-dirty",
       "image_definition_sha256": "e1e6d3ddba76018de339448417826e974090b7f1d82584c29c3c4a1504b88e5f"
+    },
+    "stb-start-container": {
+      "status": "pass",
+      "task": "7.7",
+      "description": "the STB simulator starts and is operated with remote control keys in container mode",
+      "details": [
+        "the stb-simulator workload 1.0.0 started: WPE WebKit 2.48.3 (Cog 0.18.4) at 1280x720, with 3 channels, 6 titles and the performance workloads bench, graphics-demo, media-decode, web-bench",
+        "typed on the host keyboard: EXIT: the home screen, listing channels, apps, performance, off",
+        "typed on the host keyboard: a capture of the display shows the user interface: its page and a selected item",
+        "typed on the host keyboard: Up/Down to 'channels' and OK: the channels screen, listing 1, 2, 3",
+        "typed on the host keyboard: Up/Down to 'apps' and OK: the apps screen, listing vod",
+        "typed on the host keyboard: Up/Down to 'performance' and OK: the performance screen, listing bench, graphics-demo, media-decode, web-bench",
+        "typed on the host keyboard: BACK returned to the home screen each time",
+        "clicked on the on-screen remote control: the same tour, with the same screens (5 steps)",
+        "not covered: RedRat IR input, which is not implemented",
+        "graphics provider: emulated"
+      ],
+      "checked_at": "2026-11-15T19:49:31Z",
+      "seconds": 70.7,
+      "revision": "dc00d69d1b560dbedbde3d56305c41be1045ea9d",
+      "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
+    },
+    "stb-channels-container": {
+      "status": "pass",
+      "task": "7.8",
+      "description": "the STB simulator plays the selected channel, and another, in container mode",
+      "details": [
+        "the channel list has the channels 1, 2, 3",
+        "channel 2, selected in the channel list: playing at 1280x720; a capture of the display shows its video",
+        "channel 3, Up while channel 2 played: playing at 1280x720; a capture of the display shows its video",
+        "channel 1, the digit 1 while channel 3 played: playing at 1280x720; a capture of the display shows its video",
+        "at the host-side audio process: the tones of the channels in the order they were played (880 Hz for channel 2, 660 Hz for channel 3, 440 Hz for channel 1)",
+        "at the host's audio output: the tones of the channels in the order they were played (880 Hz for channel 2, 660 Hz for channel 3, 440 Hz for channel 1)",
+        "host output device: Hovedtelefoner (2- Astro A50 Ga, at volume 0; it played for 53.5 s by its own clock, 30.6 s of that the target's sound",
+        "the host's audio server reported the player process as playing on: Hovedtelefoner (2- Astro A50 Game)"
+      ],
+      "checked_at": "2026-11-15T19:49:31Z",
+      "seconds": 0.0,
+      "revision": "dc00d69d1b560dbedbde3d56305c41be1045ea9d",
+      "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
+    },
+    "stb-vod-container": {
+      "status": "pass",
+      "task": "7.9",
+      "description": "the VOD application plays an ABR title and returns to the simulator in container mode",
+      "details": [
+        "the app launcher lists vod; OK started the video on demand application in the browser, with dash.js 5.3.0",
+        "its titles: big-buck-bunny, elephants-dream, sintel, tears-of-steel, test-pattern, test-pattern-slow",
+        "the test title is an MPEG-DASH stream with 3 video representations (426x240 at 0.25 Mbit/s, 854x480 at 0.80 Mbit/s, 1280x720 at 2.00 Mbit/s)",
+        "over a connection of 0.6 Mbit/s the player showed 426x240 at 0.25 Mbit/s only; a capture of the display shows that representation's picture",
+        "without the limit it went from 426x240 at 0.25 Mbit/s to 1280x720 at 2.00 Mbit/s; a capture shows that one",
+        "from the internet, big-buck-bunny played for 5 s: 8 representations offered, shown at 320x180 at 0.25 Mbit/s, then 1280x720 at 4.95 Mbit/s",
+        "BACK at the titles left the application: the simulator's apps screen was shown again",
+        "not played here: Elephants Dream, Sintel and Tears of Steel, which are offered the same way"
+      ],
+      "checked_at": "2026-11-15T19:49:31Z",
+      "seconds": 0.0,
+      "revision": "dc00d69d1b560dbedbde3d56305c41be1045ea9d",
+      "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
+    },
+    "stb-workloads-container": {
+      "status": "pass",
+      "task": "7.10",
+      "description": "the performance workloads run from the STB simulator in container mode",
+      "details": [
+        "the user interface offers every performance workload: bench, graphics-demo, media-decode, web-bench",
+        "bench: ran for 4 s and reported 13 results to the launcher, 13 of them measurements (malloc_churn, matmul_f64, memcpy, memset, page_fault, rand_read_4k, rand_write_4k, seq_read, seq_write, sha256_1t, sha256_mt, stream_triad, sync_write_4k); the user interface then showed its results",
+        "graphics-demo: ran for 2 s and reported 2 results to the launcher, 2 of them measurements (gles_fps, wayland_fps); the user interface then showed its results",
+        "media-decode: ran for 2 s and reported 1 results to the launcher, 1 of them measurements (video_decode_speed); the user interface then showed its results",
+        "web-bench: ran for 3 s and reported 1 results to the launcher, 1 of them measurements (web_render_fps); the user interface then showed its results",
+        "these were short runs (--quick): they show that each workload runs and reports, and are not measurements to compare"
+      ],
+      "checked_at": "2026-11-15T19:49:32Z",
+      "seconds": 0.0,
+      "revision": "dc00d69d1b560dbedbde3d56305c41be1045ea9d",
+      "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
+    },
+    "stb-start-vm": {
+      "status": "pass",
+      "task": "7.7",
+      "description": "the STB simulator starts and is operated with remote control keys in a host-native VM",
+      "details": [
+        "the stb-simulator workload 1.0.0 started: WPE WebKit 2.48.3 (Cog 0.18.4) at 1280x720, with 3 channels, 6 titles and the performance workloads bench, graphics-demo, media-decode, web-bench",
+        "typed on the host keyboard: EXIT: the home screen, listing channels, apps, performance, off",
+        "typed on the host keyboard: a capture of the display shows the user interface: its page and a selected item",
+        "typed on the host keyboard: Up/Down to 'channels' and OK: the channels screen, listing 1, 2, 3",
+        "typed on the host keyboard: Up/Down to 'apps' and OK: the apps screen, listing vod",
+        "typed on the host keyboard: Up/Down to 'performance' and OK: the performance screen, listing bench, graphics-demo, media-decode, web-bench",
+        "typed on the host keyboard: BACK returned to the home screen each time",
+        "clicked on the on-screen remote control: the same tour, with the same screens (5 steps)",
+        "not covered: RedRat IR input, which is not implemented",
+        "graphics provider: emulated"
+      ],
+      "checked_at": "2026-11-15T19:50:57Z",
+      "seconds": 76.8,
+      "revision": "dc00d69d1b560dbedbde3d56305c41be1045ea9d",
+      "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
+    },
+    "stb-channels-vm": {
+      "status": "pass",
+      "task": "7.8",
+      "description": "the STB simulator plays the selected channel, and another, in a host-native VM",
+      "details": [
+        "the channel list has the channels 1, 2, 3",
+        "channel 2, selected in the channel list: playing at 1280x720; a capture of the display shows its video",
+        "channel 3, Up while channel 2 played: playing at 1280x720; a capture of the display shows its video",
+        "channel 1, the digit 1 while channel 3 played: playing at 1280x720; a capture of the display shows its video",
+        "at the host-side audio process: the tones of the channels in the order they were played (880 Hz for channel 2, 660 Hz for channel 3, 440 Hz for channel 1)",
+        "at the host's audio output: the tones of the channels in the order they were played (880 Hz for channel 2, 660 Hz for channel 3, 440 Hz for channel 1)",
+        "host output device: Hovedtelefoner (2- Astro A50 Ga, at volume 0; it played for 53.5 s by its own clock, 30.9 s of that the target's sound",
+        "the host's audio server reported the player process as playing on: Hovedtelefoner (2- Astro A50 Game)"
+      ],
+      "checked_at": "2026-11-15T19:50:57Z",
+      "seconds": 0.0,
+      "revision": "dc00d69d1b560dbedbde3d56305c41be1045ea9d",
+      "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
+    },
+    "stb-vod-vm": {
+      "status": "pass",
+      "task": "7.9",
+      "description": "the VOD application plays an ABR title and returns to the simulator in a host-native VM",
+      "details": [
+        "the app launcher lists vod; OK started the video on demand application in the browser, with dash.js 5.3.0",
+        "its titles: big-buck-bunny, elephants-dream, sintel, tears-of-steel, test-pattern, test-pattern-slow",
+        "the test title is an MPEG-DASH stream with 3 video representations (426x240 at 0.25 Mbit/s, 854x480 at 0.80 Mbit/s, 1280x720 at 2.00 Mbit/s)",
+        "over a connection of 0.6 Mbit/s the player showed 426x240 at 0.25 Mbit/s only; a capture of the display shows that representation's picture",
+        "without the limit it went from 426x240 at 0.25 Mbit/s to 1280x720 at 2.00 Mbit/s; a capture shows that one",
+        "from the internet, big-buck-bunny played for 5 s: 8 representations offered, shown at 320x180 at 0.25 Mbit/s, then 1280x720 at 4.95 Mbit/s",
+        "BACK at the titles left the application: the simulator's apps screen was shown again",
+        "not played here: Elephants Dream, Sintel and Tears of Steel, which are offered the same way"
+      ],
+      "checked_at": "2026-11-15T19:50:57Z",
+      "seconds": 0.0,
+      "revision": "dc00d69d1b560dbedbde3d56305c41be1045ea9d",
+      "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
+    },
+    "stb-workloads-vm": {
+      "status": "pass",
+      "task": "7.10",
+      "description": "the performance workloads run from the STB simulator in a host-native VM",
+      "details": [
+        "the user interface offers every performance workload: bench, graphics-demo, media-decode, web-bench",
+        "bench: ran for 4 s and reported 13 results to the launcher, 13 of them measurements (malloc_churn, matmul_f64, memcpy, memset, page_fault, rand_read_4k, rand_write_4k, seq_read, seq_write, sha256_1t, sha256_mt, stream_triad, sync_write_4k); the user interface then showed its results",
+        "graphics-demo: ran for 2 s and reported 2 results to the launcher, 2 of them measurements (gles_fps, wayland_fps); the user interface then showed its results",
+        "media-decode: ran for 2 s and reported 1 results to the launcher, 1 of them measurements (video_decode_speed); the user interface then showed its results",
+        "web-bench: ran for 3 s and reported 1 results to the launcher, 1 of them measurements (web_render_fps); the user interface then showed its results",
+        "these were short runs (--quick): they show that each workload runs and reports, and are not measurements to compare"
+      ],
+      "checked_at": "2026-11-15T19:50:57Z",
+      "seconds": 0.0,
+      "revision": "dc00d69d1b560dbedbde3d56305c41be1045ea9d",
+      "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
+    },
+    "stb-start-vm-arm64": {
+      "status": "pass",
+      "task": "7.7",
+      "description": "the STB simulator starts and is operated with remote control keys in an ARM64 VM",
+      "details": [
+        "the stb-simulator workload 1.0.0 started: WPE WebKit 2.48.3 (Cog 0.18.4) at 1280x720, with 3 channels, 6 titles and the performance workloads bench, graphics-demo, media-decode, web-bench",
+        "typed on the host keyboard: EXIT: the home screen, listing channels, apps, performance, off",
+        "typed on the host keyboard: a capture of the display shows the user interface: its page and a selected item",
+        "typed on the host keyboard: Up/Down to 'channels' and OK: the channels screen, listing 1, 2, 3",
+        "typed on the host keyboard: Up/Down to 'apps' and OK: the apps screen, listing vod",
+        "typed on the host keyboard: Up/Down to 'performance' and OK: the performance screen, listing bench, graphics-demo, media-decode, web-bench",
+        "typed on the host keyboard: BACK returned to the home screen each time",
+        "clicked on the on-screen remote control: the same tour, with the same screens (5 steps)",
+        "not covered: RedRat IR input, which is not implemented",
+        "graphics provider: emulated"
+      ],
+      "checked_at": "2026-11-15T21:10:31Z",
+      "seconds": 2162.7,
+      "revision": "dc00d69d1b560dbedbde3d56305c41be1045ea9d-dirty",
+      "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
+    },
+    "stb-channels-vm-arm64": {
+      "status": "pass",
+      "task": "7.8",
+      "description": "the STB simulator plays the selected channel, and another, in an ARM64 VM",
+      "details": [
+        "the channel list has the channels 1, 2, 3",
+        "channel 2, selected in the channel list: playing at 1280x720; a capture of the display shows its video",
+        "channel 3, Up while channel 2 played: playing at 1280x720; a capture of the display shows its video",
+        "channel 1, the digit 1 while channel 3 played: playing at 1280x720; a capture of the display shows its video",
+        "at the host-side audio process: the tones of the channels in the order they were played (880 Hz for channel 2, 660 Hz for channel 3, 440 Hz for channel 1)",
+        "at the host's audio output: the tones of the channels in the order they were played (880 Hz for channel 2, 660 Hz for channel 3, 440 Hz for channel 1)",
+        "host output device: Hovedtelefoner (2- Astro A50 Ga, at volume 0; it played for 2032.9 s by its own clock, 28.3 s of that the target's sound",
+        "the host's audio server reported the player process as playing on: Hovedtelefoner (2- Astro A50 Game)"
+      ],
+      "checked_at": "2026-11-15T21:10:31Z",
+      "seconds": 0.0,
+      "revision": "dc00d69d1b560dbedbde3d56305c41be1045ea9d-dirty",
+      "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
+    },
+    "stb-vod-vm-arm64": {
+      "status": "fail",
+      "task": "7.9",
+      "description": "the VOD application plays an ABR title and returns to the simulator in an ARM64 VM",
+      "details": [
+        "test-pattern did not play for three seconds; the last things reported: [{'event': 'vod', 'state': 'progress', 'title': 'test-pattern-slow', 'time': 4.9, 'video': '426x240', 'representation': {'id': '0', 'width': 426, 'height': 240, 'bandwidth': 250000}, 'frames': 24, 'dropped': 5}, {'event': 'vod', 'state': 'stopped', 'title': 'test-pattern-slow'}, {'event': 'vod', 'state': 'titles', 'focus': 'test-pattern-slow'}, {'event': 'vod', 'state': 'titles', 'focus': 'test-pattern'}, {'event': 'vod', 'state': 'starting', 'title': 'test-pattern', 'url': '/media/abr/manifest.mpd'}, {'event': 'vod', 'state': 'stream', 'title': 'test-pattern', 'dash_js': '5.3.0', 'duration': 20}, {'event': 'vod', 'state': 'playing', 'title': 'test-pattern', 'time': 0, 'video': '426x240', 'sound': True, 'representation': None}, {'event': 'vod', 'state': 'representation', 'title': 'test-pattern', 'representation': {'id': '0', 'width': 426, 'height': 240, 'bandwidth': 250000}, 'time': 0.2}, {'event': 'vod', 'state': 'progress', 'title': 'test-pattern', 'time': 0.7, 'video': '426x240', 'representation': {'id': '0', 'width': 426, 'height': 240, 'bandwidth': 250000}, 'frames': 5, 'dropped': 1}, {'event': 'browser', 'state': 'ended', 'status': 1, 'log': \"find the GL video sink dependencies. Hardware-accelerated zero-copy video rendering can't be enabled without this plugin. ** (WPEWebProcess:382): ERROR **: 21:31:12.604: video meta uses 432x240 instead of 426x240 (cog:369): Cog-Core-CRITICAL **: 21:31:12.820: The renderer process crashed, exiting...\"}, {'event': 'ready', 'page': 'stb', 'viewport': '1280x720'}, {'event': 'screen', 'screen': 'home', 'focus': 'channels', 'items': ['channels', 'apps', 'performance', 'off']}]"
+      ],
+      "checked_at": "2026-11-15T22:04:13Z",
+      "seconds": 2157.4,
+      "revision": "dc00d69d1b560dbedbde3d56305c41be1045ea9d-dirty",
+      "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
+    },
+    "stb-workloads-vm-arm64": {
+      "status": "pass",
+      "task": "7.10",
+      "description": "the performance workloads run from the STB simulator in an ARM64 VM",
+      "details": [
+        "the user interface offers every performance workload: bench, graphics-demo, media-decode, web-bench",
+        "bench: ran for 10 s and reported 13 results to the launcher, 13 of them measurements (malloc_churn, matmul_f64, memcpy, memset, page_fault, rand_read_4k, rand_write_4k, seq_read, seq_write, sha256_1t, sha256_mt, stream_triad, sync_write_4k); the user interface then showed its results",
+        "graphics-demo: ran for 13 s and reported 2 results to the launcher, 2 of them measurements (gles_fps, wayland_fps); the user interface then showed its results",
+        "media-decode: ran for 22 s and reported 1 results to the launcher, 1 of them measurements (video_decode_speed); the user interface then showed its results",
+        "web-bench: ran for 33 s and reported 1 results to the launcher, 1 of them measurements (web_render_fps); the user interface then showed its results",
+        "these were short runs (--quick): they show that each workload runs and reports, and are not measurements to compare"
+      ],
+      "checked_at": "2026-11-15T21:10:31Z",
+      "seconds": 0.0,
+      "revision": "dc00d69d1b560dbedbde3d56305c41be1045ea9d-dirty",
+      "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
+    },
+    "stb-start-vm-arm32": {
+      "status": "pass",
+      "task": "7.7",
+      "description": "the STB simulator starts and is operated with remote control keys in an ARM32 VM",
+      "details": [
+        "the stb-simulator workload 1.0.0 started: WPE WebKit 2.48.3 (Cog 0.18.4) at 1280x720, with 3 channels, 6 titles and the performance workloads bench, graphics-demo, media-decode, web-bench",
+        "typed on the host keyboard: EXIT: the home screen, listing channels, apps, performance, off",
+        "typed on the host keyboard: a capture of the display shows the user interface: its page and a selected item",
+        "typed on the host keyboard: Up/Down to 'channels' and OK: the channels screen, listing 1, 2, 3",
+        "typed on the host keyboard: Up/Down to 'apps' and OK: the apps screen, listing vod",
+        "typed on the host keyboard: Up/Down to 'performance' and OK: the performance screen, listing bench, graphics-demo, media-decode, web-bench",
+        "typed on the host keyboard: BACK returned to the home screen each time",
+        "clicked on the on-screen remote control: the same tour, with the same screens (5 steps)",
+        "not covered: RedRat IR input, which is not implemented",
+        "graphics provider: emulated"
+      ],
+      "checked_at": "2026-11-15T21:19:24Z",
+      "seconds": 529.9,
+      "revision": "dc00d69d1b560dbedbde3d56305c41be1045ea9d-dirty",
+      "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
+    },
+    "stb-channels-vm-arm32": {
+      "status": "pass",
+      "task": "7.8",
+      "description": "the STB simulator plays the selected channel, and another, in an ARM32 VM",
+      "details": [
+        "the channel list has the channels 1, 2, 3",
+        "channel 2, selected in the channel list: playing at 1280x720; a capture of the display shows its video",
+        "channel 3, Up while channel 2 played: playing at 1280x720; a capture of the display shows its video",
+        "channel 1, the digit 1 while channel 3 played: playing at 1280x720; a capture of the display shows its video",
+        "at the host-side audio process: the tones of the channels in the order they were played (880 Hz for channel 2, 660 Hz for channel 3, 440 Hz for channel 1)",
+        "at the host's audio output: the tones of the channels in the order they were played (880 Hz for channel 2, 660 Hz for channel 3, 440 Hz for channel 1)",
+        "host output device: Hovedtelefoner (2- Astro A50 Ga, at volume 0; it played for 341.3 s by its own clock, 33.2 s of that the target's sound",
+        "the host's audio server reported the player process as playing on: Hovedtelefoner (2- Astro A50 Game)"
+      ],
+      "checked_at": "2026-11-15T21:19:24Z",
+      "seconds": 0.0,
+      "revision": "dc00d69d1b560dbedbde3d56305c41be1045ea9d-dirty",
+      "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
+    },
+    "stb-vod-vm-arm32": {
+      "status": "fail",
+      "task": "7.9",
+      "description": "the VOD application plays an ABR title and returns to the simulator in an ARM32 VM",
+      "details": [
+        "test-pattern is not what the display shows: technology marker is (248, 218, 0), expected (255, 64, 160)"
+      ],
+      "checked_at": "2026-11-15T21:28:12Z",
+      "seconds": 500.6,
+      "revision": "dc00d69d1b560dbedbde3d56305c41be1045ea9d-dirty",
+      "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
+    },
+    "stb-workloads-vm-arm32": {
+      "status": "pass",
+      "task": "7.10",
+      "description": "the performance workloads run from the STB simulator in an ARM32 VM",
+      "details": [
+        "the user interface offers every performance workload: bench, graphics-demo, media-decode, web-bench",
+        "bench: ran for 26 s and reported 13 results to the launcher, 13 of them measurements (malloc_churn, matmul_f64, memcpy, memset, page_fault, rand_read_4k, rand_write_4k, seq_read, seq_write, sha256_1t, sha256_mt, stream_triad, sync_write_4k); the user interface then showed its results",
+        "graphics-demo: ran for 17 s and reported 2 results to the launcher, 2 of them measurements (gles_fps, wayland_fps); the user interface then showed its results",
+        "media-decode: ran for 20 s and reported 1 results to the launcher, 1 of them measurements (video_decode_speed); the user interface then showed its results",
+        "web-bench: ran for 43 s and reported 1 results to the launcher, 1 of them measurements (web_render_fps); the user interface then showed its results",
+        "these were short runs (--quick): they show that each workload runs and reports, and are not measurements to compare"
+      ],
+      "checked_at": "2026-11-15T21:19:24Z",
+      "seconds": 0.0,
+      "revision": "dc00d69d1b560dbedbde3d56305c41be1045ea9d-dirty",
+      "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
     }
   }
 }

@@ -105,6 +105,12 @@
       "hosts": ["linux-x86_64"], "modes": ["vm-arm64"], "task": "7.9"
     },
     {
+      "kind": "fails", "area": "STB simulator",
+      "title": "Windows: video on demand fails in the ARM VMs when the player changes representation",
+      "detail": "In two runs out of two each, the test title failed where the player leaves its smallest representation (426x240). ARM64: the browser's renderer process ends with 'video meta uses 432x240 instead of 426x240' from the GStreamer libav plugin; the simulator starts the browser again. ARM32: the title was refused once ('Unable to allocate memory'), and once the picture stayed at the smallest size while the player reported 1280x720. The title that stays at one representation played each time; the films were not reached. Container mode and the host-native VM pass. The cause is not known.",
+      "hosts": ["windows-x86_64"], "modes": ["vm-arm64", "vm-arm32"], "task": "7.9"
+    },
+    {
       "kind": "limit", "area": "STB simulator",
       "title": "A performance workload that uses the display cannot be ended from the simulator",
       "detail": "The graphics, media and web workloads take over the display, and the user interface is stopped until they are done; no key ends them early. The channels are the five-second reference streams, played in a loop.",

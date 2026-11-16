@@ -31,7 +31,9 @@ workload's measurements are recorded for each host. Of stage 6, the
 launcher's own windows are implemented and verified on all three hosts: the
 display window (toolbar, scaling, full screen), remote control keys from the
 host keyboard and from an on-screen remote control, and the settings window.
-RedRat IR input is not implemented. macOS has no host
+RedRat IR input is not implemented. The STB simulator is implemented and
+verified on Linux and, except for video on demand in the ARM VMs, on Windows
+([STB simulator](#stb-simulator)). macOS has no host
 graphics acceleration, which the Linux host has in VM mode. The task list and
 `evaluation/verification/` show what has been verified, and on which hosts.
 
@@ -441,7 +443,8 @@ the emulator.
   and QEMU on Windows), and host acceleration is asked for or preferred, the
   display is shown there, as before: without toolbar, scaling control or
   remote control keys. `--graphics emulated` gets the launcher's window, and
-  so does `--remote-control` while host acceleration is only preferred
+  so does `--remote-control`, or a workload that is operated with remote
+  control keys (`stb-simulator`), while host acceleration is only preferred
   (`--graphics auto`, the default): the keys come before the acceleration,
   and the launcher says so. `--option window=qemu` gets QEMU's.
 
@@ -859,6 +862,17 @@ Limits:
   its frames ([Web browser](#web-browser)).
 - The films depend on servers that are not this project's; a stream that
   moves or goes away has to be replaced in `titles.json`.
+- On the Windows host, video on demand fails in the ARM64 and ARM32 VMs when
+  the player leaves a title's smallest representation: in the ARM64 VM the
+  browser's renderer process ends (the simulator starts the browser again),
+  in the ARM32 VM the title is refused or its picture stays at the smallest
+  size. A title that stays at one representation plays. The channels, the
+  user interface and the performance tests work there, and everything works
+  in container mode and in the host-native VM. On Linux the same title
+  stalled once in the ARM64 VM. The cause is not known.
+
+The simulator is verified on Linux and on Windows (there with the exception
+above); it has not been run on macOS.
 
 ## Evaluation
 
