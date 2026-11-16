@@ -503,6 +503,42 @@ def _address(text):
     return text
 
 
+def _stay_awake():
+    """macOS slows down a program whose window cannot be seen, in the
+    background or with the screen locked (App Nap), a while after it was
+    started: the window then takes each picture late, and a VM's window got
+    about 5 pictures a second of a video where it gets about 15 otherwise.
+    This tells the system that the program shows a live picture and has to
+    keep its pace. It does not keep the display or the machine awake.
+    Returns what must be kept for as long as that holds."""
+    if sys.platform != "darwin":
+        return None
+    try:
+        import ctypes
+        import ctypes.util
+        objc = ctypes.cdll.LoadLibrary(ctypes.util.find_library("objc"))
+        ctypes.cdll.LoadLibrary(ctypes.util.find_library("Foundation"))
+        objc.objc_getClass.restype = ctypes.c_void_p
+        objc.objc_getClass.argtypes = [ctypes.c_char_p]
+        objc.sel_registerName.restype = ctypes.c_void_p
+        objc.sel_registerName.argtypes = [ctypes.c_char_p]
+
+        def send(receiver, selector, *arguments, types=()):
+            call = ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, *types)(
+                ("objc_msgSend", objc))
+            return call(receiver, objc.sel_registerName(selector), *arguments)
+
+        process = send(objc.objc_getClass(b"NSProcessInfo"), b"processInfo")
+        reason = send(objc.objc_getClass(b"NSString"), b"stringWithUTF8String:", b"showing the emulator's display",
+                      types=(ctypes.c_char_p,))
+        # NSActivityUserInitiatedAllowingIdleSystemSleep
+        activity = send(process, b"beginActivityWithOptions:reason:", 0x00EFFFFF, reason,
+                        types=(ctypes.c_uint64, ctypes.c_void_p))
+        return send(activity, b"retain") if activity else None
+    except (OSError, AttributeError, TypeError, ValueError):
+        return None         # the window works without it, slower in the background
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="emulator.gui.viewer", description=__doc__.splitlines()[0])
     parser.add_argument("--display", required=True, type=_address, metavar="ADDRESS")
@@ -526,6 +562,7 @@ def main(argv=None):
         args.remote_control = None
     application = QApplication(sys.argv[:1])
     application.setApplicationName("Emulator")
+    awake = _stay_awake()
     window = Window(args, sender)
     window.show()
     window.raise_()
@@ -534,7 +571,7 @@ def main(argv=None):
     status = application.exec()
     if sender is not None:
         sender.close()
-    del control
+    del control, awake
     return status
 
 

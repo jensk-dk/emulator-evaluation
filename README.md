@@ -32,8 +32,8 @@ launcher's own windows are implemented and verified on all three hosts: the
 display window (toolbar, scaling, full screen), remote control keys from the
 host keyboard and from an on-screen remote control, and the settings window.
 RedRat IR input is not implemented. The STB simulator is implemented and
-verified on Linux and, except for video on demand in the ARM VMs, on Windows
-([STB simulator](#stb-simulator)). macOS has no host
+verified on Linux and macOS and, except for video on demand in the ARM VMs,
+on Windows ([STB simulator](#stb-simulator)). macOS has no host
 graphics acceleration, which the Linux host has in VM mode. The task list and
 `evaluation/verification/` show what has been verified, and on which hosts.
 
@@ -435,9 +435,8 @@ the emulator.
   on a socket of the run, or on a loopback port on Windows). In container mode
   a program in the target captures the compositor's output and serves it the
   same way on a port published on the host's loopback address
-  ([target/src/emuscreen.c](target/src/emuscreen.c)). Either way it costs the
-  target nothing in VM mode and a copy of each changed frame in container
-  mode, and only while a window is open.
+  ([target/src/emuscreen.c](target/src/emuscreen.c)). That is done only
+  while a window is open, and it is not free: see the limits below.
 - **QEMU's own window.** Where QEMU can show a display that is rendered on
   the host GPU only in a window of its own (the experimental QEMU on macOS,
   and QEMU on Windows), and host acceleration is asked for or preferred, the
@@ -471,7 +470,39 @@ Limits:
   growing.
 - Pixels travel unpacked. That is fine on one machine; a container engine
   inside a virtual machine (macOS, Windows) carries them over its network
-  path, and how smooth full-screen video is there has not been measured.
+  path. Measured on the macOS host at 1080p
+  ([procedures](evaluation/procedures.md#timings-of-the-simulator)): in
+  container mode a video of 25 frames a second reached the window whole
+  (24.6 to 24.8 pictures a second), and a change on a quiet screen after
+  0.08 s.
+- In VM mode the window gets less of a video, and a quiet screen's change
+  later: QEMU's display server sends a picture when the window has asked for
+  one and its own clock comes round, and it slows that clock down while the
+  display does not change. On the macOS host a host-native VM's window got 14
+  to 17 pictures a second of such a video, and showed a change on a quiet
+  screen after 0.12 s, or after 0.5 to 0.7 s (0.2 to 0.9 s) when the screen
+  had shown nothing new for 5 seconds or more. That QEMU's clock is the cause is read
+  from how QEMU is built, not shown by a test. The Linux and Windows hosts
+  have not been measured.
+- The window costs the target's graphics some speed, so results for the
+  evaluation are taken without it. On the macOS host at 1080p, the graphics
+  workload with the window against the same image without it: plain Wayland
+  drawing 25% lower in container mode and 37 to 38% lower on the simulated
+  ARM targets (1% in a host-native VM); OpenGL ES 3 to 10% lower; Vulkan 9%
+  lower in container mode, 12% in a host-native VM and 17% on the ARM64
+  target. The browser's drawing was 13% lower in container mode and 18% in a
+  host-native VM.
+- With the window, the media workload stalled in 3 of 10 runs in the ARM64
+  VM on the macOS host: a playback froze within seconds of its start and the
+  run had to be ended. Without the window the same runs completed. The cause
+  is not known ([known issues](evaluation/results/known-issues.json)).
+- macOS slows down a program whose window cannot be seen: one in the
+  background, or any while the screen is locked (App Nap). A VM's window
+  then got about 5 pictures a second of a video where it had got about 15,
+  within two minutes of its start. The window now tells macOS that it shows
+  a live picture, which keeps its pace; it does not keep the display or the
+  Mac awake. All of these measurements were taken unattended, with the Mac's
+  screen locked; how the window does in front of a user was not measured.
 
 ### Experimental: host graphics on macOS
 
@@ -850,6 +881,37 @@ to where the user was, and EXIT goes to the home screen.
   checks its SHA-256. The image also has the certificate authorities the
   browser needs for HTTPS.
 
+How fast it is, timed on the macOS host at 1080p from the launcher's window
+(medians; the method is in the
+[procedures](evaluation/procedures.md#timings-of-the-simulator), every value
+with its spread in
+[evaluation/stb-timings/macos-arm64.md](evaluation/stb-timings/macos-arm64.md)).
+These are findings, not results of the evaluation:
+
+| | Container | VM, host-native | VM, ARM64 | VM, ARM32 |
+|---|---|---|---|---|
+| Launch to the home screen | 0.93 s | 1.32 s | 11.8 s | 29.7 s |
+| A key to the user interface's answer | 0.007 s | 0.005 s | 0.041 s | 0.046 s |
+| A key to the changed picture in the window | 0.078 s | 0.12 s | 0.94 s | 1.16 s |
+| The same after 30 s without a new picture | 0.15 s | 0.67 s | 1.84 s | 2.45 s |
+| Channel change to the channel's picture in the window | 0.16 s | 0.28 s | 2.30 s | 3.03 s |
+| Pictures a second of a channel in the window (the streams have 25) | 24.6 to 24.8 | 14.2 to 17.0 | 1.4 to 1.5 | 0.7 to 0.9 |
+| Video on demand application started | 0.16 s | 0.17 s | 0.46 s | 0.40 s |
+| Test title playing after OK | 0.13 s | 0.17 s | 1.44 s | 1.83 s |
+| Big Buck Bunny shown at 1920x1080 after OK | 4.06 s | 4.40 s | 6.09 s | 5.83 s |
+| User interface back after a workload that took the display | 0.16 s | 0.11 s | 2.50 s | 2.68 s |
+
+A performance workload started from the performance tests screen reports
+what it reports when the launcher runs it with the same window, with two
+exceptions. The browser of `web-bench` starts in half to three quarters of
+the time, since the simulator's browser ran just before it. And `bench` does
+not take the display, so the simulator's browser stays up beside it: on the
+simulated ARM targets 9 and 10 of its 13 results came out 11 to 35% lower
+(natively its processor and memory tests agreed within 7%, and its storage
+tests vary from run to run either way). Results for the
+evaluation are recorded by running the workloads themselves, without a window
+([Display window](#display-window) has what the window costs).
+
 Limits:
 
 - The browser does not tell a page about the P+, P-, TEXT and WEBTV keys
@@ -858,8 +920,9 @@ Limits:
 - RedRat IR input is not implemented, so the simulator takes its keys from
   the other two input modes.
 - With the CPU emulated (ARM64 and ARM32 targets) the browser draws far
-  below real time: the user interface answers slowly and video shows few of
-  its frames ([Web browser](#web-browser)).
+  below real time: the user interface takes about a second to show what a
+  key did, and a channel shows about one picture a second (the table above;
+  [Web browser](#web-browser)).
 - The films depend on servers that are not this project's; a stream that
   moves or goes away has to be replaced in `titles.json`.
 - On the Windows host, video on demand fails in the ARM64 and ARM32 VMs when
@@ -871,8 +934,8 @@ Limits:
   in container mode and in the host-native VM. On Linux the same title
   stalled once in the ARM64 VM. The cause is not known.
 
-The simulator is verified on Linux and on Windows (there with the exception
-above); it has not been run on macOS.
+The simulator is verified on Linux, on macOS and on Windows (there with the
+exception above).
 
 ## Evaluation
 
@@ -884,7 +947,12 @@ above); it has not been run on macOS.
 - `evaluation/verification/`: what `./emu verify` has confirmed, per host.
 - [evaluation/footprint.md](evaluation/footprint.md): the disk space of the
   host installation and of each target, and the install, build and run times
-  that the report has to state. None is measured yet.
+  that the report has to state. Only a few are measured so far.
+- [evaluation/stb-timings.py](evaluation/stb-timings.py) and
+  `evaluation/stb-timings/`: how fast the STB simulator starts and answers,
+  and what the performance workloads report when started from it, per host.
+  Findings, not results of the evaluation
+  ([procedures](evaluation/procedures.md#timings-of-the-simulator)).
 
 ### Results page
 
@@ -951,9 +1019,9 @@ a newly installed Chrome that had never been opened stopped at once with
 "Failed to get the path for 1001"; after it had been opened once, the command
 worked.
 
-The snapshot in the repository was made on the Windows host on 2026-11-15,
-with the CPU, graphics and media results of all three hosts and the browser
-results of the Windows and macOS hosts. Windows' MSE playback values in it
+The snapshot in the repository was made on the macOS host on 2026-11-16,
+with the CPU, graphics, media and browser results of all three hosts.
+Windows' MSE playback values in it
 are those measured again that day with version 1.1.0 of the workload; the
 earlier ones are kept as records and not charted
 ([procedures](evaluation/procedures.md#web)).

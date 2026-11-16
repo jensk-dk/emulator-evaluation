@@ -7,9 +7,9 @@ evaluation take
 ([requirement](../openspec/specs/performance-reporting/spec.md), task 8.3 of
 the [task list](../openspec/changes/staged-emulator-delivery/tasks.md)).
 
-**Nothing here is measured yet.** A value is filled in when a task provides
-it, with the date and how it was taken. Until then it reads "not measured",
-and the report shows it as unavailable. No value is estimated.
+**Only a few values are measured so far.** A value is filled in when a task
+provides it, with the date and how it was taken. Until then it reads "not
+measured", and the report shows it as unavailable. No value is estimated.
 
 ## What each value is
 
@@ -75,10 +75,18 @@ The host-native VM and the ARM64 target use the same VM image here.
 |---|---|---|---|
 | Host installation | not measured | not measured | |
 | of that: Qt for Python, in `build/host/gui` | 329 MB | not measured | 2026-11-15, `du -sh` after `./setup.sh` installed PySide6-Essentials 6.10.3 |
-| Target: container image (ARM64) | not measured | not measured | |
-| Target: VM image, ARM64 (host-native and ARM64 target) | not measured | not measured | |
-| Target: VM image, ARM32 | not measured | not measured | |
+| Target: container image (ARM64) | 1.54 GB | not measured | 2026-11-15, image 0.6.0, as `docker image ls` lists it (its layers as stored compressed: 407 MB, `docker image inspect`) |
+| Target: VM image, ARM64 (host-native and ARM64 target) | 1.95 GB | not measured | 2026-11-15, image 0.6.0, the sizes of its three files in `build/vm/arm64` added (`ls -l`): root file system 1.90 GB, kernel 38 MB, initial RAM disk 10 MB |
+| Target: VM image, ARM32 | 1.49 GB | not measured | 2026-11-15, image 0.6.0, the same in `build/vm/arm32`: root file system 1.47 GB, kernel 6 MB, initial RAM disk 9 MB |
 | Performance evaluation: container | | not measured | |
 | Performance evaluation: VM, host-native | | not measured | |
 | Performance evaluation: VM, ARM64 target | | not measured | |
 | Performance evaluation: VM, ARM32 target | | not measured | |
+
+The three target sizes are of image 0.6.0 as built on this host on
+2026-11-15. No build time is given: these builds had the build cache of image
+0.5.0 (they took 39 s, 45 s and 107 s), and the value wanted is the time from
+an empty cache. Not counted above: the image that a VM image is exported
+from stays in the container engine (2.5 GB for ARM64 and 1.93 GB for ARM32,
+as `docker image ls` lists them), and so do the images of earlier versions
+until they are removed.

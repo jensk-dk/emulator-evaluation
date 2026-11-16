@@ -1,0 +1,3953 @@
+{
+ "taken": "2026-11-16T01:21:51Z",
+ "counts": {
+  "starts": 3,
+  "moves": 20,
+  "idle": "5,30",
+  "idle_moves": 3,
+  "screens": 5,
+  "zaps": 3,
+  "rate_seconds": 10.0,
+  "apps": 3,
+  "titles": 3,
+  "rounds": 3,
+  "only": ""
+ },
+ "starts": [
+  {
+   "launch_to_home_screen": 29.695,
+   "launch_to_workload": 25.703,
+   "home_screen_to_first_key": 4.149,
+   "boot_seconds": 21.015,
+   "switch_off_to_end": 0.992,
+   "exit_code": 0,
+   "error": null
+  },
+  {
+   "launch_to_home_screen": 31.544,
+   "launch_to_workload": 27.582,
+   "home_screen_to_first_key": 4.059,
+   "boot_seconds": 22.962,
+   "switch_off_to_end": 1.21,
+   "exit_code": 0,
+   "error": null
+  },
+  {
+   "launch_to_home_screen": 28.736,
+   "launch_to_workload": 24.755,
+   "home_screen_to_first_key": 3.139,
+   "boot_seconds": 20.21,
+   "switch_off_to_end": 1.086,
+   "exit_code": 0,
+   "error": null
+  }
+ ],
+ "host": {
+  "id": "macos-arm64",
+  "os": "macos",
+  "os_version": "27.2.1",
+  "arch": "arm64",
+  "cpu_model": "Apple M6",
+  "cpus": 12,
+  "memory_bytes": 25769803776,
+  "gpus": [
+   {
+    "model": "Apple M6"
+   }
+  ],
+  "python": "3.9.6"
+ },
+ "emulator": {
+  "mode": "vm",
+  "variant": "vm-arm32",
+  "guest_arch": "arm32",
+  "accelerator": "tcg",
+  "cpu_model": "cortex-a15",
+  "machine": "virt",
+  "runtime": "QEMU emulator version 11.1.3",
+  "display": {
+   "resolution": "1920x1080",
+   "window": "launcher",
+   "remote_control": "keys"
+  },
+  "graphics": {
+   "requested": "auto",
+   "provider": "emulated",
+   "reason": "no compatible host graphics acceleration: this QEMU build has no GPU-accelerated display device (virtio-gpu-gl); it was built without virglrenderer",
+   "device": "virtio-gpu (2D), rendering by the target CPU"
+  },
+  "cpus": 4,
+  "memory_mb": 2048,
+  "options": {
+   "audio-output": "none"
+  },
+  "extra_args": [],
+  "audio": {
+   "strategy": "host",
+   "player": null,
+   "plays": false,
+   "sink": null,
+   "path": "the emulated sound card's backend, through a named pipe"
+  }
+ },
+ "image": {
+  "name": "emu-target-debian",
+  "version": "0.6.0",
+  "kind": "vm",
+  "arch": "arm32",
+  "source": {
+   "distribution": "Debian 13 (trixie)",
+   "base_image": "docker.io/library/debian:trixie-slim",
+   "base_image_digest": "sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2",
+   "apt_snapshot": "20261104T212339Z",
+   "flutter": {
+    "version": "3.47.9",
+    "revision": "c197ca5199e9ee5661e865596c9c07294dfab51c",
+    "repository": "https://github.com/flutter/flutter.git",
+    "architectures": [
+     "x86_64",
+     "arm64"
+    ]
+   },
+   "dash_js": {
+    "version": "5.3.0",
+    "package": "https://registry.npmjs.org/dashjs/-/dashjs-5.3.0.tgz",
+    "package_sha256": "3dbcd4dd957cf0bb885d4059e66b87f56a17c90f00c697d21fbdad1273d8005c",
+    "licence": "BSD-3-Clause"
+   }
+  },
+  "definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385",
+  "build_revision": "dc00d69d1b560dbedbde3d56305c41be1045ea9d",
+  "built_at": "2026-11-15T20:37:13Z",
+  "kernel_release": "6.12.115+deb13.1-armmp-lpae",
+  "rootfs_sha256": "41287b573699b1d193579703261db097095b6bb154a65f174172c4d678b47822"
+ },
+ "drivers": {
+  "hwrng": "emulated",
+  "audio": "host"
+ },
+ "launcher_revision": "dc00d69d1b560dbedbde3d56305c41be1045ea9d-dirty",
+ "simulator": {
+  "id": "stb-simulator",
+  "version": "1.0.0",
+  "resolution": "1920x1080",
+  "graphics": "emulated",
+  "remote": true,
+  "audio": {
+   "feature": "audio",
+   "strategy": "host",
+   "mode": "vm",
+   "provider": "kernel:virtio-snd - VirtIO SoundCard",
+   "device": "default"
+  },
+  "browser": "WPE WebKit 2.48.3 (Cog 0.18.4)",
+  "quick": false,
+  "channels": [
+   {
+    "number": 1,
+    "name": "Emu One",
+    "stream": "mpeg2-fragments",
+    "marker": [
+     255,
+     128,
+     0
+    ]
+   },
+   {
+    "number": 2,
+    "name": "Emu Two",
+    "stream": "avc-fragments",
+    "marker": [
+     0,
+     200,
+     255
+    ]
+   },
+   {
+    "number": 3,
+    "name": "Emu Three",
+    "stream": "hevc-fragments",
+    "marker": [
+     200,
+     0,
+     255
+    ]
+   }
+  ],
+  "titles": [
+   {
+    "id": "big-buck-bunny",
+    "name": "Big Buck Bunny",
+    "where": "internet",
+    "url": "https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps.mpd"
+   },
+   {
+    "id": "elephants-dream",
+    "name": "Elephants Dream",
+    "where": "internet",
+    "url": "https://rdmedia.bbc.co.uk/elephants_dream/1/client_manifest-all.mpd"
+   },
+   {
+    "id": "sintel",
+    "name": "Sintel",
+    "where": "internet",
+    "url": "https://storage.googleapis.com/shaka-demo-assets/sintel/dash.mpd"
+   },
+   {
+    "id": "tears-of-steel",
+    "name": "Tears of Steel",
+    "where": "internet",
+    "url": "https://storage.googleapis.com/shaka-demo-assets/tos-ttml/dash.mpd"
+   },
+   {
+    "id": "test-pattern",
+    "name": "Test pattern",
+    "where": "device",
+    "url": "/media/abr/manifest.mpd"
+   },
+   {
+    "id": "test-pattern-slow",
+    "name": "Test pattern, slow network",
+    "where": "device",
+    "url": "/media/abr-limited/75000/manifest.mpd"
+   }
+  ],
+  "workloads": [
+   "bench",
+   "graphics-demo",
+   "media-decode",
+   "web-bench"
+  ],
+  "dash_js": "5.3.0",
+  "display": {
+   "width": 1920,
+   "height": 1080,
+   "presentation_feedback": true,
+   "gles": {
+    "renderer": "llvmpipe (LLVM 19.1.7, 128 bits)",
+    "version": "OpenGL ES 3.2 Mesa 25.0.7-2+deb13u1",
+    "accelerated": false
+   },
+   "vulkan": [
+    {
+     "name": "llvmpipe (LLVM 19.1.7, 128 bits)",
+     "type": "CPU",
+     "accelerated": false
+    }
+   ]
+  }
+ },
+ "notes": [
+  "audio through the host OS (no host output: none: playing was turned off)",
+  "display 1920x1080 in a window, graphics emulated (no compatible host graphics acceleration: this QEMU build has no GPU-accelerated display device (virtio-gpu-gl); it was built without virglrenderer)"
+ ],
+ "parts": {
+  "menus": {
+   "moves": [
+    {
+     "key": "down",
+     "reported": 0.0666,
+     "seen": 1.1115
+    },
+    {
+     "key": "up",
+     "reported": 0.0542,
+     "seen": 1.2786
+    },
+    {
+     "key": "down",
+     "reported": 0.0429,
+     "seen": 1.2444
+    },
+    {
+     "key": "up",
+     "reported": 0.0466,
+     "seen": 1.1804
+    },
+    {
+     "key": "down",
+     "reported": 0.0444,
+     "seen": 1.171
+    },
+    {
+     "key": "up",
+     "reported": 0.0344,
+     "seen": 1.1467
+    },
+    {
+     "key": "down",
+     "reported": 0.0512,
+     "seen": 1.1588
+    },
+    {
+     "key": "up",
+     "reported": 0.0502,
+     "seen": 1.1424
+    },
+    {
+     "key": "down",
+     "reported": 0.0515,
+     "seen": 1.1643
+    },
+    {
+     "key": "up",
+     "reported": 0.0433,
+     "seen": 1.1641
+    },
+    {
+     "key": "down",
+     "reported": 0.0452,
+     "seen": 1.1088
+    },
+    {
+     "key": "up",
+     "reported": 0.0477,
+     "seen": 1.1607
+    },
+    {
+     "key": "down",
+     "reported": 0.0425,
+     "seen": 1.1555
+    },
+    {
+     "key": "up",
+     "reported": 0.0471,
+     "seen": 1.1795
+    },
+    {
+     "key": "down",
+     "reported": 0.0396,
+     "seen": 1.1551
+    },
+    {
+     "key": "up",
+     "reported": 0.0451,
+     "seen": 1.1394
+    },
+    {
+     "key": "down",
+     "reported": 0.0401,
+     "seen": 1.1556
+    },
+    {
+     "key": "up",
+     "reported": 0.0508,
+     "seen": 1.1805
+    },
+    {
+     "key": "down",
+     "reported": 0.0424,
+     "seen": 1.1653
+    },
+    {
+     "key": "up",
+     "reported": 0.0466,
+     "seen": 1.1575
+    }
+   ],
+   "idle": [
+    {
+     "key": "down",
+     "reported": 0.05,
+     "seen": 0.8413,
+     "idle": 5.0
+    },
+    {
+     "key": "up",
+     "reported": 0.0512,
+     "seen": 0.7296,
+     "idle": 5.0
+    },
+    {
+     "key": "down",
+     "reported": 0.0436,
+     "seen": 1.0448,
+     "idle": 5.0
+    },
+    {
+     "key": "up",
+     "reported": 0.0485,
+     "seen": 2.5771,
+     "idle": 30.0
+    },
+    {
+     "key": "down",
+     "reported": 0.044,
+     "seen": 2.454,
+     "idle": 30.0
+    },
+    {
+     "key": "up",
+     "reported": 0.0476,
+     "seen": 2.1129,
+     "idle": 30.0
+    }
+   ],
+   "open": [
+    {
+     "key": "ok",
+     "reported": 0.07,
+     "seen": 1.2391
+    },
+    {
+     "key": "ok",
+     "reported": 0.0602,
+     "seen": 1.0445
+    },
+    {
+     "key": "ok",
+     "reported": 0.0559,
+     "seen": 1.1811
+    },
+    {
+     "key": "ok",
+     "reported": 0.0489,
+     "seen": 1.1797
+    },
+    {
+     "key": "ok",
+     "reported": 0.0454,
+     "seen": 1.1239
+    }
+   ],
+   "back": [
+    {
+     "key": "back",
+     "reported": 0.0608,
+     "seen": 1.3142
+    },
+    {
+     "key": "back",
+     "reported": 0.0594,
+     "seen": 1.2837
+    },
+    {
+     "key": "back",
+     "reported": 0.0581,
+     "seen": 1.1693
+    },
+    {
+     "key": "back",
+     "reported": 0.0504,
+     "seen": 1.1961
+    },
+    {
+     "key": "back",
+     "reported": 0.0521,
+     "seen": 1.1725
+    }
+   ]
+  },
+  "channels": {
+   "first": {
+    "key": "ok",
+    "channel": 1,
+    "tuning": 0.0628,
+    "playing": 8.4126,
+    "picture": 10.454
+   },
+   "changes": [
+    {
+     "key": "up",
+     "channel": 2,
+     "tuning": 0.0492,
+     "playing": 1.2344,
+     "picture": 3.9658
+    },
+    {
+     "key": "up",
+     "channel": 3,
+     "tuning": 0.0291,
+     "playing": 1.2184,
+     "picture": 3.7484
+    },
+    {
+     "key": "up",
+     "channel": 1,
+     "tuning": 0.0376,
+     "playing": 1.3824,
+     "picture": 3.1085
+    },
+    {
+     "key": "up",
+     "channel": 2,
+     "tuning": 0.0406,
+     "playing": 1.0793,
+     "picture": 2.7109
+    },
+    {
+     "key": "up",
+     "channel": 3,
+     "tuning": 0.0545,
+     "playing": 1.0429,
+     "picture": 3.1277
+    },
+    {
+     "key": "up",
+     "channel": 1,
+     "tuning": 0.0369,
+     "playing": 1.3327,
+     "picture": 2.5461
+    },
+    {
+     "key": "up",
+     "channel": 2,
+     "tuning": 0.0301,
+     "playing": 1.1264,
+     "picture": 2.9309
+    },
+    {
+     "key": "up",
+     "channel": 3,
+     "tuning": 0.0406,
+     "playing": 1.2531,
+     "picture": 2.9546
+    },
+    {
+     "key": "up",
+     "channel": 1,
+     "tuning": 0.0372,
+     "playing": 1.2831,
+     "picture": 2.7054
+    },
+    {
+     "key": "up",
+     "channel": 2,
+     "tuning": 0.0312,
+     "playing": 1.1087,
+     "picture": 2.729
+    },
+    {
+     "key": "up",
+     "channel": 3,
+     "tuning": 0.0273,
+     "playing": 1.2328,
+     "picture": 3.3366
+    },
+    {
+     "key": "up",
+     "channel": 1,
+     "tuning": 0.0399,
+     "playing": 1.2293,
+     "picture": 3.7641
+    }
+   ],
+   "pictures": [
+    {
+     "channel": 2,
+     "seconds": 10.01,
+     "pictures": 7,
+     "per_second": 0.7
+    },
+    {
+     "channel": 3,
+     "seconds": 10.01,
+     "pictures": 8,
+     "per_second": 0.8
+    },
+    {
+     "channel": 1,
+     "seconds": 10.01,
+     "pictures": 9,
+     "per_second": 0.9
+    }
+   ]
+  },
+  "vod": {
+   "start": [
+    {
+     "key": "ok",
+     "reported": 0.6928,
+     "seen": 1.6213
+    },
+    {
+     "key": "ok",
+     "reported": 0.3735,
+     "seen": 1.0815
+    },
+    {
+     "key": "ok",
+     "reported": 0.4034,
+     "seen": 1.23
+    }
+   ],
+   "leave": [
+    {
+     "key": "back",
+     "reported": 0.3042,
+     "seen": 1.3593
+    },
+    {
+     "key": "back",
+     "reported": 0.2777,
+     "seen": 1.2741
+    },
+    {
+     "key": "back",
+     "reported": 0.2829,
+     "seen": 1.2519
+    }
+   ],
+   "titles": [
+    {
+     "title": "test-pattern",
+     "watched_seconds": 36,
+     "stream": 1.735,
+     "playing": 2.923,
+     "representations": [
+      {
+       "at": 3.208,
+       "media_time": 0.1,
+       "size": "426x240",
+       "mbit": 0.25
+      },
+      {
+       "at": 5.17,
+       "media_time": 2.1,
+       "size": "1280x720",
+       "mbit": 2.0
+      }
+     ],
+     "offered": [
+      "426x240 at 0.25 Mbit/s",
+      "854x480 at 0.80 Mbit/s",
+      "1280x720 at 2.00 Mbit/s"
+     ],
+     "progress": {
+      "at": 20.459,
+      "media_time": 17.4,
+      "frames": 405,
+      "dropped": 3,
+      "video": "1280x720"
+     }
+    },
+    {
+     "title": "test-pattern",
+     "watched_seconds": 36,
+     "stream": 0.499,
+     "playing": 1.535,
+     "representations": [
+      {
+       "at": 1.792,
+       "media_time": 0.1,
+       "size": "426x240",
+       "mbit": 0.25
+      },
+      {
+       "at": 3.833,
+       "media_time": 2.1,
+       "size": "1280x720",
+       "mbit": 2.0
+      }
+     ],
+     "offered": [
+      "426x240 at 0.25 Mbit/s",
+      "854x480 at 0.80 Mbit/s",
+      "1280x720 at 2.00 Mbit/s"
+     ],
+     "progress": {
+      "at": 20.221,
+      "media_time": 18.5,
+      "frames": 430,
+      "dropped": 2,
+      "video": "1280x720"
+     }
+    },
+    {
+     "title": "test-pattern",
+     "watched_seconds": 36,
+     "stream": 0.783,
+     "playing": 1.835,
+     "representations": [
+      {
+       "at": 2.192,
+       "media_time": 0.1,
+       "size": "426x240",
+       "mbit": 0.25
+      },
+      {
+       "at": 4.146,
+       "media_time": 2.1,
+       "size": "1280x720",
+       "mbit": 2.0
+      }
+     ],
+     "offered": [
+      "426x240 at 0.25 Mbit/s",
+      "854x480 at 0.80 Mbit/s",
+      "1280x720 at 2.00 Mbit/s"
+     ],
+     "progress": {
+      "at": 20.138,
+      "media_time": 18.2,
+      "frames": 419,
+      "dropped": 3,
+      "video": "1280x720"
+     }
+    },
+    {
+     "title": "big-buck-bunny",
+     "watched_seconds": 60,
+     "stream": 1.467,
+     "playing": 2.507,
+     "representations": [
+      {
+       "at": 2.869,
+       "media_time": 0.2,
+       "size": "320x180",
+       "mbit": 0.25
+      },
+      {
+       "at": 7.179,
+       "media_time": 4.5,
+       "size": "1920x1080",
+       "mbit": 9.91
+      }
+     ],
+     "offered": [
+      "320x180 at 0.25 Mbit/s",
+      "320x180 at 0.51 Mbit/s",
+      "480x270 at 0.76 Mbit/s",
+      "640x360 at 1.01 Mbit/s",
+      "640x360 at 1.25 Mbit/s",
+      "768x432 at 1.88 Mbit/s",
+      "1024x576 at 3.13 Mbit/s",
+      "1280x720 at 4.95 Mbit/s",
+      "1920x1080 at 9.91 Mbit/s"
+     ],
+     "progress": {
+      "at": 60.28,
+      "media_time": 57.6,
+      "frames": 117,
+      "dropped": 2,
+      "video": "1920x1080"
+     }
+    },
+    {
+     "title": "big-buck-bunny",
+     "watched_seconds": 60,
+     "stream": 0.748,
+     "playing": 1.449,
+     "representations": [
+      {
+       "at": 1.687,
+       "media_time": 0.1,
+       "size": "320x180",
+       "mbit": 0.25
+      },
+      {
+       "at": 5.746,
+       "media_time": 4.2,
+       "size": "1920x1080",
+       "mbit": 9.91
+      }
+     ],
+     "offered": [
+      "320x180 at 0.25 Mbit/s",
+      "320x180 at 0.51 Mbit/s",
+      "480x270 at 0.76 Mbit/s",
+      "640x360 at 1.01 Mbit/s",
+      "640x360 at 1.25 Mbit/s",
+      "768x432 at 1.88 Mbit/s",
+      "1024x576 at 3.13 Mbit/s",
+      "1280x720 at 4.95 Mbit/s",
+      "1920x1080 at 9.91 Mbit/s"
+     ],
+     "progress": {
+      "at": 60.244,
+      "media_time": 58.7,
+      "frames": 97,
+      "dropped": 4,
+      "video": "1920x1080"
+     }
+    },
+    {
+     "title": "big-buck-bunny",
+     "watched_seconds": 60,
+     "stream": 0.697,
+     "playing": 1.518,
+     "representations": [
+      {
+       "at": 1.789,
+       "media_time": 0.2,
+       "size": "320x180",
+       "mbit": 0.25
+      },
+      {
+       "at": 5.829,
+       "media_time": 4.2,
+       "size": "1920x1080",
+       "mbit": 9.91
+      }
+     ],
+     "offered": [
+      "320x180 at 0.25 Mbit/s",
+      "320x180 at 0.51 Mbit/s",
+      "480x270 at 0.76 Mbit/s",
+      "640x360 at 1.01 Mbit/s",
+      "640x360 at 1.25 Mbit/s",
+      "768x432 at 1.88 Mbit/s",
+      "1024x576 at 3.13 Mbit/s",
+      "1280x720 at 4.95 Mbit/s",
+      "1920x1080 at 9.91 Mbit/s"
+     ],
+     "progress": {
+      "at": 60.129,
+      "media_time": 58.5,
+      "frames": 128,
+      "dropped": 2,
+      "video": "1920x1080"
+     }
+    }
+   ]
+  },
+  "workloads": [
+   {
+    "round": 1,
+    "id": "bench",
+    "status": 0,
+    "version": "1.0.0",
+    "workload_seconds": 25.7,
+    "key_to_finished": 25.76,
+    "finished_to_results_screen": 0.57,
+    "results": [
+     {
+      "area": "cpu",
+      "test": "sha256_1t",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 111.775,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "cpu",
+      "test": "sha256_mt",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 341.344,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "cpu",
+      "test": "matmul_f64",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 347.717,
+      "unit": "Mflop/s",
+      "unavailable": null
+     },
+     {
+      "area": "memory_allocation",
+      "test": "malloc_churn",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 2.439,
+      "unit": "Mops/s",
+      "unavailable": null
+     },
+     {
+      "area": "memory_allocation",
+      "test": "page_fault",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 63.994,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "memory_bandwidth",
+      "test": "memset",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 5113.86,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "memory_bandwidth",
+      "test": "memcpy",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 7188.582,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "memory_bandwidth",
+      "test": "stream_triad",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 4567.621,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "io",
+      "test": "seq_write",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 85.14,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "io",
+      "test": "seq_read",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 2039.564,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "io",
+      "test": "rand_read_4k",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 5326.083,
+      "unit": "IOPS",
+      "unavailable": null
+     },
+     {
+      "area": "io",
+      "test": "rand_write_4k",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 4986.807,
+      "unit": "IOPS",
+      "unavailable": null
+     },
+     {
+      "area": "io",
+      "test": "sync_write_4k",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 623.405,
+      "unit": "IOPS",
+      "unavailable": null
+     }
+    ],
+    "results_screen_to_keys": 0.137
+   },
+   {
+    "round": 1,
+    "id": "graphics-demo",
+    "status": 0,
+    "version": "1.0.0",
+    "workload_seconds": 17.5,
+    "key_to_finished": 19.52,
+    "finished_to_results_screen": 2.92,
+    "results": [
+     {
+      "area": "graphics",
+      "test": "wayland_fps",
+      "case": null,
+      "technology": "wayland",
+      "resolution": "1920x1080",
+      "value": 113.87,
+      "unit": "frames/s",
+      "unavailable": null
+     },
+     {
+      "area": "graphics",
+      "test": "gles_fps",
+      "case": null,
+      "technology": "gles",
+      "resolution": "1920x1080",
+      "value": 1.63,
+      "unit": "frames/s",
+      "unavailable": null
+     },
+     {
+      "area": "graphics",
+      "test": "vulkan_fps",
+      "case": null,
+      "technology": "vulkan",
+      "resolution": null,
+      "value": null,
+      "unit": "frames/s",
+      "unavailable": "the vulkan test ended with status 134: malloc(): invalid size (unsorted) "
+     },
+     {
+      "area": "graphics",
+      "test": "flutter_fps",
+      "case": null,
+      "technology": "flutter",
+      "resolution": null,
+      "value": null,
+      "unit": "frames/s",
+      "unavailable": "the Flutter SDK (3.47.9) builds Linux applications for x86-64 and ARM64 only, not for armhf"
+     }
+    ],
+    "results_screen_to_keys": 2.055
+   },
+   {
+    "round": 1,
+    "id": "media-decode",
+    "status": 0,
+    "version": "1.0.0",
+    "workload_seconds": 190.8,
+    "key_to_finished": 192.78,
+    "finished_to_results_screen": 3.44,
+    "results": [
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "mpeg2-mp2ts",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 13.74,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "mpeg2-mp4",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 14.4,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "mpeg2-fragments",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 14.27,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "avc-mp2ts",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 5.82,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "avc-mp4",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 5.29,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "avc-fragments",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 5.71,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "hevc-mp2ts",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 4.55,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "hevc-mp4",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 4.65,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "hevc-fragments",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 4.47,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "audio_decode_speed",
+      "case": "audio-mp2-mp2ts",
+      "technology": null,
+      "resolution": null,
+      "value": 106.88,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "audio_decode_speed",
+      "case": "audio-ac3-mp2ts",
+      "technology": null,
+      "resolution": null,
+      "value": 89.16,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "audio_decode_speed",
+      "case": "audio-aac-mp4",
+      "technology": null,
+      "resolution": null,
+      "value": 78.06,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "audio_decode_speed",
+      "case": "audio-heaac-mp4",
+      "technology": null,
+      "resolution": null,
+      "value": 29.85,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "audio_decode_speed",
+      "case": "audio-heaac-mp2ts",
+      "technology": null,
+      "resolution": null,
+      "value": 34.81,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "mpeg2-mp2ts/wayland",
+      "technology": "wayland",
+      "resolution": "1920x1080",
+      "value": 95,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "mpeg2-mp2ts/gles",
+      "technology": "gles",
+      "resolution": "1920x1080",
+      "value": 103,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "mpeg2-mp2ts/vulkan",
+      "technology": "vulkan",
+      "resolution": "1920x1080",
+      "value": null,
+      "unit": "frames",
+      "unavailable": "the player closed its control connection"
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "mpeg2-mp2ts/flutter",
+      "technology": "flutter",
+      "resolution": "1920x1080",
+      "value": null,
+      "unit": "frames",
+      "unavailable": "the Flutter SDK (3.47.9) builds Linux applications for x86-64 and ARM64 only, not for armhf"
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "avc-mp4/wayland",
+      "technology": "wayland",
+      "resolution": "1920x1080",
+      "value": 94,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "avc-mp4/gles",
+      "technology": "gles",
+      "resolution": "1920x1080",
+      "value": 94,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "avc-mp4/vulkan",
+      "technology": "vulkan",
+      "resolution": "1920x1080",
+      "value": null,
+      "unit": "frames",
+      "unavailable": "the player closed its control connection"
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "avc-mp4/flutter",
+      "technology": "flutter",
+      "resolution": "1920x1080",
+      "value": null,
+      "unit": "frames",
+      "unavailable": "the Flutter SDK (3.47.9) builds Linux applications for x86-64 and ARM64 only, not for armhf"
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "hevc-fragments/wayland",
+      "technology": "wayland",
+      "resolution": "1920x1080",
+      "value": 106,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "hevc-fragments/gles",
+      "technology": "gles",
+      "resolution": "1920x1080",
+      "value": 86,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "hevc-fragments/vulkan",
+      "technology": "vulkan",
+      "resolution": "1920x1080",
+      "value": null,
+      "unit": "frames",
+      "unavailable": "[Errno 104] Connection reset by peer"
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "hevc-fragments/flutter",
+      "technology": "flutter",
+      "resolution": "1920x1080",
+      "value": null,
+      "unit": "frames",
+      "unavailable": "the Flutter SDK (3.47.9) builds Linux applications for x86-64 and ARM64 only, not for armhf"
+     }
+    ],
+    "results_screen_to_keys": 1.071
+   },
+   {
+    "round": 1,
+    "id": "web-bench",
+    "status": 0,
+    "version": "1.1.0",
+    "workload_seconds": 63.1,
+    "key_to_finished": 65.01,
+    "finished_to_results_screen": 2.71,
+    "results": [
+     {
+      "area": "web",
+      "test": "web_launch",
+      "case": null,
+      "technology": "web",
+      "resolution": "1920x1080",
+      "value": 5.893,
+      "unit": "seconds",
+      "unavailable": null
+     },
+     {
+      "area": "graphics",
+      "test": "web_render_fps",
+      "case": null,
+      "technology": "web",
+      "resolution": "1920x1080",
+      "value": 0.27,
+      "unit": "frames/s",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "mse_playback_dropped_frames",
+      "case": "mpeg2-fragments",
+      "technology": "web",
+      "resolution": "1920x1080",
+      "value": 120,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "mse_playback_dropped_frames",
+      "case": "avc-fragments",
+      "technology": "web",
+      "resolution": "1920x1080",
+      "value": 120,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "mse_playback_dropped_frames",
+      "case": "hevc-fragments",
+      "technology": "web",
+      "resolution": "1920x1080",
+      "value": 120,
+      "unit": "frames",
+      "unavailable": null
+     }
+    ],
+    "results_screen_to_keys": 2.085
+   },
+   {
+    "round": 2,
+    "id": "bench",
+    "status": 0,
+    "version": "1.0.0",
+    "workload_seconds": 24.6,
+    "key_to_finished": 24.65,
+    "finished_to_results_screen": 0.52,
+    "results": [
+     {
+      "area": "cpu",
+      "test": "sha256_1t",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 107.953,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "cpu",
+      "test": "sha256_mt",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 340.665,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "cpu",
+      "test": "matmul_f64",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 372.623,
+      "unit": "Mflop/s",
+      "unavailable": null
+     },
+     {
+      "area": "memory_allocation",
+      "test": "malloc_churn",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 2.568,
+      "unit": "Mops/s",
+      "unavailable": null
+     },
+     {
+      "area": "memory_allocation",
+      "test": "page_fault",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 61.771,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "memory_bandwidth",
+      "test": "memset",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 4960.859,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "memory_bandwidth",
+      "test": "memcpy",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 7543.612,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "memory_bandwidth",
+      "test": "stream_triad",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 4411.663,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "io",
+      "test": "seq_write",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 82.822,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "io",
+      "test": "seq_read",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 2238.408,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "io",
+      "test": "rand_read_4k",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 5107.201,
+      "unit": "IOPS",
+      "unavailable": null
+     },
+     {
+      "area": "io",
+      "test": "rand_write_4k",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 4830.062,
+      "unit": "IOPS",
+      "unavailable": null
+     },
+     {
+      "area": "io",
+      "test": "sync_write_4k",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 631.626,
+      "unit": "IOPS",
+      "unavailable": null
+     }
+    ],
+    "results_screen_to_keys": 0.112
+   },
+   {
+    "round": 2,
+    "id": "graphics-demo",
+    "status": 0,
+    "version": "1.0.0",
+    "workload_seconds": 14.0,
+    "key_to_finished": 15.75,
+    "finished_to_results_screen": 2.68,
+    "results": [
+     {
+      "area": "graphics",
+      "test": "wayland_fps",
+      "case": null,
+      "technology": "wayland",
+      "resolution": "1920x1080",
+      "value": 107.48,
+      "unit": "frames/s",
+      "unavailable": null
+     },
+     {
+      "area": "graphics",
+      "test": "gles_fps",
+      "case": null,
+      "technology": "gles",
+      "resolution": "1920x1080",
+      "value": 1.59,
+      "unit": "frames/s",
+      "unavailable": null
+     },
+     {
+      "area": "graphics",
+      "test": "vulkan_fps",
+      "case": null,
+      "technology": "vulkan",
+      "resolution": null,
+      "value": null,
+      "unit": "frames/s",
+      "unavailable": "the vulkan test ended with status 134: Fatal glibc error: malloc.c:2601 (sysmalloc): assertion failed: (old_top == initial_top (av) && old_size == 0) || ((unsigned long) (old_size) >= MINSIZE && prev_inuse (old_top) && ((unsigned long) old_end & (pagesize - 1)) == 0) "
+     },
+     {
+      "area": "graphics",
+      "test": "flutter_fps",
+      "case": null,
+      "technology": "flutter",
+      "resolution": null,
+      "value": null,
+      "unit": "frames/s",
+      "unavailable": "the Flutter SDK (3.47.9) builds Linux applications for x86-64 and ARM64 only, not for armhf"
+     }
+    ],
+    "results_screen_to_keys": 2.112
+   },
+   {
+    "round": 2,
+    "id": "media-decode",
+    "status": 0,
+    "version": "1.0.0",
+    "workload_seconds": 195.3,
+    "key_to_finished": 197.19,
+    "finished_to_results_screen": 2.7,
+    "results": [
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "mpeg2-mp2ts",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 14.26,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "mpeg2-mp4",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 14.82,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "mpeg2-fragments",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 14.26,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "avc-mp2ts",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 5.56,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "avc-mp4",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 5.46,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "avc-fragments",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 5.14,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "hevc-mp2ts",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 4.49,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "hevc-mp4",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 4.39,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "hevc-fragments",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 4.66,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "audio_decode_speed",
+      "case": "audio-mp2-mp2ts",
+      "technology": null,
+      "resolution": null,
+      "value": 105.47,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "audio_decode_speed",
+      "case": "audio-ac3-mp2ts",
+      "technology": null,
+      "resolution": null,
+      "value": 89.23,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "audio_decode_speed",
+      "case": "audio-aac-mp4",
+      "technology": null,
+      "resolution": null,
+      "value": 80.43,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "audio_decode_speed",
+      "case": "audio-heaac-mp4",
+      "technology": null,
+      "resolution": null,
+      "value": 34.84,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "audio_decode_speed",
+      "case": "audio-heaac-mp2ts",
+      "technology": null,
+      "resolution": null,
+      "value": 34.33,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "mpeg2-mp2ts/wayland",
+      "technology": "wayland",
+      "resolution": "1920x1080",
+      "value": 103,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "mpeg2-mp2ts/gles",
+      "technology": "gles",
+      "resolution": "1920x1080",
+      "value": 104,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "mpeg2-mp2ts/vulkan",
+      "technology": "vulkan",
+      "resolution": "1920x1080",
+      "value": null,
+      "unit": "frames",
+      "unavailable": "the player closed its control connection"
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "mpeg2-mp2ts/flutter",
+      "technology": "flutter",
+      "resolution": "1920x1080",
+      "value": null,
+      "unit": "frames",
+      "unavailable": "the Flutter SDK (3.47.9) builds Linux applications for x86-64 and ARM64 only, not for armhf"
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "avc-mp4/wayland",
+      "technology": "wayland",
+      "resolution": "1920x1080",
+      "value": 106,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "avc-mp4/gles",
+      "technology": "gles",
+      "resolution": "1920x1080",
+      "value": 90,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "avc-mp4/vulkan",
+      "technology": "vulkan",
+      "resolution": "1920x1080",
+      "value": null,
+      "unit": "frames",
+      "unavailable": "the player closed its control connection"
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "avc-mp4/flutter",
+      "technology": "flutter",
+      "resolution": "1920x1080",
+      "value": null,
+      "unit": "frames",
+      "unavailable": "the Flutter SDK (3.47.9) builds Linux applications for x86-64 and ARM64 only, not for armhf"
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "hevc-fragments/wayland",
+      "technology": "wayland",
+      "resolution": "1920x1080",
+      "value": 68,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "hevc-fragments/gles",
+      "technology": "gles",
+      "resolution": "1920x1080",
+      "value": 85,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "hevc-fragments/vulkan",
+      "technology": "vulkan",
+      "resolution": "1920x1080",
+      "value": null,
+      "unit": "frames",
+      "unavailable": "[Errno 104] Connection reset by peer"
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "hevc-fragments/flutter",
+      "technology": "flutter",
+      "resolution": "1920x1080",
+      "value": null,
+      "unit": "frames",
+      "unavailable": "the Flutter SDK (3.47.9) builds Linux applications for x86-64 and ARM64 only, not for armhf"
+     }
+    ],
+    "results_screen_to_keys": 2.152
+   },
+   {
+    "round": 2,
+    "id": "web-bench",
+    "status": 0,
+    "version": "1.1.0",
+    "workload_seconds": 53.9,
+    "key_to_finished": 55.81,
+    "finished_to_results_screen": 2.65,
+    "results": [
+     {
+      "area": "web",
+      "test": "web_launch",
+      "case": null,
+      "technology": "web",
+      "resolution": "1920x1080",
+      "value": 3.355,
+      "unit": "seconds",
+      "unavailable": null
+     },
+     {
+      "area": "graphics",
+      "test": "web_render_fps",
+      "case": null,
+      "technology": "web",
+      "resolution": "1920x1080",
+      "value": 0.33,
+      "unit": "frames/s",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "mse_playback_dropped_frames",
+      "case": "mpeg2-fragments",
+      "technology": "web",
+      "resolution": "1920x1080",
+      "value": 120,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "mse_playback_dropped_frames",
+      "case": "avc-fragments",
+      "technology": "web",
+      "resolution": "1920x1080",
+      "value": 120,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "mse_playback_dropped_frames",
+      "case": "hevc-fragments",
+      "technology": "web",
+      "resolution": "1920x1080",
+      "value": 120,
+      "unit": "frames",
+      "unavailable": null
+     }
+    ],
+    "results_screen_to_keys": 2.077
+   },
+   {
+    "round": 3,
+    "id": "bench",
+    "status": 0,
+    "version": "1.0.0",
+    "workload_seconds": 25.5,
+    "key_to_finished": 25.6,
+    "finished_to_results_screen": 0.94,
+    "results": [
+     {
+      "area": "cpu",
+      "test": "sha256_1t",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 110.995,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "cpu",
+      "test": "sha256_mt",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 325.307,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "cpu",
+      "test": "matmul_f64",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 377.118,
+      "unit": "Mflop/s",
+      "unavailable": null
+     },
+     {
+      "area": "memory_allocation",
+      "test": "malloc_churn",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 2.441,
+      "unit": "Mops/s",
+      "unavailable": null
+     },
+     {
+      "area": "memory_allocation",
+      "test": "page_fault",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 63.291,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "memory_bandwidth",
+      "test": "memset",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 5032.637,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "memory_bandwidth",
+      "test": "memcpy",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 7290.955,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "memory_bandwidth",
+      "test": "stream_triad",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 4385.765,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "io",
+      "test": "seq_write",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 82.902,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "io",
+      "test": "seq_read",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 2307.034,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "io",
+      "test": "rand_read_4k",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 5294.81,
+      "unit": "IOPS",
+      "unavailable": null
+     },
+     {
+      "area": "io",
+      "test": "rand_write_4k",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 4718.524,
+      "unit": "IOPS",
+      "unavailable": null
+     },
+     {
+      "area": "io",
+      "test": "sync_write_4k",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 614.71,
+      "unit": "IOPS",
+      "unavailable": null
+     }
+    ],
+    "results_screen_to_keys": 0.074
+   },
+   {
+    "round": 3,
+    "id": "graphics-demo",
+    "status": 0,
+    "version": "1.0.0",
+    "workload_seconds": 14.1,
+    "key_to_finished": 16.04,
+    "finished_to_results_screen": 2.62,
+    "results": [
+     {
+      "area": "graphics",
+      "test": "wayland_fps",
+      "case": null,
+      "technology": "wayland",
+      "resolution": "1920x1080",
+      "value": 106.42,
+      "unit": "frames/s",
+      "unavailable": null
+     },
+     {
+      "area": "graphics",
+      "test": "gles_fps",
+      "case": null,
+      "technology": "gles",
+      "resolution": "1920x1080",
+      "value": 1.55,
+      "unit": "frames/s",
+      "unavailable": null
+     },
+     {
+      "area": "graphics",
+      "test": "vulkan_fps",
+      "case": null,
+      "technology": "vulkan",
+      "resolution": null,
+      "value": null,
+      "unit": "frames/s",
+      "unavailable": "the vulkan test ended with status 134: Fatal glibc error: malloc.c:2601 (sysmalloc): assertion failed: (old_top == initial_top (av) && old_size == 0) || ((unsigned long) (old_size) >= MINSIZE && prev_inuse (old_top) && ((unsigned long) old_end & (pagesize - 1)) == 0) "
+     },
+     {
+      "area": "graphics",
+      "test": "flutter_fps",
+      "case": null,
+      "technology": "flutter",
+      "resolution": null,
+      "value": null,
+      "unit": "frames/s",
+      "unavailable": "the Flutter SDK (3.47.9) builds Linux applications for x86-64 and ARM64 only, not for armhf"
+     }
+    ],
+    "results_screen_to_keys": 2.061
+   },
+   {
+    "round": 3,
+    "id": "media-decode",
+    "status": 0,
+    "version": "1.0.0",
+    "workload_seconds": 200.3,
+    "key_to_finished": 202.23,
+    "finished_to_results_screen": 2.62,
+    "results": [
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "mpeg2-mp2ts",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 14.38,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "mpeg2-mp4",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 14.49,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "mpeg2-fragments",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 14.15,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "avc-mp2ts",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 5.8,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "avc-mp4",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 5.06,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "avc-fragments",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 5.29,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "hevc-mp2ts",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 4.45,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "hevc-mp4",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 4.46,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "hevc-fragments",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 4.53,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "audio_decode_speed",
+      "case": "audio-mp2-mp2ts",
+      "technology": null,
+      "resolution": null,
+      "value": 109.83,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "audio_decode_speed",
+      "case": "audio-ac3-mp2ts",
+      "technology": null,
+      "resolution": null,
+      "value": 88.7,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "audio_decode_speed",
+      "case": "audio-aac-mp4",
+      "technology": null,
+      "resolution": null,
+      "value": 80.21,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "audio_decode_speed",
+      "case": "audio-heaac-mp4",
+      "technology": null,
+      "resolution": null,
+      "value": 34.58,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "audio_decode_speed",
+      "case": "audio-heaac-mp2ts",
+      "technology": null,
+      "resolution": null,
+      "value": 34.53,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "mpeg2-mp2ts/wayland",
+      "technology": "wayland",
+      "resolution": "1920x1080",
+      "value": 99,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "mpeg2-mp2ts/gles",
+      "technology": "gles",
+      "resolution": "1920x1080",
+      "value": 104,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "mpeg2-mp2ts/vulkan",
+      "technology": "vulkan",
+      "resolution": "1920x1080",
+      "value": null,
+      "unit": "frames",
+      "unavailable": "[Errno 104] Connection reset by peer"
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "mpeg2-mp2ts/flutter",
+      "technology": "flutter",
+      "resolution": "1920x1080",
+      "value": null,
+      "unit": "frames",
+      "unavailable": "the Flutter SDK (3.47.9) builds Linux applications for x86-64 and ARM64 only, not for armhf"
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "avc-mp4/wayland",
+      "technology": "wayland",
+      "resolution": "1920x1080",
+      "value": 86,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "avc-mp4/gles",
+      "technology": "gles",
+      "resolution": "1920x1080",
+      "value": 94,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "avc-mp4/vulkan",
+      "technology": "vulkan",
+      "resolution": "1920x1080",
+      "value": null,
+      "unit": "frames",
+      "unavailable": "the player closed its control connection"
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "avc-mp4/flutter",
+      "technology": "flutter",
+      "resolution": "1920x1080",
+      "value": null,
+      "unit": "frames",
+      "unavailable": "the Flutter SDK (3.47.9) builds Linux applications for x86-64 and ARM64 only, not for armhf"
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "hevc-fragments/wayland",
+      "technology": "wayland",
+      "resolution": "1920x1080",
+      "value": 64,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "hevc-fragments/gles",
+      "technology": "gles",
+      "resolution": "1920x1080",
+      "value": 85,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "hevc-fragments/vulkan",
+      "technology": "vulkan",
+      "resolution": "1920x1080",
+      "value": null,
+      "unit": "frames",
+      "unavailable": "the player closed its control connection"
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "hevc-fragments/flutter",
+      "technology": "flutter",
+      "resolution": "1920x1080",
+      "value": null,
+      "unit": "frames",
+      "unavailable": "the Flutter SDK (3.47.9) builds Linux applications for x86-64 and ARM64 only, not for armhf"
+     }
+    ],
+    "results_screen_to_keys": 2.126
+   },
+   {
+    "round": 3,
+    "id": "web-bench",
+    "status": 0,
+    "version": "1.1.0",
+    "workload_seconds": 54.8,
+    "key_to_finished": 56.63,
+    "finished_to_results_screen": 2.64,
+    "results": [
+     {
+      "area": "web",
+      "test": "web_launch",
+      "case": null,
+      "technology": "web",
+      "resolution": "1920x1080",
+      "value": 3.392,
+      "unit": "seconds",
+      "unavailable": null
+     },
+     {
+      "area": "graphics",
+      "test": "web_render_fps",
+      "case": null,
+      "technology": "web",
+      "resolution": "1920x1080",
+      "value": 0.33,
+      "unit": "frames/s",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "mse_playback_dropped_frames",
+      "case": "mpeg2-fragments",
+      "technology": "web",
+      "resolution": "1920x1080",
+      "value": 120,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "mse_playback_dropped_frames",
+      "case": "avc-fragments",
+      "technology": "web",
+      "resolution": "1920x1080",
+      "value": 120,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "mse_playback_dropped_frames",
+      "case": "hevc-fragments",
+      "technology": "web",
+      "resolution": "1920x1080",
+      "value": 120,
+      "unit": "frames",
+      "unavailable": null
+     }
+    ],
+    "results_screen_to_keys": 2.04
+   }
+  ],
+  "direct": [
+   {
+    "round": 1,
+    "id": "bench",
+    "status": 0,
+    "version": "1.0.0",
+    "boot_seconds": 23.631,
+    "duration_seconds": 48.9,
+    "results": [
+     {
+      "area": "cpu",
+      "test": "sha256_1t",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 129.844,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "cpu",
+      "test": "sha256_mt",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 424.352,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "cpu",
+      "test": "matmul_f64",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 474.726,
+      "unit": "Mflop/s",
+      "unavailable": null
+     },
+     {
+      "area": "memory_allocation",
+      "test": "malloc_churn",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 3.118,
+      "unit": "Mops/s",
+      "unavailable": null
+     },
+     {
+      "area": "memory_allocation",
+      "test": "page_fault",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 90.941,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "memory_bandwidth",
+      "test": "memset",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 5469.151,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "memory_bandwidth",
+      "test": "memcpy",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 8066.549,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "memory_bandwidth",
+      "test": "stream_triad",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 5038.181,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "io",
+      "test": "seq_write",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 75.794,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "io",
+      "test": "seq_read",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 2911.374,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "io",
+      "test": "rand_read_4k",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 7351.593,
+      "unit": "IOPS",
+      "unavailable": null
+     },
+     {
+      "area": "io",
+      "test": "rand_write_4k",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 6765.571,
+      "unit": "IOPS",
+      "unavailable": null
+     },
+     {
+      "area": "io",
+      "test": "sync_write_4k",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 866.168,
+      "unit": "IOPS",
+      "unavailable": null
+     }
+    ]
+   },
+   {
+    "round": 1,
+    "id": "graphics-demo",
+    "status": 0,
+    "version": "1.0.0",
+    "boot_seconds": 27.407,
+    "duration_seconds": 46.8,
+    "results": [
+     {
+      "area": "graphics",
+      "test": "wayland_fps",
+      "case": null,
+      "technology": "wayland",
+      "resolution": "1920x1080",
+      "value": 115.04,
+      "unit": "frames/s",
+      "unavailable": null
+     },
+     {
+      "area": "graphics",
+      "test": "gles_fps",
+      "case": null,
+      "technology": "gles",
+      "resolution": "1920x1080",
+      "value": 1.53,
+      "unit": "frames/s",
+      "unavailable": null
+     },
+     {
+      "area": "graphics",
+      "test": "vulkan_fps",
+      "case": null,
+      "technology": "vulkan",
+      "resolution": null,
+      "value": null,
+      "unit": "frames/s",
+      "unavailable": "the vulkan test ended with status 134: malloc(): invalid size (unsorted) "
+     },
+     {
+      "area": "graphics",
+      "test": "flutter_fps",
+      "case": null,
+      "technology": "flutter",
+      "resolution": null,
+      "value": null,
+      "unit": "frames/s",
+      "unavailable": "the Flutter SDK (3.47.9) builds Linux applications for x86-64 and ARM64 only, not for armhf"
+     }
+    ]
+   },
+   {
+    "round": 1,
+    "id": "media-decode",
+    "status": 0,
+    "version": "1.0.0",
+    "boot_seconds": 25.063,
+    "duration_seconds": 246.6,
+    "results": [
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "mpeg2-mp2ts",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 12.82,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "mpeg2-mp4",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 13.49,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "mpeg2-fragments",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 12.83,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "avc-mp2ts",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 5.42,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "avc-mp4",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 4.99,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "avc-fragments",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 4.99,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "hevc-mp2ts",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 4.2,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "hevc-mp4",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 4.26,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "hevc-fragments",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 4.32,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "audio_decode_speed",
+      "case": "audio-mp2-mp2ts",
+      "technology": null,
+      "resolution": null,
+      "value": 108.04,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "audio_decode_speed",
+      "case": "audio-ac3-mp2ts",
+      "technology": null,
+      "resolution": null,
+      "value": 79.52,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "audio_decode_speed",
+      "case": "audio-aac-mp4",
+      "technology": null,
+      "resolution": null,
+      "value": 70.26,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "audio_decode_speed",
+      "case": "audio-heaac-mp4",
+      "technology": null,
+      "resolution": null,
+      "value": 30.32,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "audio_decode_speed",
+      "case": "audio-heaac-mp2ts",
+      "technology": null,
+      "resolution": null,
+      "value": 29.99,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "mpeg2-mp2ts/wayland",
+      "technology": "wayland",
+      "resolution": "1920x1080",
+      "value": 105,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "mpeg2-mp2ts/gles",
+      "technology": "gles",
+      "resolution": "1920x1080",
+      "value": 108,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "mpeg2-mp2ts/vulkan",
+      "technology": "vulkan",
+      "resolution": "1920x1080",
+      "value": null,
+      "unit": "frames",
+      "unavailable": "the player closed its control connection"
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "mpeg2-mp2ts/flutter",
+      "technology": "flutter",
+      "resolution": "1920x1080",
+      "value": null,
+      "unit": "frames",
+      "unavailable": "the Flutter SDK (3.47.9) builds Linux applications for x86-64 and ARM64 only, not for armhf"
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "avc-mp4/wayland",
+      "technology": "wayland",
+      "resolution": "1920x1080",
+      "value": 63,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "avc-mp4/gles",
+      "technology": "gles",
+      "resolution": "1920x1080",
+      "value": 89,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "avc-mp4/vulkan",
+      "technology": "vulkan",
+      "resolution": "1920x1080",
+      "value": null,
+      "unit": "frames",
+      "unavailable": "the player closed its control connection"
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "avc-mp4/flutter",
+      "technology": "flutter",
+      "resolution": "1920x1080",
+      "value": null,
+      "unit": "frames",
+      "unavailable": "the Flutter SDK (3.47.9) builds Linux applications for x86-64 and ARM64 only, not for armhf"
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "hevc-fragments/wayland",
+      "technology": "wayland",
+      "resolution": "1920x1080",
+      "value": 54,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "hevc-fragments/gles",
+      "technology": "gles",
+      "resolution": "1920x1080",
+      "value": 86,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "hevc-fragments/vulkan",
+      "technology": "vulkan",
+      "resolution": "1920x1080",
+      "value": null,
+      "unit": "frames",
+      "unavailable": "the player closed its control connection"
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "hevc-fragments/flutter",
+      "technology": "flutter",
+      "resolution": "1920x1080",
+      "value": null,
+      "unit": "frames",
+      "unavailable": "the Flutter SDK (3.47.9) builds Linux applications for x86-64 and ARM64 only, not for armhf"
+     }
+    ]
+   },
+   {
+    "round": 1,
+    "id": "web-bench",
+    "status": 0,
+    "version": "1.1.0",
+    "boot_seconds": 25.298,
+    "duration_seconds": 91.9,
+    "results": [
+     {
+      "area": "web",
+      "test": "web_launch",
+      "case": null,
+      "technology": "web",
+      "resolution": "1920x1080",
+      "value": 7.162,
+      "unit": "seconds",
+      "unavailable": null
+     },
+     {
+      "area": "graphics",
+      "test": "web_render_fps",
+      "case": null,
+      "technology": "web",
+      "resolution": "1920x1080",
+      "value": 0.19,
+      "unit": "frames/s",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "mse_playback_dropped_frames",
+      "case": "mpeg2-fragments",
+      "technology": "web",
+      "resolution": "1920x1080",
+      "value": 121,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "mse_playback_dropped_frames",
+      "case": "avc-fragments",
+      "technology": "web",
+      "resolution": "1920x1080",
+      "value": 120,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "mse_playback_dropped_frames",
+      "case": "hevc-fragments",
+      "technology": "web",
+      "resolution": "1920x1080",
+      "value": 120,
+      "unit": "frames",
+      "unavailable": null
+     }
+    ]
+   },
+   {
+    "round": 2,
+    "id": "bench",
+    "status": 0,
+    "version": "1.0.0",
+    "boot_seconds": 21.443,
+    "duration_seconds": 46.8,
+    "results": [
+     {
+      "area": "cpu",
+      "test": "sha256_1t",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 128.034,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "cpu",
+      "test": "sha256_mt",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 416.718,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "cpu",
+      "test": "matmul_f64",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 456.658,
+      "unit": "Mflop/s",
+      "unavailable": null
+     },
+     {
+      "area": "memory_allocation",
+      "test": "malloc_churn",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 2.814,
+      "unit": "Mops/s",
+      "unavailable": null
+     },
+     {
+      "area": "memory_allocation",
+      "test": "page_fault",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 91.593,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "memory_bandwidth",
+      "test": "memset",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 5454.236,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "memory_bandwidth",
+      "test": "memcpy",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 8027.083,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "memory_bandwidth",
+      "test": "stream_triad",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 5019.215,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "io",
+      "test": "seq_write",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 76.042,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "io",
+      "test": "seq_read",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 2822.181,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "io",
+      "test": "rand_read_4k",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 7392.817,
+      "unit": "IOPS",
+      "unavailable": null
+     },
+     {
+      "area": "io",
+      "test": "rand_write_4k",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 6825.766,
+      "unit": "IOPS",
+      "unavailable": null
+     },
+     {
+      "area": "io",
+      "test": "sync_write_4k",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 853.784,
+      "unit": "IOPS",
+      "unavailable": null
+     }
+    ]
+   },
+   {
+    "round": 2,
+    "id": "graphics-demo",
+    "status": 0,
+    "version": "1.0.0",
+    "boot_seconds": 22.281,
+    "duration_seconds": 41.4,
+    "results": [
+     {
+      "area": "graphics",
+      "test": "wayland_fps",
+      "case": null,
+      "technology": "wayland",
+      "resolution": "1920x1080",
+      "value": 114.07,
+      "unit": "frames/s",
+      "unavailable": null
+     },
+     {
+      "area": "graphics",
+      "test": "gles_fps",
+      "case": null,
+      "technology": "gles",
+      "resolution": "1920x1080",
+      "value": 1.37,
+      "unit": "frames/s",
+      "unavailable": null
+     },
+     {
+      "area": "graphics",
+      "test": "vulkan_fps",
+      "case": null,
+      "technology": "vulkan",
+      "resolution": null,
+      "value": null,
+      "unit": "frames/s",
+      "unavailable": "the vulkan test ended with status 134: malloc(): invalid size (unsorted) "
+     },
+     {
+      "area": "graphics",
+      "test": "flutter_fps",
+      "case": null,
+      "technology": "flutter",
+      "resolution": null,
+      "value": null,
+      "unit": "frames/s",
+      "unavailable": "the Flutter SDK (3.47.9) builds Linux applications for x86-64 and ARM64 only, not for armhf"
+     }
+    ]
+   },
+   {
+    "round": 2,
+    "id": "media-decode",
+    "status": 0,
+    "version": "1.0.0",
+    "boot_seconds": 25.637,
+    "duration_seconds": 238.1,
+    "results": [
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "mpeg2-mp2ts",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 12.82,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "mpeg2-mp4",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 13.57,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "mpeg2-fragments",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 12.8,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "avc-mp2ts",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 5.35,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "avc-mp4",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 5.22,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "avc-fragments",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 4.96,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "hevc-mp2ts",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 4.35,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "hevc-mp4",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 4.38,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "hevc-fragments",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 4.3,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "audio_decode_speed",
+      "case": "audio-mp2-mp2ts",
+      "technology": null,
+      "resolution": null,
+      "value": 106.22,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "audio_decode_speed",
+      "case": "audio-ac3-mp2ts",
+      "technology": null,
+      "resolution": null,
+      "value": 81.91,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "audio_decode_speed",
+      "case": "audio-aac-mp4",
+      "technology": null,
+      "resolution": null,
+      "value": 69.98,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "audio_decode_speed",
+      "case": "audio-heaac-mp4",
+      "technology": null,
+      "resolution": null,
+      "value": 30.32,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "audio_decode_speed",
+      "case": "audio-heaac-mp2ts",
+      "technology": null,
+      "resolution": null,
+      "value": 29.96,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "mpeg2-mp2ts/wayland",
+      "technology": "wayland",
+      "resolution": "1920x1080",
+      "value": 105,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "mpeg2-mp2ts/gles",
+      "technology": "gles",
+      "resolution": "1920x1080",
+      "value": 107,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "mpeg2-mp2ts/vulkan",
+      "technology": "vulkan",
+      "resolution": "1920x1080",
+      "value": null,
+      "unit": "frames",
+      "unavailable": "the player closed its control connection"
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "mpeg2-mp2ts/flutter",
+      "technology": "flutter",
+      "resolution": "1920x1080",
+      "value": null,
+      "unit": "frames",
+      "unavailable": "the Flutter SDK (3.47.9) builds Linux applications for x86-64 and ARM64 only, not for armhf"
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "avc-mp4/wayland",
+      "technology": "wayland",
+      "resolution": "1920x1080",
+      "value": 77,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "avc-mp4/gles",
+      "technology": "gles",
+      "resolution": "1920x1080",
+      "value": 89,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "avc-mp4/vulkan",
+      "technology": "vulkan",
+      "resolution": "1920x1080",
+      "value": null,
+      "unit": "frames",
+      "unavailable": "the player closed its control connection"
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "avc-mp4/flutter",
+      "technology": "flutter",
+      "resolution": "1920x1080",
+      "value": null,
+      "unit": "frames",
+      "unavailable": "the Flutter SDK (3.47.9) builds Linux applications for x86-64 and ARM64 only, not for armhf"
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "hevc-fragments/wayland",
+      "technology": "wayland",
+      "resolution": "1920x1080",
+      "value": 80,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "hevc-fragments/gles",
+      "technology": "gles",
+      "resolution": "1920x1080",
+      "value": 84,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "hevc-fragments/vulkan",
+      "technology": "vulkan",
+      "resolution": "1920x1080",
+      "value": null,
+      "unit": "frames",
+      "unavailable": "the player closed its control connection"
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "hevc-fragments/flutter",
+      "technology": "flutter",
+      "resolution": "1920x1080",
+      "value": null,
+      "unit": "frames",
+      "unavailable": "the Flutter SDK (3.47.9) builds Linux applications for x86-64 and ARM64 only, not for armhf"
+     }
+    ]
+   },
+   {
+    "round": 2,
+    "id": "web-bench",
+    "status": 0,
+    "version": "1.1.0",
+    "boot_seconds": 21.095,
+    "duration_seconds": 90.0,
+    "results": [
+     {
+      "area": "web",
+      "test": "web_launch",
+      "case": null,
+      "technology": "web",
+      "resolution": "1920x1080",
+      "value": 7.212,
+      "unit": "seconds",
+      "unavailable": null
+     },
+     {
+      "area": "graphics",
+      "test": "web_render_fps",
+      "case": null,
+      "technology": "web",
+      "resolution": "1920x1080",
+      "value": 0.26,
+      "unit": "frames/s",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "mse_playback_dropped_frames",
+      "case": "mpeg2-fragments",
+      "technology": "web",
+      "resolution": "1920x1080",
+      "value": 120,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "mse_playback_dropped_frames",
+      "case": "avc-fragments",
+      "technology": "web",
+      "resolution": "1920x1080",
+      "value": 120,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "mse_playback_dropped_frames",
+      "case": "hevc-fragments",
+      "technology": "web",
+      "resolution": "1920x1080",
+      "value": 120,
+      "unit": "frames",
+      "unavailable": null
+     }
+    ]
+   },
+   {
+    "round": 3,
+    "id": "bench",
+    "status": 0,
+    "version": "1.0.0",
+    "boot_seconds": 20.908,
+    "duration_seconds": 46.3,
+    "results": [
+     {
+      "area": "cpu",
+      "test": "sha256_1t",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 128.682,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "cpu",
+      "test": "sha256_mt",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 418.052,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "cpu",
+      "test": "matmul_f64",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 470.078,
+      "unit": "Mflop/s",
+      "unavailable": null
+     },
+     {
+      "area": "memory_allocation",
+      "test": "malloc_churn",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 2.957,
+      "unit": "Mops/s",
+      "unavailable": null
+     },
+     {
+      "area": "memory_allocation",
+      "test": "page_fault",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 89.526,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "memory_bandwidth",
+      "test": "memset",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 5483.208,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "memory_bandwidth",
+      "test": "memcpy",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 8043.224,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "memory_bandwidth",
+      "test": "stream_triad",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 5022.104,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "io",
+      "test": "seq_write",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 76.192,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "io",
+      "test": "seq_read",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 2653.62,
+      "unit": "MiB/s",
+      "unavailable": null
+     },
+     {
+      "area": "io",
+      "test": "rand_read_4k",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 7408.546,
+      "unit": "IOPS",
+      "unavailable": null
+     },
+     {
+      "area": "io",
+      "test": "rand_write_4k",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 6781.989,
+      "unit": "IOPS",
+      "unavailable": null
+     },
+     {
+      "area": "io",
+      "test": "sync_write_4k",
+      "case": null,
+      "technology": null,
+      "resolution": null,
+      "value": 850.115,
+      "unit": "IOPS",
+      "unavailable": null
+     }
+    ]
+   },
+   {
+    "round": 3,
+    "id": "graphics-demo",
+    "status": 0,
+    "version": "1.0.0",
+    "boot_seconds": 21.839,
+    "duration_seconds": 41.4,
+    "results": [
+     {
+      "area": "graphics",
+      "test": "wayland_fps",
+      "case": null,
+      "technology": "wayland",
+      "resolution": "1920x1080",
+      "value": 111.4,
+      "unit": "frames/s",
+      "unavailable": null
+     },
+     {
+      "area": "graphics",
+      "test": "gles_fps",
+      "case": null,
+      "technology": "gles",
+      "resolution": "1920x1080",
+      "value": 1.43,
+      "unit": "frames/s",
+      "unavailable": null
+     },
+     {
+      "area": "graphics",
+      "test": "vulkan_fps",
+      "case": null,
+      "technology": "vulkan",
+      "resolution": null,
+      "value": null,
+      "unit": "frames/s",
+      "unavailable": "the vulkan test ended with status 134: malloc(): invalid size (unsorted) "
+     },
+     {
+      "area": "graphics",
+      "test": "flutter_fps",
+      "case": null,
+      "technology": "flutter",
+      "resolution": null,
+      "value": null,
+      "unit": "frames/s",
+      "unavailable": "the Flutter SDK (3.47.9) builds Linux applications for x86-64 and ARM64 only, not for armhf"
+     }
+    ]
+   },
+   {
+    "round": 3,
+    "id": "media-decode",
+    "status": 0,
+    "version": "1.0.0",
+    "boot_seconds": 22.284,
+    "duration_seconds": 215.0,
+    "results": [
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "mpeg2-mp2ts",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 13.98,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "mpeg2-mp4",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 14.46,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "mpeg2-fragments",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 14.41,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "avc-mp2ts",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 5.52,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "avc-mp4",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 5.34,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "avc-fragments",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 5.53,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "hevc-mp2ts",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 4.42,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "hevc-mp4",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 4.41,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "video_decode_speed",
+      "case": "hevc-fragments",
+      "technology": null,
+      "resolution": "1280x720",
+      "value": 4.5,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "audio_decode_speed",
+      "case": "audio-mp2-mp2ts",
+      "technology": null,
+      "resolution": null,
+      "value": 109.42,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "audio_decode_speed",
+      "case": "audio-ac3-mp2ts",
+      "technology": null,
+      "resolution": null,
+      "value": 93.54,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "audio_decode_speed",
+      "case": "audio-aac-mp4",
+      "technology": null,
+      "resolution": null,
+      "value": 81.82,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "audio_decode_speed",
+      "case": "audio-heaac-mp4",
+      "technology": null,
+      "resolution": null,
+      "value": 34.8,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "audio_decode_speed",
+      "case": "audio-heaac-mp2ts",
+      "technology": null,
+      "resolution": null,
+      "value": 34.37,
+      "unit": "x realtime",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "mpeg2-mp2ts/wayland",
+      "technology": "wayland",
+      "resolution": "1920x1080",
+      "value": 102,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "mpeg2-mp2ts/gles",
+      "technology": "gles",
+      "resolution": "1920x1080",
+      "value": 104,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "mpeg2-mp2ts/vulkan",
+      "technology": "vulkan",
+      "resolution": "1920x1080",
+      "value": null,
+      "unit": "frames",
+      "unavailable": "the player closed its control connection"
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "mpeg2-mp2ts/flutter",
+      "technology": "flutter",
+      "resolution": "1920x1080",
+      "value": null,
+      "unit": "frames",
+      "unavailable": "the Flutter SDK (3.47.9) builds Linux applications for x86-64 and ARM64 only, not for armhf"
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "avc-mp4/wayland",
+      "technology": "wayland",
+      "resolution": "1920x1080",
+      "value": 103,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "avc-mp4/gles",
+      "technology": "gles",
+      "resolution": "1920x1080",
+      "value": 90,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "avc-mp4/vulkan",
+      "technology": "vulkan",
+      "resolution": "1920x1080",
+      "value": null,
+      "unit": "frames",
+      "unavailable": "[Errno 104] Connection reset by peer"
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "avc-mp4/flutter",
+      "technology": "flutter",
+      "resolution": "1920x1080",
+      "value": null,
+      "unit": "frames",
+      "unavailable": "the Flutter SDK (3.47.9) builds Linux applications for x86-64 and ARM64 only, not for armhf"
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "hevc-fragments/wayland",
+      "technology": "wayland",
+      "resolution": "1920x1080",
+      "value": 102,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "hevc-fragments/gles",
+      "technology": "gles",
+      "resolution": "1920x1080",
+      "value": 86,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "hevc-fragments/vulkan",
+      "technology": "vulkan",
+      "resolution": "1920x1080",
+      "value": null,
+      "unit": "frames",
+      "unavailable": "[Errno 104] Connection reset by peer"
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "playback_dropped_frames",
+      "case": "hevc-fragments/flutter",
+      "technology": "flutter",
+      "resolution": "1920x1080",
+      "value": null,
+      "unit": "frames",
+      "unavailable": "the Flutter SDK (3.47.9) builds Linux applications for x86-64 and ARM64 only, not for armhf"
+     }
+    ]
+   },
+   {
+    "round": 3,
+    "id": "web-bench",
+    "status": 0,
+    "version": "1.1.0",
+    "boot_seconds": 20.026,
+    "duration_seconds": 88.3,
+    "results": [
+     {
+      "area": "web",
+      "test": "web_launch",
+      "case": null,
+      "technology": "web",
+      "resolution": "1920x1080",
+      "value": 7.24,
+      "unit": "seconds",
+      "unavailable": null
+     },
+     {
+      "area": "graphics",
+      "test": "web_render_fps",
+      "case": null,
+      "technology": "web",
+      "resolution": "1920x1080",
+      "value": 0.26,
+      "unit": "frames/s",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "mse_playback_dropped_frames",
+      "case": "mpeg2-fragments",
+      "technology": "web",
+      "resolution": "1920x1080",
+      "value": 120,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "mse_playback_dropped_frames",
+      "case": "avc-fragments",
+      "technology": "web",
+      "resolution": "1920x1080",
+      "value": 120,
+      "unit": "frames",
+      "unavailable": null
+     },
+     {
+      "area": "audio_video_decoding",
+      "test": "mse_playback_dropped_frames",
+      "case": "hevc-fragments",
+      "technology": "web",
+      "resolution": "1920x1080",
+      "value": 121,
+      "unit": "frames",
+      "unavailable": null
+     }
+    ]
+   }
+  ]
+ }
+}

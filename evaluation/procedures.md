@@ -326,6 +326,71 @@ goes by:
   short part of its tests: the results show that it ran and reported, and
   are not measurements to compare.
 
+### Timings of the simulator
+
+How fast the simulator starts and answers its keys, and what the performance
+workloads report when they are started from its user interface, is taken by
+[stb-timings.py](stb-timings.py). No requirement asks for these, and they are
+not results of the performance evaluation: they are findings about the
+simulator, taken with a method of that script's own, and kept apart from
+`evaluation/results/` in [stb-timings](stb-timings).
+
+    python3 evaluation/stb-timings.py run --mode container
+    python3 evaluation/stb-timings.py run --mode vm --arch arm32
+    python3 evaluation/stb-timings.py table > evaluation/stb-timings/HOST.md
+
+`run` takes one mode, on a quiet host as for every measurement, and writes
+`stb-timings/HOST_VARIANT.json`; `table` prints a host's files as tables.
+
+- **The run.** The simulator is started as `./emu run --workload
+  stb-simulator` starts it: at 1080p, with 4 CPUs and 2048 MiB, in the
+  launcher's window, with remote control keys from the keyboard. Its sound is
+  taken in by the host and not played. Keys are typed into the window
+  through its command channel, as in the checks.
+- **A time** runs on the host's clock from the moment a key is given to the
+  window. *Reported* ends when the `EMU-STB` line for what the key brought
+  about has arrived at the launcher: the way of the key into the target, the
+  user interface's answer, and the way of the line back. *Seen* ends when
+  the window has received a picture of the display that shows it: for a
+  menu, any new picture after the screen had shown none for 0.4 s (2 s on a
+  simulated ARM target); for a channel, a picture with the red corner block
+  and the block that names the channel's video codec, looked for every
+  20 ms (0.2 s on a simulated ARM target). Neither says when the picture
+  was on the host's screen.
+- **Starts.** The simulator is started three times. The time runs from the
+  launcher being called to the home screen being reported, and then to the
+  first key the user interface takes (the red key, pressed every 0.05 s, or
+  every second on a simulated ARM target).
+- **Menus.** Twenty moves of the selection on the home screen, three more
+  after 5 s and three after 30 s without a new picture, and five times a
+  screen opened and left.
+- **Channels.** The first channel from the list, then Up through the three
+  channels four times. The last time round, the pictures that reach the
+  window are counted for 10 s on each channel; the streams have 25 frames a
+  second. That counts what the window gets, which is no more than the way
+  the display takes to it delivers.
+- **Video on demand.** The application is started and left three times. The
+  test title and Big Buck Bunny are each played three times, for 12 s and
+  20 s after they are reported as playing (three times as long on a
+  simulated ARM target), and the representations that dash.js reports as
+  shown are kept with their times. Big Buck Bunny comes from the internet,
+  so its times are also the connection's. Should nothing come of the OK that
+  starts a title, it is pressed once more, and the run keeps that it was.
+- **Performance workloads.** Each is started from the performance tests
+  screen, in full, in three rounds. Then each is run as the launcher runs
+  it, three times from a fresh start, with the display in the launcher's
+  window as the simulator has it: results taken under the same conditions
+  on the same image. `table` sets the medians of the two beside each other,
+  and those of the second beside the medians of the results recorded in
+  `evaluation/results/`, which were taken without a window and on earlier
+  images. What it lists as apart differs by more than 10%.
+
+So far only the macOS host has been timed (2026-11-15 and 16, image 0.6.0,
+unattended and with its screen locked):
+[stb-timings/macos-arm64.md](stb-timings/macos-arm64.md). What that showed
+is in the [README](../README.md#stb-simulator) and, with what it showed
+about the launcher's window, in the task list (7.1, 7.2 and 7.7 to 7.10).
+
 ## Web
 
 Workload `web-bench`. The browser is WPE WebKit, started by its launcher Cog
