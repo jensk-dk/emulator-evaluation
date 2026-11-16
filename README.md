@@ -133,7 +133,10 @@ removes it. With `--check` (`-Check`) it only lists.
   script installed Podman. The target images the launcher built are among
   those.
 - The experimental QEMU on macOS is removed with the rest, with its tap and
-  Homebrew's trust in it.
+  Homebrew's trust in it. Homebrew keeps that trust outside itself, in
+  `~/.homebrew/trust.json`, where its uninstaller leaves it: where Homebrew
+  itself is removed, the script takes the trust back first, and gives it
+  again should Homebrew stay.
 - Where the script installed Homebrew itself, Homebrew was installed for this
   project, and all that is installed with it counts as this project's, also
   what was installed with it later by hand. The uninstall then removes
@@ -172,10 +175,28 @@ How far this has been run:
   with it, and the 30 that Homebrew's QEMU and Colima use stayed. With two
   small packages that stood in for the script's own, a dependency from before
   setup stayed, which Homebrew's own uninstall would have removed. Removing
-  Homebrew itself has not been run: on the Mac this was written on, the
-  script installed Homebrew, and removing it takes the whole setup. Its steps
-  were run with stand-ins that remove nothing, and Homebrew's uninstaller in
-  its dry-run mode.
+  Homebrew itself was not run then: its steps were run with stand-ins that
+  remove nothing, and Homebrew's uninstaller in its dry-run mode.
+- macOS: on 2026-11-16 the whole setup was removed from the Mac this was
+  written on and installed again, for the
+  [disk space and time values](evaluation/footprint.md). `./setup.sh
+  --uninstall --yes` deleted the Colima virtual machine, the Python
+  environment with Qt and the buildx link, and removed Homebrew with its own
+  uninstaller and the 55 packages installed with it, the experimental QEMU
+  among them, in 22 s. It left `~/.docker`, which was not empty, and named
+  the Command Line Tools and the developer directory as left in place;
+  Homebrew's uninstaller left `/opt/homebrew/etc`. `./setup.sh --yes` then
+  installed everything again in 4.4 min, and all 124 checks came out as
+  before. One thing stayed that should have gone: Homebrew's trust in the
+  experimental tap, which the script took to go with Homebrew. The script
+  now takes it back before it removes Homebrew. That change was run with
+  stand-ins only: a copy of the script that cannot remove Homebrew, a record
+  made for the test and a copy of the trust file. Where Homebrew went, the
+  trust was gone and the record empty; where it could not be removed, the
+  trust was given again and the record kept both entries; the script as it
+  was left the trust in the same test. On this Mac the trust that had stayed
+  was taken back by hand, with the experimental QEMU, and the build that
+  followed has it in its record again.
 - Linux: in containers only, on a Linux host (x86-64) and on the Mac. This
   host's own setup predates the record, so there is nothing for the script to
   remove on it. With apt in Ubuntu 24.04, as a user who gets root through
@@ -540,12 +561,26 @@ it is built from:
 | ANGLE | chromium.googlesource.com/angle/angle | `47d8f0e2` |
 | libepoxy | github.com/anholt/libepoxy | `d1f952c4` |
 
-Two things can stop the option:
+Three things can stop the option:
 
 - The tap's history is a single commit. If the tap is rewritten, that commit
   may no longer be there to fetch; the option then stops and says so.
 - Homebrew's own `virglrenderer` has the same name as the tap's. Where that
   one is installed, the option stops and does not replace it.
+- The sources are forks whose branches their author rewrites, while Homebrew
+  clones a source's branches and looks for the commit among them. Since
+  2026-11-16 the commits above of virglrenderer and of QEMU are on no branch
+  any more. The servers still give them out by their ids, and a commit that
+  no branch holds may be gone from a server one day; the option then stops
+  and says so.
+
+Where a commit is on no branch, the option asks the server for it by its id,
+into Homebrew's clone of the source, and builds that part once more. In the
+output the build of such a part first ends with `fatal: unable to read tree`,
+and the lines after that say what the script does. This was run on
+2026-11-16 on the Mac after the build, the packages that came with it, the
+tap and Homebrew's downloads had been removed: one run of the option built
+all five parts, in 6.8 min, from the commits above.
 
 `./setup.sh --uninstall` removes the build with everything else the script
 installed (see [Removing what setup installed](#removing-what-setup-installed)).
@@ -947,7 +982,11 @@ exception above).
 - `evaluation/verification/`: what `./emu verify` has confirmed, per host.
 - [evaluation/footprint.md](evaluation/footprint.md): the disk space of the
   host installation and of each target, and the install, build and run times
-  that the report has to state. Only a few are measured so far.
+  that the report has to state. The macOS host is measured; of the Linux and
+  Windows hosts only the run times and one size each.
+  [evaluation/footprint.py](evaluation/footprint.py) adds up the run times
+  from the recorded results and prints the sizes of a host's targets
+  ([procedures](evaluation/procedures.md#disk-space-and-times)).
 - [evaluation/stb-timings.py](evaluation/stb-timings.py) and
   `evaluation/stb-timings/`: how fast the STB simulator starts and answers,
   and what the performance workloads report when started from it, per host.
@@ -969,7 +1008,10 @@ this server: a browser cannot list a directory, and an ordinary web server
 does not list one that holds an `index.html`, so the launcher's server gives
 the page the list of records. Opened another way (from disk, or from another
 web server) the page asks for the results folder, or for its JSON files to be
-dropped on it.
+dropped on it. A listed record that cannot be read is asked for again, and
+the page says at its top if one is still missing: until 2026-11-16 such a
+record was left out without a word, and the server reset a connection often
+enough for that to happen (it now keeps its connections open).
 
 The page starts with the hosts the results were measured on: CPU, memory,
 GPU with its driver, operating system and emulator software, as the records
@@ -996,11 +1038,19 @@ median of that configuration's runs and the dots are the single runs. The
 hosts can be filtered, values can be shown relative to the container on the
 same host, and pointing at a row shows the details of its runs.
 
+At the end is "Disk space and times": for each host the disk space of the
+host installation and of each target, and the install, build and performance
+evaluation times, with how each value was taken. The page shows the tables of
+[evaluation/footprint.md](evaluation/footprint.md) as they are, which the
+server hands out as well, so a value that is not measured reads so there too.
+What each value is, and what the measurements showed, is in that document
+only. Without the launcher's server, the `evaluation` folder has it.
+
 ### Results as PDF
 
 [emulator-results.pdf](evaluation/results/emulator-results.pdf) is a snapshot
-of the page: the hosts, the support matrix with the known issues, and the
-charts. Unlike the page it does not follow new runs. To make it again,
+of the page: the hosts, the support matrix with the known issues, the charts,
+and the disk space and times. Unlike the page it does not follow new runs. To make it again,
 start `./emu report` and either print the page from the browser (Save as PDF;
 the page has its own print layout, A4 landscape, without the list of
 records), or let Chrome
@@ -1012,6 +1062,8 @@ do it without a window:
 
 `--virtual-time-budget` gives the page time to read the records before it is
 printed. The PDF shows all hosts with measured values, the page's defaults.
+Its first page says how many records it shows: that is to be the number of
+record files in `evaluation/results/`.
 This was run with Chrome on Linux, on Windows (there with `emu.cmd` and
 Chrome's `chrome.exe`) and on macOS (there with
 `"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"`). On macOS

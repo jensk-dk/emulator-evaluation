@@ -29,7 +29,7 @@
     {
       "kind": "limit", "area": "Graphics",
       "title": "macOS: no host GPU graphics with the QEMU that setup installs",
-      "detail": "Homebrew's QEMU has no GPU-accelerated display device. An experimental QEMU build (./setup.sh --experimental-qemu) gives OpenGL ES on the host GPU in QEMU's own window; it is not part of the verified setup.",
+      "detail": "Homebrew's QEMU has no GPU-accelerated display device. An experimental QEMU build (./setup.sh --experimental-qemu) gives OpenGL ES on the host GPU in QEMU's own window; it is not part of the verified setup. Two of the source commits it builds from are on no branch any more (2026-11-16); setup.sh asks the servers for them by their ids, which works for as long as the servers keep them.",
       "hosts": ["macos-arm64"], "modes": ["vm-native", "vm-arm64", "vm-arm32"], "task": "4.2"
     },
     {
@@ -149,7 +149,7 @@
     {
       "kind": "missing", "area": "Qualification",
       "title": "Full matrix run, comparison report, and disk space and time measurements",
-      "detail": "The complete host matrix has not been run, the Slidev comparison is not written, and almost every value in evaluation/footprint.md is not measured yet.",
+      "detail": "The complete host matrix has not been run and the Slidev comparison is not written. Of the disk space and time values in evaluation/footprint.md the macOS host's are measured; the Linux and Windows hosts have their performance evaluation times and one size each.",
       "hosts": "all", "modes": "all", "task": "8.1 to 8.3"
     },
     {

@@ -671,6 +671,29 @@ xcode_developer_dir() {
 # Reads a patch; prints a number for what it changes, whatever its line numbers.
 patch_id() { git patch-id --stable | cut -d' ' -f1; }
 
+# Puts the commit that a formula of the tap is built from into Homebrew's clone
+# of the formula's source, where the clone is there and lacks it. Homebrew
+# fetches a source's branches and then looks for the commit among them. The
+# forks' authors rewrite their branches, so the commit can be on none of them
+# (seen on 2026-11-16, for virglrenderer and for QEMU), while the server still
+# gives it out by its id. Succeeds only if it fetched the commit now.
+fetch_pinned_commit() {     # formula, the tap's directory
+  local file="$2/Formula/$1.rb" url commit clone
+  # The formula's own source: its first url, with the revision on the next line.
+  url=$(sed -n 's/^  url "\(.*\.git\)",$/\1/p' "$file" 2>/dev/null | head -1)
+  commit=$(sed -n '/^  url ".*\.git",$/{n;s/^ *revision: "\([0-9a-f]\{40\}\)".*/\1/p;}' "$file" 2>/dev/null | head -1)
+  [ -n "$url" ] && [ -n "$commit" ] || return 1       # built from a branch, or not from git
+  clone=$(brew --cache --build-from-source "$EXP_TAP/$1" 2>/dev/null)
+  [ -n "$clone" ] && [ -d "$clone/.git" ] || return 1 # Homebrew has not cloned it yet
+  ! git -C "$clone" cat-file -e "$commit^{commit}" 2>/dev/null || return 1
+  info "  The source of $1 has commit $commit on no branch that Homebrew fetched;"
+  info "  asking $url for it by its id."
+  run git -C "$clone" fetch --quiet origin "$commit" || {
+    info "  The source of $1 no longer has commit $commit, which this build is made from."
+    return 1
+  }
+}
+
 # The body is a subshell, so that its Homebrew settings stay its own.
 install_experimental_qemu() (
   info "Building the experimental QEMU..."
@@ -739,8 +762,15 @@ install_experimental_qemu() (
   done
   for formula in $to_build; do
     before=$(brew_formulae) || { info "  Homebrew does not list its packages."; return 1; }
+    # A clone from an earlier run may lack the commit; a new one is made by
+    # the build, which then stops where it lacks it and is run once more.
+    fetch_pinned_commit "$formula" "$tap_dir"
     run brew install --build-from-source "$EXP_TAP/$formula"
     build_status=$?
+    if [ "$build_status" != 0 ] && fetch_pinned_commit "$formula" "$tap_dir"; then
+      run brew install --build-from-source "$EXP_TAP/$formula"
+      build_status=$?
+    fi
     # With the formula, what its build brought: also where the build failed.
     record_brew_added "$before" "$formula"
     [ "$build_status" = 0 ] || return 1
@@ -882,7 +912,8 @@ install_linux() {
 # The kinds of entry in the record that this script removes, in the order to
 # remove them: what uses a thing goes before the thing. Homebrew itself is in
 # the record where this script installed it; it goes with all that is
-# installed with it, before the entries of that.
+# installed with it, before the entries of that. Its trust in a tap is not
+# installed with it, and is taken back as Homebrew goes (remove_entry).
 REMOVE_ORDER="service group binfmt engine-image colima-vm python-env link dir homebrew brew brew-tap brew-trust apt dnf pacman zypper"
 # The kinds it lists and leaves: other software on the host can have come to
 # use them, and removing them takes root rights.
@@ -991,10 +1022,11 @@ EOF
 list_entry() {
   local others
   # What is inside a virtual machine that goes is not listed beside it, nor
-  # what is installed with a Homebrew that goes.
+  # what is installed with a Homebrew that goes. Homebrew's trust in a tap is
+  # listed: it is kept outside Homebrew and does not go with it.
   case "$1" in
     binfmt|engine-image) [ -z "$(recorded colima-vm)" ] || return 0 ;;
-    brew|brew-tap|brew-trust) ! homebrew_goes || return 0 ;;
+    brew|brew-tap) ! homebrew_goes || return 0 ;;
   esac
   if entry_present "$1" "$2"; then
     info "  - $(entry_text "$1" "$2")"
@@ -1010,14 +1042,31 @@ list_entry() {
 }
 
 remove_entry() {
-  local kind="$1" value="$2" status=0 names
+  local kind="$1" value="$2" status=0 names tap untrusted=""
   # What is installed with a Homebrew that goes is not removed on its own. A
   # Homebrew that was to go and is still there could not be removed, and then
   # all of it stays.
   case "$kind" in brew|brew-tap|brew-trust) ! homebrew_goes || return 0 ;; esac
   if ! entry_present "$kind" "$value"; then forget "$kind" "$value"; return 0; fi
   case "$kind" in
-    homebrew) remove_homebrew || status=1 ;;
+    homebrew)
+      # Homebrew keeps its trust in taps outside itself (~/.homebrew), where
+      # its uninstaller leaves it. The trust this script gave is taken back
+      # first, while there is a brew to do it, and given again if Homebrew
+      # stays.
+      for tap in $(recorded brew-trust); do
+        entry_present brew-trust "$tap" || continue
+        if run brew untrust --tap "$tap"; then
+          untrusted="$untrusted $tap"
+        else
+          info "  ! Homebrew's trust in the tap $tap could not be taken back; it stays."
+          NOT_REMOVED=$((NOT_REMOVED + 1))
+        fi
+      done
+      if ! remove_homebrew; then
+        status=1
+        for tap in $untrusted; do run brew trust --tap "$tap"; done
+      fi ;;
     service) as_root systemctl disable --now "$value" || status=1 ;;
     group) as_root gpasswd -d "$(id -un)" "$value" || status=1 ;;
     binfmt|engine-image)

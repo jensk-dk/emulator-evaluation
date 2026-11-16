@@ -7,86 +7,171 @@ evaluation take
 ([requirement](../openspec/specs/performance-reporting/spec.md), task 8.3 of
 the [task list](../openspec/changes/staged-emulator-delivery/tasks.md)).
 
-**Only a few values are measured so far.** A value is filled in when a task
-provides it, with the date and how it was taken. Until then it reads "not
-measured", and the report shows it as unavailable. No value is estimated.
+**The macOS host is measured; of the Linux and Windows hosts only the
+performance evaluation times and one size each.** A value is filled in when a
+task provides it, with the date and how it was taken. Until then it reads
+"not measured", and the report shows it as unavailable. No value is
+estimated. How the values are taken is in the
+[procedures](procedures.md#disk-space-and-times).
+
+Sizes are in decimal units (1 GB is 1000 MB, a thousand million bytes), as the
+container engine and Finder give them; `du` counts in units of 1024, and its
+values are converted.
 
 ## What each value is
 
-Proposed, not agreed; to be settled when the first values are taken.
+Proposed, not agreed. The macOS values of 2026-11-16 were taken as written
+here; where taking them made a definition more exact than it was, that is now
+part of it, and still to be agreed.
 
 - **Host installation, disk space.** What the setup script (`setup.sh`,
   `setup.ps1`) installed on the host, as its record lists it, together with
-  what that software keeps for the project: for one, the container runtime's
-  own virtual machine where it has one.
-- **Host installation, time.** The setup script's running time on a host that
-  had none of it installed. Downloads are part of it, so the value is given
-  with the host's network connection.
+  what that software keeps for the project: the container runtime's own
+  virtual machine where it has one, and the downloads its tools keep. Two
+  values, because the container engine's storage grows with what is built in
+  it: right after the setup script, and with each of the host's targets built
+  once. It is the sizes of the places the installation uses, added up, and
+  checked against the growth of the used space on the volume.
+- **Host installation, time.** The setup script's running time (with `--yes`,
+  so that it waits for no answer) on a host from which its `--uninstall` had
+  removed what that removes, and the tools' kept downloads besides. What the
+  removal leaves in place is not installed again; it is named with the value.
+  Downloads are part of the time, so the value is given with the host's
+  network connection.
 - **Target, disk space.** One value per target the host builds: the container
-  image, and the VM image of each guest CPU architecture (root file system,
-  kernel and initial RAM disk).
-- **Target, build time.** The running time of `./emu build` for that target
-  from an empty build cache. Downloads are part of this one too.
+  image as the container engine lists it, and the VM image of each guest CPU
+  architecture as the sizes of its files added (root file system, kernel and
+  initial RAM disk).
+- **Target, build time.** The running time of `./emu build --rebuild` for
+  that target in a container engine that holds no image of the project and no
+  build cache. Downloads are part of this one too. The targets share build
+  steps, so a target built after another takes less: the time of all of a
+  host's targets, built one after the other in a new engine, is given beside
+  them.
 - **Performance evaluation, time.** The running time of the performance
   workloads in one mode, each from launch to exit, the target's start
-  included. Each result record already has its run's `duration_seconds` and
-  `boot_seconds`; they have not been added up.
+  included. It is added up from the result records, which have each run's
+  `duration_seconds`: `python3 evaluation/footprint.py times` prints the sums.
+  Two values per mode: one run of each of the four workloads (the sum of each
+  workload's median run), and all the runs the host has recorded in that mode
+  (the procedures ask for three of each workload; some hosts have recorded
+  more, a workload at two versions or with two graphics providers).
 
 ## Values
 
 A host gets a table when it is evaluated. The macOS x86-64 host of the matrix
-has none yet.
+has none yet. The results page and its PDF show these tables as they are
+(`./emu report`): one table per host, under a heading with the host's name,
+and before it what is to be said about that host's values as a whole.
 
 ### Linux x86-64
 
 | What | Disk space | Time | Taken |
 |---|---|---|---|
 | Host installation | not measured | not measured | |
-| of that: Qt for Python, in `build/host/gui` | 262 MB | not measured | 2026-11-15, `du -sm` after `./setup.sh` installed PySide6-Essentials 6.12.0 |
+| of that: Qt for Python, in `build/host/gui` | 275 MB | not measured | 2026-11-15, `du -sm` (262, in units of 1024 × 1024 bytes) after `./setup.sh` installed PySide6-Essentials 6.12.0 |
 | Target: container image (x86-64) | not measured | not measured | |
 | Target: VM image, x86-64 (host-native) | not measured | not measured | |
 | Target: VM image, ARM64 | not measured | not measured | |
 | Target: VM image, ARM32 | not measured | not measured | |
-| Performance evaluation: container | | not measured | |
-| Performance evaluation: VM, host-native | | not measured | |
-| Performance evaluation: VM, ARM64 target | | not measured | |
-| Performance evaluation: VM, ARM32 target | | not measured | |
+| Performance evaluation: container | | 2.9 min for one run of each workload; 8.7 min for the 12 recorded runs | runs recorded 2026-11-12 to 15 (images 0.2.0, 0.3.0 and 0.5.0), added up by `evaluation/footprint.py times` |
+| Performance evaluation: VM, host-native | | 2.9 min for one run of each workload; 10.5 min for the 16 recorded runs | runs recorded 2026-11-12 to 15 (images 0.2.0, 0.3.0 and 0.5.0), added up by `evaluation/footprint.py times` |
+| Performance evaluation: VM, ARM64 target | | 10.6 min for one run of each workload; 37.1 min for the 15 recorded runs | runs recorded 2026-11-12 to 15 (images 0.2.0, 0.3.0 and 0.5.0), added up by `evaluation/footprint.py times` |
+| Performance evaluation: VM, ARM32 target | | 11.2 min for one run of each workload; 52.8 min for the 15 recorded runs | runs recorded 2026-11-12 to 15 (images 0.2.0, 0.3.0 and 0.5.0), added up by `evaluation/footprint.py times` |
 
 ### Windows x86-64
 
 | What | Disk space | Time | Taken |
 |---|---|---|---|
 | Host installation | not measured | not measured | |
-| of that: Qt for Python, in `build/host/gui` | 234 MB | not measured | 2026-11-15, `du -sh` after `setup.cmd` installed PySide6-Essentials 6.12.0 |
+| of that: Qt for Python, in `build/host/gui` | 245 MB | not measured | 2026-11-15, `du -sh` (234M, in units of 1024 × 1024 bytes) after `setup.cmd` installed PySide6-Essentials 6.12.0 |
 | Target: container image (x86-64) | not measured | not measured | |
 | Target: VM image, x86-64 (host-native) | not measured | not measured | |
 | Target: VM image, ARM64 | not measured | not measured | |
 | Target: VM image, ARM32 | not measured | not measured | |
-| Performance evaluation: container | | not measured | |
-| Performance evaluation: VM, host-native | | not measured | |
-| Performance evaluation: VM, ARM64 target | | not measured | |
-| Performance evaluation: VM, ARM32 target | | not measured | |
+| Performance evaluation: container | | 3.0 min for one run of each workload; 10.9 min for the 16 recorded runs | runs recorded 2026-11-11 to 15 (images 0.2.0 to 0.5.0), added up by `evaluation/footprint.py times` |
+| Performance evaluation: VM, host-native | | 3.2 min for one run of each workload; 11.6 min for the 16 recorded runs | runs recorded 2026-11-11 to 15 (images 0.2.0 to 0.5.0), added up by `evaluation/footprint.py times` |
+| Performance evaluation: VM, ARM64 target | | 15.9 min for one run of each workload; 61.3 min for the 15 recorded runs | runs recorded 2026-11-11 to 15 (images 0.2.0 to 0.5.0), added up by `evaluation/footprint.py times` |
+| Performance evaluation: VM, ARM32 target | | 31.2 min for one run of each workload; 102.2 min for the 15 recorded runs | runs recorded 2026-11-11 to 15 (images 0.2.0 to 0.5.0), added up by `evaluation/footprint.py times` |
 
 ### macOS ARM64
 
-The host-native VM and the ARM64 target use the same VM image here.
+The host-native VM and the ARM64 target use the same VM image here, so the
+host builds three targets. Installation, targets and builds were measured on
+2026-11-16 on the Mac mini (Apple M6, macOS 27.2.1), after
+`./setup.sh --uninstall` had removed the installation of 2026-11-11, with
+image 0.6.0 and a connection of 86 Mbit/s down (`networkQuality`, the same
+afternoon).
 
 | What | Disk space | Time | Taken |
 |---|---|---|---|
-| Host installation | not measured | not measured | |
-| of that: Qt for Python, in `build/host/gui` | 329 MB | not measured | 2026-11-15, `du -sh` after `./setup.sh` installed PySide6-Essentials 6.10.3 |
-| Target: container image (ARM64) | 1.54 GB | not measured | 2026-11-15, image 0.6.0, as `docker image ls` lists it (its layers as stored compressed: 407 MB, `docker image inspect`) |
-| Target: VM image, ARM64 (host-native and ARM64 target) | 1.95 GB | not measured | 2026-11-15, image 0.6.0, the sizes of its three files in `build/vm/arm64` added (`ls -l`): root file system 1.90 GB, kernel 38 MB, initial RAM disk 10 MB |
-| Target: VM image, ARM32 | 1.49 GB | not measured | 2026-11-15, image 0.6.0, the same in `build/vm/arm32`: root file system 1.47 GB, kernel 6 MB, initial RAM disk 9 MB |
-| Performance evaluation: container | | not measured | |
-| Performance evaluation: VM, host-native | | not measured | |
-| Performance evaluation: VM, ARM64 target | | not measured | |
-| Performance evaluation: VM, ARM32 target | | not measured | |
+| Host installation | 3.8 GB after `./setup.sh`; 25.4 GB with the three targets built once | 4.4 min | 2026-11-16, `./setup.sh --yes`, 264 s from its start to its end. The space is the places below added (`du -sk`); the used space on the volume grew by 3.84 GB (`df -k`) |
+| of that: Homebrew with QEMU 11.1.3, Colima 0.10.3, the Docker client 29.10.0 and buildx 0.39.0, in `/opt/homebrew` | 1.40 GB | 2.4 min | Homebrew itself 31 s, then its 34 packages 112 s (85 s of that downloading), by the times of the log's lines |
+| of that: the container engine's VM (Colima), in `~/.colima` | 1.30 GB new; 22.9 GB with the three targets built once | 1.3 min | created and started in 75 s (54 s of that downloading its disk image), 5 s more to register the ARM32 emulation that image builds need |
+| of that: Qt for Python, in `build/host/gui` | 345 MB | 0.5 min | 32 s, PySide6-Essentials 6.10.3 |
+| of that: downloads the tools keep, in `~/Library/Caches` | 0.76 GB | | Homebrew 320 MB, Colima 336 MB, pip 107 MB |
+| Target: container image (ARM64) | 1.54 GB | 3.1 min | 185 s from an empty engine. Size as `docker image ls` lists it (its layers as stored compressed: 407 MB, `docker image inspect`) |
+| Target: VM image, ARM64 (host-native and ARM64 target) | 1.95 GB | 3.5 min | 210 s from an empty engine. The sizes of its three files in `build/vm/arm64` added: root file system 1.90 GB, kernel 38 MB, initial RAM disk 10 MB |
+| Target: VM image, ARM32 | 1.49 GB | 4.8 min | 290 s from an empty engine. The same in `build/vm/arm32`: root file system 1.47 GB, kernel 6 MB, initial RAM disk 9 MB |
+| All three targets, one after the other in a new engine | | 9.1 min | the container image 215 s, then the ARM64 VM image 53 s (30 of its steps from the cache), then the ARM32 VM image 277 s (5 from the cache) |
+| Option: the experimental QEMU (`./setup.sh --experimental-qemu`) | 2.87 GB more: 0.64 GB in `/opt/homebrew`, 2.22 GB of downloads that Homebrew keeps in `~/Library/Caches/Homebrew` | 6.8 min | 2026-11-16, one run of 405 s, after the build, the 16 packages that came with it, its tap and all of Homebrew's downloads had been removed. Of that Homebrew gives as build time: `gn` 16 s, `libangle` 66 s, `libepoxy-angle` 6 s, `virglrenderer` 17 s, `qemu-virgl` 61 s; most of the rest is fetching sources. A first build that day, in three runs with two commits fetched by hand, took 7.0 min in all and 2.83 GB |
+| Performance evaluation: container | | 2.6 min for one run of each workload; 7.8 min for the 12 recorded runs | runs recorded 2026-11-11 to 15 (images 0.1.0 to 0.4.0), added up by `evaluation/footprint.py times`. Run again on 2026-11-16 on the new installation with image 0.6.0, not recorded: 2.6 min and 7.9 min |
+| Performance evaluation: VM, host-native | | 2.6 min for one run of each workload; 7.9 min for the 12 recorded runs | runs recorded 2026-11-11 to 15 (images 0.1.0 to 0.4.0), added up by `evaluation/footprint.py times`. Run again on 2026-11-16 on the new installation with image 0.6.0, not recorded: 2.6 min and 7.9 min |
+| Performance evaluation: VM, ARM64 target | | 5.5 min for one run of each workload; 16.5 min for the 12 recorded runs | runs recorded 2026-11-11 to 15 (images 0.1.0 to 0.4.0), added up by `evaluation/footprint.py times`. Run again on 2026-11-16 on the new installation with image 0.6.0, not recorded: 5.6 min and 16.9 min |
+| Performance evaluation: VM, ARM32 target | | 7.0 min for one run of each workload; 20.9 min for the 12 recorded runs | runs recorded 2026-11-11 to 15 (images 0.1.0 to 0.4.0), added up by `evaluation/footprint.py times`. Run again on 2026-11-16 on the new installation with image 0.6.0, not recorded: 6.8 min and 20.6 min |
+| Performance evaluation: the four modes, one after the other | | 53.4 min for the 48 runs | 2026-11-16, the runs on the new installation named above: 3202 s from the first launch to the last exit |
 
-The three target sizes are of image 0.6.0 as built on this host on
-2026-11-15. No build time is given: these builds had the build cache of image
-0.5.0 (they took 39 s, 45 s and 107 s), and the value wanted is the time from
-an empty cache. Not counted above: the image that a VM image is exported
-from stays in the container engine (2.5 GB for ARM64 and 1.93 GB for ARM32,
-as `docker image ls` lists them), and so do the images of earlier versions
-until they are removed.
+What the values leave out, and what taking them showed:
+
+- **The Xcode Command Line Tools are not in the installation's values.**
+  `setup.sh` has them installed (by Homebrew's installer) on a Mac that lacks
+  them, and its `--uninstall` leaves them in place, so they were there:
+  1.42 GB in `/Library/Developer/CommandLineTools`, installation time not
+  measured. Nor is the time to type the administrator's password that
+  Homebrew's installer asks for.
+- **Each build from an empty engine took no step from the cache** (its log
+  has none marked `CACHED`). The container image was built twice that way,
+  in 185 s and 215 s; downloads are a large part of every build.
+- **The engine's VM is where the space goes.** With the three targets built
+  once, its data disk holds 21.3 GB (`df` inside the VM): the container
+  image, the two images that the VM images are exported from (2.5 GB for
+  ARM64 and 1.93 GB for ARM32, as `docker image ls` lists them), and the
+  build cache (16.7 GB by `docker system df`, 12.3 GB of it reclaimable; it
+  shares storage with the images). The VM images themselves are in the
+  repository's `build/vm`, 3.43 GB, beside the installation.
+- **Finding: the VM's disk on the Mac only grows.** Removing images and the
+  build cache frees space inside the VM, not on the Mac: emptying the engine
+  after the first build left `~/.colima` at the 7.8 GB it had, and the five
+  builds of the measurement, the engine emptied before each of the first
+  three, took it to 29.8 GB while its data disk held 21.3 GB. In the engine
+  the values above are from, the checks and the 48 performance runs then
+  added 2.2 GB on the Mac (22.9 to 25.1 GB), with the data disk still at
+  21.3 GB. `setup.sh` gives that disk 60 GiB (64.4 GB), which is the limit.
+  The installation of 2026-11-11 had reached 63.7 GB there after five days
+  of builds; removing it freed 68.6 GB on the volume, in 22 s.
+- **The runs on the new installation are not results.** They were made to
+  see that the installation as measured performs like the one the results
+  were recorded on, and they are not in `evaluation/results/`. All 48 ended
+  normally. Of their 192 values, the median of 187 is within 10 % of the
+  recorded median, though the recorded runs are of images 0.1.0 to 0.4.0 and
+  these of 0.6.0. The five that are further apart: sequential writing in
+  container mode (0.89 of the recorded), `malloc_churn` on the ARM32 target
+  (0.90), and there the frames dropped in the Wayland playback of the three
+  streams (81, 97 and 56 of 125, against 104, 80 and 98).
+- **Finding, and changed the same day: the experimental QEMU's sources.** The
+  forks it is built from had their branches rewritten on 2026-11-16
+  (virglrenderer at 11:37, QEMU at 11:42), and the commits that `setup.sh`
+  pins are on no branch any more. Homebrew's clone of a fork then lacks the
+  commit, and the option stopped with `fatal: unable to read tree`. Both
+  servers still gave the commits out by their ids. The first build was
+  finished by fetching each by hand and running the option again. The script
+  was then changed to do that itself, the build removed, and the value above
+  taken from one run of the changed script; the build is of the same commits
+  as before (QEMU 11.1.90, `c95b8c49`). In one run with `--window` the
+  target reported OpenGL ES at 117 frames/s and Flutter at 60 on `virgl
+  (ANGLE (Apple, Apple M6, OpenGL 4.1 Metal))`; such a display cannot be
+  captured, so no picture was looked at.
+- **The checks, measured along.** No requirement asks for their time: all
+  124 checks of `./emu verify` took 42.6 min on the new installation (2554 s)
+  and came out as before the removal, 118 passed, 4 failed and 2 not
+  runnable on this host.

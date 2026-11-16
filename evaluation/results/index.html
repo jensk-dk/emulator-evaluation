@@ -182,6 +182,17 @@
   .issues .tag.fails { color: var(--bad); border-color: var(--bad); }
   .issues .hostline { display: flex; align-items: center; gap: 6px; }
 
+  /* Disk space and times: the tables of evaluation/footprint.md, one per host. */
+  .hosttitle { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; margin: 20px 0 0; }
+  .hostnote { margin-top: 4px; max-width: 900px; font-size: 13px; color: var(--text-2); }
+  .footprint { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .footprint th, .footprint td { white-space: normal; vertical-align: top; padding: 6px 10px; }
+  .footprint td.what { width: 24%; }
+  .footprint td.part { padding-left: 26px; color: var(--text-2); }
+  .footprint td.value { width: 21%; font-variant-numeric: tabular-nums; }
+  .footprint td.na { color: var(--muted); }
+  .footprint td.taken { color: var(--text-2); }
+
   /* Printing, or saving as PDF: the charts only, on a white page. */
   @page { size: A4 landscape; margin: 10mm; }
   @media print {
@@ -199,7 +210,9 @@
     .controls { position: static; border: 0; padding: 0; margin-top: 12px; }
     .chip[aria-pressed="false"] { display: none; }
     .cards { grid-template-columns: repeat(3, 1fr); gap: 8px; }
-    .card, .tile, .support tr, .issues tr { break-inside: avoid; }
+    .card, .tile, .support tr, .issues tr, .footprint tr { break-inside: avoid; }
+    .hosttitle, .hostnote { break-after: avoid; }
+    .hostnote { max-width: none; }
     :root { --ok: #1a7f37; --bad: #c62828; }
     .support tfoot { display: table-row-group; }      /* once, at the end, not on every page */
     .issues td .detail { max-width: none; }
@@ -218,7 +231,7 @@
     <p><b>The result files could not be listed from here.</b></p>
     <p class="sub">A browser cannot list a directory by itself. Let the launcher serve this page, and it reads every record on each load:</p>
     <p><code>./emu report</code></p>
-    <p class="sub">Or pick the <code>evaluation/results</code> folder (or drop its JSON files on this page). Nothing is uploaded; the files are read in the browser. For the support matrix, pick the <code>evaluation</code> folder instead, which has the verification reports as well.</p>
+    <p class="sub">Or pick the <code>evaluation/results</code> folder (or drop its JSON files on this page). Nothing is uploaded; the files are read in the browser. For the support matrix and for the disk space and times, pick the <code>evaluation</code> folder instead, which has the verification reports and <code>footprint.md</code> as well.</p>
     <div class="actions">
       <button class="action" id="pick">Choose the results folder…</button>
       <input type="file" id="folder" webkitdirectory multiple hidden>
@@ -282,13 +295,17 @@ const HOST_ORDER = ["linux-x86_64", "windows-x86_64", "macos-arm64", "macos-x86_
 const HOST_NAMES = { "linux-x86_64": "Linux x86-64", "windows-x86_64": "Windows x86-64",
                      "macos-arm64": "macOS ARM64", "macos-x86_64": "macOS x86-64" };
 
-const state = { records: [], machines: {}, verification: {}, issues: [], hosts: new Set(), relative: false, source: "" };
+const state = { records: [], machines: {}, verification: {}, issues: [], footprint: [], hosts: new Set(), relative: false,
+                source: "", unread: 0 };
 // Stated facts about the hosts' machines, beside the records.
 const MACHINES_FILE = "machines.json";
 // Known issues and limits, kept by hand; and the verification reports of
 // `emu verify`, one per host, which `emu report` serves from their directory.
 const ISSUES_FILE = "known-issues.json";
 const VERIFICATION_PATH = "verification/";
+// The disk space and time values, kept by hand in a document beside the
+// results (evaluation/footprint.md); `emu report` serves it under this name.
+const FOOTPRINT_FILE = "footprint.md";
 const $ = (id) => document.getElementById(id);
 
 function el(tag, attrs, ...children) {
@@ -352,6 +369,11 @@ async function loadFromServer() {
   } catch (error) { state.machines = {}; }
   const json = async (url) => (await fetch(url, { cache: "no-store" })).json();
   try { state.issues = (await json(ISSUES_FILE)).issues || []; } catch (error) { state.issues = []; }
+  state.footprint = [];
+  try {
+    const found = await fetch(FOOTPRINT_FILE, { cache: "no-store" });
+    if (found.ok) state.footprint = parseFootprint(await found.text());
+  } catch (error) { /* a plain web server has no such document beside the page */ }
   state.verification = {};
   try {
     for (const name of await json(VERIFICATION_PATH + "list")) {
@@ -361,11 +383,23 @@ async function loadFromServer() {
       } catch (error) { /* one unreadable report leaves the others */ }
     }
   } catch (error) { /* a plain web server has no such list */ }
+  // A listed record that cannot be read is asked for again: a connection can
+  // be reset where many are opened at once. One that still cannot be read is
+  // counted, and the page says so, since a record left out changes a median.
+  const read = async (url) => {
+    for (let attempt = 0; ; attempt++) {
+      try { return await json(url); } catch (error) {
+        if (attempt === 3) throw error;
+        await new Promise((done) => setTimeout(done, 150 * (attempt + 1)));
+      }
+    }
+  };
+  state.unread = 0;
   const loaded = await Promise.all(urls.map(async (url) => {
     try {
-      const data = await (await fetch(url, { cache: "no-store" })).json();
+      const data = await read(url);
       return isRecord(data) ? Object.assign(data, { _file: decodeURIComponent(url.split("/").pop()), _url: url }) : null;
-    } catch (error) { return null; }
+    } catch (error) { state.unread++; return null; }
   }));
   return loaded.filter(Boolean);
 }
@@ -376,6 +410,10 @@ async function loadFromFiles(fileList) {
   try { state.machines = machines ? JSON.parse(await machines.text()).hosts || {} : {}; } catch (error) { state.machines = {}; }
   const issues = files.find((file) => file.name === ISSUES_FILE);
   try { state.issues = issues ? JSON.parse(await issues.text()).issues || [] : []; } catch (error) { state.issues = []; }
+  state.unread = 0;
+  // Among the chosen files where the evaluation folder was picked.
+  const footprint = [...fileList].find((file) => file.name === FOOTPRINT_FILE);
+  try { state.footprint = footprint ? parseFootprint(await footprint.text()) : []; } catch (error) { state.footprint = []; }
   state.verification = {};
   const loaded = await Promise.all(files.map(async (file) => {
     try {
@@ -487,8 +525,9 @@ function render() {
   hosts.forEach(hostColor);
   const modes = new Set(records.map((r) => r.emulator.variant));
   const last = records[records.length - 1].recorded_at;
-  $("status").textContent = records.length + " records, " + state.source + ". Bars show the median of the runs of a "
-    + "configuration; dots show each run. Higher is better unless a chart says otherwise.";
+  $("status").textContent = records.length + " records, " + state.source + ". "
+    + (state.unread ? state.unread + " more are listed and could not be read, so what is shown is incomplete: reload. " : "")
+    + "Bars show the median of the runs of a configuration; dots show each run. Higher is better unless a chart says otherwise.";
 
   $("tiles").replaceChildren(
     el("div", { class: "tile" }, el("b", {}, String(records.length)), el("span", {}, "result records")),
@@ -537,6 +576,7 @@ function render() {
     }
     sections.push(el("div", { class: "cards" }, cards));
   }
+  sections.push(...costs());
   $("sections").replaceChildren(...sections);
   renderTable();
 }
@@ -747,6 +787,75 @@ function support() {
         el("td", { class: "where" }, where(issue)),
         el("td", { class: "where" }, modes(issue)),
         el("td", { class: "where" }, issue.task || "")))))));
+  }
+  return out;
+}
+
+// ------------------------------------------------- disk space and times ---
+
+// Reads the tables of evaluation/footprint.md: under its heading "Values", one
+// table per host under a heading of the host's name. What stands between a
+// host's heading and its table is kept as a note; what follows the table is
+// the document's own.
+function parseFootprint(text) {
+  const hosts = [];
+  let values = false, host = null;
+  for (const line of text.split(/\r?\n/)) {
+    if (/^## /.test(line)) { values = /^## Values\s*$/.test(line); host = null; continue; }
+    if (!values) continue;
+    const heading = /^### (.+?)\s*$/.exec(line);
+    if (heading) { host = { title: heading[1], notes: [], columns: null, rows: [], closed: false }; hosts.push(host); continue; }
+    if (!host || host.closed) continue;
+    if (/^\s*\|/.test(line)) {
+      const cells = line.trim().replace(/^\||\|$/g, "").split("|").map((cell) => cell.trim());
+      if (!host.columns) host.columns = cells;
+      else if (!cells.every((cell) => /^:?-+:?$/.test(cell))) host.rows.push(cells);
+    } else if (host.columns) { if (line.trim()) host.closed = true; }
+    else if (line.trim()) host.notes.push(line.trim());
+  }
+  return hosts.filter((found) => found.columns && found.rows.length);
+}
+
+// A cell or a note of that document: its code, its bold, and a link's text.
+function inline(text) {
+  const out = [];
+  let rest = 0;
+  for (const match of text.matchAll(/`([^`]+)`|\*\*([^*]+)\*\*|\[([^\]]+)\]\([^)]*\)/g)) {
+    if (match.index > rest) out.push(text.slice(rest, match.index));
+    out.push(match[1] !== undefined ? el("code", {}, match[1]) : match[2] !== undefined ? el("b", {}, match[2]) : match[3]);
+    rest = match.index + match[0].length;
+  }
+  if (rest < text.length) out.push(text.slice(rest));
+  return out;
+}
+
+// The section: for each host, the table as the document has it.
+function costs() {
+  const recorded = new Set(state.records.map((r) => r.host.id));
+  const idOf = (title) => Object.keys(HOST_NAMES).find((id) => HOST_NAMES[id] === title) || "";
+  const hosts = state.footprint.map((found) => Object.assign({ id: idOf(found.title) }, found))
+    .filter((found) => !found.id || !recorded.has(found.id) || state.hosts.has(found.id))
+    .sort((a, b) => order(HOST_ORDER, a.id || a.title) - order(HOST_ORDER, b.id || b.title));
+  if (!hosts.length) return [];
+  const out = [el("h2", {}, "Disk space and times"),
+               el("p", { class: "sub" }, "What the platform costs on each host: the disk space of the host installation and of "
+                 + "each target, and the time that installing, building and running the performance evaluation take. The values are "
+                 + "kept in evaluation/footprint.md, which says what each one is (as proposals so far), how it was taken and what "
+                 + "it leaves out. A value that was not measured on a host reads so; none is estimated.")];
+  for (const host of hosts) {
+    const last = host.columns.length - 1;
+    out.push(el("h3", { class: "hosttitle" },
+      host.id && el("span", { class: "swatch", style: "background:" + hostColor(host.id) }), host.title));
+    if (host.notes.length) out.push(el("p", { class: "hostnote" }, inline(host.notes.join(" "))));
+    out.push(el("div", { class: "tablewrap" }, el("table", { class: "footprint" },
+      el("thead", {}, el("tr", {}, host.columns.map((name) => el("th", {}, inline(name))))),
+      el("tbody", {}, host.rows.map((cells) => el("tr", {}, host.columns.map((name, index) => {
+        const cell = cells[index] || "";
+        const kind = index === 0 ? "what" + (/^of that\b/i.test(cell) ? " part" : "")
+          : index === last && last > 2 ? "taken"
+          : "value" + (/^not measured$/i.test(cell) ? " na" : "");
+        return el("td", { class: kind }, inline(cell));
+      })))))));
   }
   return out;
 }

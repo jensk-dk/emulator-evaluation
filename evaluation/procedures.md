@@ -466,3 +466,62 @@ as a Wayland client, full screen on the target's display.
 `./emu verify` captures the display for each test, as for the graphics and
 media workloads: the pages draw the same marker blocks, and a played stream
 is paused on a frame for the capture (not in a measured run).
+
+## Disk space and times
+
+What the platform costs on a host, in disk space and in time, is kept in
+[footprint.md](footprint.md), which says what each value is. Those
+definitions are proposals until they are agreed; this is how the values of
+the macOS host were taken on 2026-11-16, and how another host's can be. The
+rules for every measurement hold here too: a quiet host, and a value that was
+not measured on the host reads "not measured".
+
+- **Performance evaluation, time.** Not measured again: every recorded run
+  has its duration, and `python3 evaluation/footprint.py times` adds them up
+  per host and mode.
+- **Target, disk space.** `python3 evaluation/footprint.py sizes`, on the
+  host, once its targets are built.
+- **Host installation.** On a host that the setup script has set up and that
+  has its record:
+
+  1. Remove the installation: `./setup.sh --uninstall` (`setup.cmd
+     -Uninstall`). Then remove the downloads its tools kept, so that the
+     installation has to fetch them again (on macOS the folders `Homebrew`,
+     `colima` and `pip` in `~/Library/Caches`).
+  2. Note the used space on the volume (`df -k`).
+  3. Run the setup script with `--yes` (`-Yes`) and time it from its start to
+     its end. On macOS Homebrew's installer asks for an administrator's
+     password: give it beforehand (`sudo -v`, once more after the removal,
+     which makes `sudo` forget it) and set `NONINTERACTIVE=1`, and the time
+     has no waiting for a person in it.
+  4. Take the size of every place the installation uses (`du -sk`) and the
+     used space on the volume again. On macOS the places are `/opt/homebrew`,
+     `~/.colima`, `~/.docker`, the three cache folders and `build/host/gui`.
+     The places of a Linux and of a Windows host are not listed yet: neither
+     has been measured.
+  5. Name what the removal left in place and the installation therefore did
+     not install (on macOS the Xcode Command Line Tools).
+
+- **Target, build time.** For each target of the host: empty the container
+  engine of every image but the ones the setup script brought, and of its
+  whole build cache (`docker image rm`, `docker builder prune --all --force`;
+  the same with `podman`), then time `./emu build` with `--rebuild` for that
+  target alone. The build's output must show no step marked `CACHED`.
+
+      ./emu build --mode container --rebuild
+      ./emu build --mode vm --arch arm64 --rebuild
+      ./emu build --mode vm --arch arm32 --rebuild
+
+  (and `--arch native` where the host's own architecture is not ARM64). This
+  removes every image the engine holds: only for an engine that holds nothing
+  else.
+- **The installation with its targets, and all targets in one go.** In a new
+  container engine (on macOS: `colima delete --force --data`, then
+  `./setup.sh --yes` creates the virtual machine again), build the host's
+  targets one after the other, timed, and take the sizes of step 4 again.
+  The value must come from an engine that was never emptied: where the
+  engine keeps its storage in a disk image, as Colima does, that file does
+  not shrink when images are removed.
+- **Afterwards** run `./emu verify`: the installation that was measured has
+  to be one that works. On the macOS host all 124 checks came out as they
+  had before the removal.
