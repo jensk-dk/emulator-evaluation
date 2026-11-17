@@ -197,9 +197,9 @@ How far this has been run:
   was left the trust in the same test. On this Mac the trust that had stayed
   was taken back by hand, with the experimental QEMU, and the build that
   followed has it in its record again.
-- Linux: in containers only, on a Linux host (x86-64) and on the Mac. This
-  host's own setup predates the record, so there is nothing for the script to
-  remove on it. With apt in Ubuntu 24.04, as a user who gets root through
+- Linux: in containers, on a Linux host (x86-64) and on the Mac; for the
+  Linux host itself see the item after this one. That host's own setup
+  predates the record, so there was nothing for the script to remove on it. With apt in Ubuntu 24.04, as a user who gets root through
   `sudo`, the script installed some 300 packages and recorded each. The
   uninstall then ran with packages in place that the script did not install:
   unused dependencies from before setup, and a package installed after setup
@@ -211,6 +211,19 @@ How far this has been run:
   groups again, which setup had added them to, and disabled the Docker
   service that setup had enabled; the service was a stand-in, as a container
   has no systemd.
+- Linux: on 2026-11-17 the setup was removed from the Linux host and
+  installed again, for the
+  [disk space and time values](evaluation/footprint.md). The record listed
+  the Python environment with Qt only, which `./setup.sh --uninstall --yes`
+  removed in 0.2 s; QEMU and the ARM build emulation, 32 packages, were
+  removed by hand with `apt-get remove`, by name. Docker, which was on the
+  host before, stayed. `./setup.sh --yes` installed all of it again in
+  1.4 min, the packages, their versions and their marks were as before, and
+  all 124 checks came out as before. The record lists the 32 packages now.
+  Running it showed a fault, now corrected: with the emulators gone,
+  `./setup.sh --check` still took the ARM build emulation for present,
+  because Docker's builder went on listing ARM among its platforms. Where
+  the engine runs on the host's own kernel the script now asks the kernel.
 - With dnf in Fedora, zypper in openSUSE Tumbleweed and pacman in Arch Linux
   the script installed its own packages, as root, and removed them again:
   all of them on openSUSE and Arch. On Fedora `systemd` and `systemd-udev`
@@ -337,6 +350,18 @@ on Debian 13. The container runtime builds it either as a container image or
 as VM artifacts (ext4 root filesystem, Debian kernel, initramfs), for x86-64,
 ARM64 and ARM32. [target/image.json](target/image.json) pins its source: the
 base image digest and a dated Debian package snapshot.
+
+A build tidies the container engine after itself. It removes the images of
+other versions of the definition, the images that a build of the same
+version took the tag from (the launcher labels what it builds, `emu.image`,
+to know them), and build steps that no build has used for 48 hours, and it
+says what went. The last of these is the engine's whole build cache, other
+projects' included; images that are not this project's are never touched.
+`./emu build --keep-old` leaves everything in place. The images of the
+current version and their build steps stay, about 25 GB for four targets
+on Linux ([disk space and times](evaluation/footprint.md)). Run on the
+Linux host with Docker; not run with Podman or on macOS yet, where the
+engine's disk file does not shrink when its contents go.
 
 [target/rootfs/opt/emu/init](target/rootfs/opt/emu/init) is the target's init
 in both modes: PID 1 in a VM, the entrypoint in a container. It brings up the
@@ -999,9 +1024,9 @@ exception above).
 - `evaluation/verification/`: what `./emu verify` has confirmed, per host.
 - [evaluation/footprint.md](evaluation/footprint.md): the disk space of the
   host installation and of each target, and the install, build and run times
-  that the report has to state. The macOS host is measured, and the Windows
-  host but for three build values that its disk had no room for; of the
-  Linux host only the run times and one size.
+  that the report has to state. The macOS and the Linux host are measured,
+  and the Windows host but for three build values that its disk had no room
+  for.
   [evaluation/footprint.py](evaluation/footprint.py) adds up the run times
   from the recorded results and prints the sizes of a host's targets
   ([procedures](evaluation/procedures.md#disk-space-and-times)).

@@ -127,7 +127,7 @@ def _build_command(runtime, arch, stage, tag, definition_hash):
         "DASHJS_SHA256": spec["source"]["dash_js"]["package_sha256"],
     }
     command = [runtime.cli, "build", "--platform", info["platform"], "--target", stage, "--tag", tag,
-               "--file", str(TARGET_DIR / "Dockerfile")]
+               "--label", "%s=%s" % (OWNER_LABEL, spec["name"]), "--file", str(TARGET_DIR / "Dockerfile")]
     for key, value in sorted(args.items()):
         command += ["--build-arg", "%s=%s" % (key, value)]
     return command + [str(TARGET_DIR)]
@@ -237,9 +237,63 @@ def build_vm(runtime, arch, quiet=False):
     return manifest
 
 
-def ensure(kind, runtime_factory, arch, quiet=False, rebuild=False):
+# Every image the launcher builds carries this label with the image's name,
+# so that an image a later build took the tag from is still known as ours.
+OWNER_LABEL = "emu.image"
+# Build steps the engine keeps that no build has used for this long go.
+CACHE_KEEP = "48h"
+
+
+def _reclaimed(text):
+    """The amount a prune command says it freed, or None."""
+    for line in reversed(text.splitlines()):
+        if "reclaimed" in line.lower() and ":" in line:
+            amount = line.split(":", 1)[1].strip()
+            return None if amount in ("0B", "0 B", "") else amount
+    return None
+
+
+def cleanup(runtime):
+    """Remove from the container engine what earlier builds of the target
+    left there: the images of other versions of the definition, the images
+    that a build of the same version took the tag from, and build steps that
+    no build has used for CACHE_KEEP. Returns a line that says what went, or
+    None. Nothing here stops a build: what cannot be removed stays."""
+    spec = definition()
+    name, prefix = spec["name"], spec["version"] + "-"
+    removed = 0
+    try:
+        listed = runtime.run("image", "ls", "--format", "{{.Repository}} {{.Tag}} {{.ID}}")
+        for line in listed.stdout.splitlines() if listed.returncode == 0 else ():
+            parts = line.split()
+            if len(parts) != 3 or (parts[0] != name and not parts[0].endswith("/" + name)):
+                continue
+            if parts[1].startswith(prefix) or parts[1] == "<none>":
+                continue
+            # By its tag, not its id: an image that a container still uses stays.
+            if runtime.run("image", "rm", "%s:%s" % (parts[0], parts[1])).returncode == 0:
+                removed += 1
+        dangling = runtime.run("image", "ls", "--quiet", "--filter", "dangling=true",
+                               "--filter", "label=%s=%s" % (OWNER_LABEL, name))
+        for image_id in sorted(set(dangling.stdout.split())) if dangling.returncode == 0 else ():
+            if runtime.run("image", "rm", image_id).returncode == 0:
+                removed += 1
+        pruned = runtime.run("builder", "prune", "--force", "--filter", "until=" + CACHE_KEEP, timeout=600)
+        cache = _reclaimed(pruned.stdout) if pruned.returncode == 0 else None
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    said = []
+    if removed:
+        said.append("%d image%s of earlier builds" % (removed, "" if removed == 1 else "s"))
+    if cache:
+        said.append("%s of build steps unused for %s" % (cache, CACHE_KEEP))
+    return "removed from the container engine: " + " and ".join(said) if said else None
+
+
+def ensure(kind, runtime_factory, arch, quiet=False, rebuild=False, keep_old=False):
     """Return the manifest of an up-to-date image, building it when it is
-    missing or was built from a different definition."""
+    missing or was built from a different definition. A build is followed by
+    cleanup(), unless keep_old."""
     manifest = load_manifest(kind, arch)
     present = is_current(manifest)
     if present and kind == "vm":
@@ -253,4 +307,10 @@ def ensure(kind, runtime_factory, arch, quiet=False, rebuild=False):
     print("emu: %s the %s image for %s (the first build downloads packages and takes a while)" % (reason, kind, arch),
           flush=True)
     builder = build_vm if kind == "vm" else build_container
-    return builder(runtime_factory(), arch, quiet=quiet)
+    runtime = runtime_factory()
+    manifest = builder(runtime, arch, quiet=quiet)
+    if not keep_old:
+        said = cleanup(runtime)
+        if said and not quiet:
+            print("emu: " + said, flush=True)
+    return manifest

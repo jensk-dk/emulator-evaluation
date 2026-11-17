@@ -472,8 +472,9 @@ is paused on a frame for the capture (not in a measured run).
 What the platform costs on a host, in disk space and in time, is kept in
 [footprint.md](footprint.md), which says what each value is. Those
 definitions are proposals until they are agreed; this is how the values of
-the macOS host were taken on 2026-11-16 and those of the Windows host on
-2026-11-16 and 17, and how another host's can be. The
+the macOS host were taken on 2026-11-16, those of the Windows host on
+2026-11-16 and 17 and those of the Linux host on 2026-11-17, and how another
+host's can be. The
 rules for every measurement hold here too: a quiet host, and a value that was
 not measured on the host reads "not measured".
 
@@ -495,7 +496,18 @@ not measured on the host reads "not measured".
      Podman, because it was set up before the record was kept, remove those
      two as well, or the setup does not install them:
      `winget uninstall SoftwareFreedomConservancy.QEMU` and
-     `winget uninstall RedHat.Podman`.
+     `winget uninstall RedHat.Podman`. On a Linux host the kept downloads
+     are `~/.cache/pip` (move it aside and put it back afterwards, where
+     other projects use it) and the package manager's (`sudo apt-get
+     clean`). On a Linux host whose record does not list QEMU, remove its
+     packages by name: the five that the script asks for (`qemu-system-x86
+     qemu-system-arm qemu-utils qemu-user-static binfmt-support`) and those
+     that came with them and that nothing else needs. Check with `apt-get
+     -s remove` that naming them removes them and nothing else, and then
+     remove them. Use no `autoremove`, which takes whatever else the host
+     no longer needs, and leave the player's package (`pulseaudio-utils`)
+     where removing it takes the sound server along. A container engine
+     that was on the host before the setup stays.
   2. Note the used space on the volume (`df -k`).
   3. Run the setup script with `--yes` (`-Yes`) and time it from its start to
      its end. On macOS Homebrew's installer asks for an administrator's
@@ -513,11 +525,16 @@ not measured on the host reads "not measured".
      machine: its disk `ext4.vhdx`, the machine image and the kept download),
      `%LOCALAPPDATA%\pip\Cache` and `build\host\gui`, each as the sizes of
      its files added (`Get-ChildItem -Recurse -Force -File | Measure-Object
-     Length -Sum`), and the volume's used space from `Get-PSDrive C`. The
-     places of a Linux host are not listed yet: it has not been measured.
+     Length -Sum`), and the volume's used space from `Get-PSDrive C`. On
+     Linux with apt they are the files of the installed packages (`dpkg -L`
+     of each, the regular files given to `du -ck`), `build/host/gui`,
+     `~/.cache/pip`, `/var/cache/apt/archives`, and for the engine
+     `/var/lib/docker` (`sudo du -sk`), of which only the growth counts
+     where the engine holds other things.
   5. Name what the removal left in place and the installation therefore did
      not install (on macOS the Xcode Command Line Tools; on Windows Python,
-     WSL 2, the Windows Hypervisor Platform and winget).
+     WSL 2, the Windows Hypervisor Platform and winget; on the Linux host
+     Docker, Python, the sound server's player and the libraries Qt loads).
 
 - **Target, build time.** For each target of the host: empty the container
   engine of every image but the ones the setup script brought, and of its
@@ -531,14 +548,18 @@ not measured on the host reads "not measured".
 
   (and `--arch native` where the host's own architecture is not ARM64). This
   removes every image the engine holds: only for an engine that holds nothing
-  else.
+  else. On the Linux host, whose engine holds its owner's images too, only
+  the project's were removed (`emu-target-debian`, the untagged images its
+  builds left, the `debian` base image) and the whole build cache; no build
+  of the project uses the others.
 - **The installation with its targets, and all targets in one go.** In a new
   container engine (on macOS: `colima delete --force --data`, then
   `./setup.sh --yes` creates the virtual machine again), build the host's
   targets one after the other, timed, and take the sizes of step 4 again.
   The value must come from an engine that was never emptied: where the
   engine keeps its storage in a disk image, as Colima does, that file does
-  not shrink when images are removed.
+  not shrink when images are removed. On Linux, where Docker keeps its
+  storage in a directory, an emptied engine serves.
 - **On Windows, a new engine before every build, and room on the volume.**
   Podman's machine keeps its storage in a disk file that only grows, and a
   build in an emptied engine does not use the freed space first. So make the
@@ -552,6 +573,6 @@ not measured on the host reads "not measured".
   followed by `podman machine rm --force`.
 - **Afterwards** run `./emu verify`: the installation that was measured has
   to be one that works. On the macOS host all 124 checks came out as they
-  had before the removal. On the Windows host 122 did; of the other two, one
+  had before the removal, and on the Linux host. On the Windows host 122 did; of the other two, one
   failed once and passed when run again, and one passed that had failed
   before ([footprint.md](footprint.md#windows-x86-64)).

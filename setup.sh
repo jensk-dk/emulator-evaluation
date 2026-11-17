@@ -460,6 +460,13 @@ check_container() {
   fi
 }
 
+# Whether the container engine runs on this host's kernel (Docker on Linux,
+# but not Docker Desktop, which has a virtual machine of its own there too).
+engine_on_host_kernel() {
+  [ "$OS" = Linux ] && [ "$CONTAINER_CLI" = docker ] &&
+    ! docker info --format '{{.OperatingSystem}}' 2>/dev/null | grep -qi 'docker desktop'
+}
+
 # Building target images for other CPU architectures runs their binaries
 # through user-mode emulation (binfmt_misc) in the container engine's kernel.
 # Prints the target platforms that kernel cannot run, if any.
@@ -468,12 +475,14 @@ foreign_arch_gaps() {
   if [ "$ARCH" = arm64 ]; then need="linux/arm/v7"; else need="linux/arm64 linux/arm/v7"; fi
   # The builder's own platform list is quick to read but is not refreshed
   # when emulators are registered later, so only trust it when it says yes.
+  # Nor is it refreshed when they are removed: where the engine runs on this
+  # host's own kernel, that kernel is asked instead.
   if [ "$CONTAINER_CLI" = docker ] && docker buildx version >/dev/null 2>&1; then
     plats=$(docker buildx inspect 2>/dev/null | sed -n 's/^Platforms://p' | tr -d ' ')
     for p in $need; do
       case ",$plats," in *",$p,"*) ;; *) gaps="$gaps $p" ;; esac
     done
-    [ -z "$gaps" ] && return 0
+    [ -z "$gaps" ] && ! engine_on_host_kernel && return 0
     gaps=""
   fi
   # Ask the kernel the engine runs on what it has registered.

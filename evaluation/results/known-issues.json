@@ -1,6 +1,6 @@
 {
   "comment": "Known issues and limits of the emulator on the evaluated hosts, kept by hand. The results page (index.html) shows them under the support matrix, which it builds from evaluation/verification/. Not a result record. 'hosts' and 'modes' say where an issue applies ('all', or a list of host ids / emulator variants). 'kind' is one of: fails (a verification check fails because of it), limit (works, with a restriction), unverified (no host could check it), missing (not implemented). The task list (openspec/changes/staged-emulator-delivery/tasks.md) has the full account of each.",
-  "updated": "2026-11-16",
+  "updated": "2026-11-17",
   "issues": [
     {
       "kind": "fails", "area": "Graphics",
@@ -147,9 +147,15 @@
       "hosts": "all", "modes": "all", "task": "7.8, 7.10"
     },
     {
+      "kind": "limit", "area": "Hosts",
+      "title": "The container engine's disk file keeps growing on macOS and Windows; the cleanup after a build is run on Linux only",
+      "detail": "Until 2026-11-17 nothing removed the images and build steps of earlier builds: the Linux host's engine held 106.7 GB of the project after six days, 73.8 GB of it build cache. A build now removes the images of other versions, superseded images of the same version and build steps unused for 48 hours (./emu build --keep-old leaves them). That was run with Docker on Linux, not with Podman or on macOS. There the engine keeps its storage in a disk file that does not shrink when its contents are removed, so the space comes back only with a new engine.",
+      "hosts": "all", "modes": "all", "task": "8.3"
+    },
+    {
       "kind": "missing", "area": "Qualification",
       "title": "Full matrix run, comparison report, and disk space and time measurements",
-      "detail": "The complete host matrix has not been run and the Slidev comparison is not written. Of the disk space and time values in evaluation/footprint.md the macOS host's are measured, and the Windows host's but for three: the build times of the host-native and the ARM64 VM image from an empty engine, and of all four targets in one engine, for which its disk had too little free space (27 to 34 GB). The Linux host has its performance evaluation times and one size.",
+      "detail": "The complete host matrix has not been run and the Slidev comparison is not written. Of the disk space and time values in evaluation/footprint.md the macOS and the Linux host's are measured, and the Windows host's but for three: the build times of the host-native and the ARM64 VM image from an empty engine, and of all four targets in one engine, for which its disk had too little free space (27 to 34 GB).",
       "hosts": "all", "modes": "all", "task": "8.1 to 8.3"
     },
     {

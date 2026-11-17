@@ -7,9 +7,8 @@ evaluation take
 ([requirement](../openspec/specs/performance-reporting/spec.md), task 8.3 of
 the [task list](../openspec/changes/staged-emulator-delivery/tasks.md)).
 
-**The macOS host is measured, and the Windows host but for three build
-values that its disk had no room for; of the Linux host only the performance
-evaluation times and one size.** A value is filled in when a
+**The macOS and the Linux host are measured, and the Windows host but for
+three build values that its disk had no room for.** A value is filled in when a
 task provides it, with the date and how it was taken. Until then it reads
 "not measured", and the report shows it as unavailable. No value is
 estimated. How the values are taken is in the
@@ -21,8 +20,8 @@ values are converted.
 
 ## What each value is
 
-Proposed, not agreed. The macOS values of 2026-11-16 and the Windows values
-of 2026-11-16 and 17 were taken as written here; where taking them made a definition more exact than it was, that is now
+Proposed, not agreed. The macOS values of 2026-11-16, the Windows values
+of 2026-11-16 and 17 and the Linux values of 2026-11-17 were taken as written here; where taking them made a definition more exact than it was, that is now
 part of it, and still to be agreed.
 
 - **Host installation, disk space.** What the setup script (`setup.sh`,
@@ -67,18 +66,123 @@ and before it what is to be said about that host's values as a whole.
 
 ### Linux x86-64
 
+Installation, targets and builds were measured on 2026-11-17 on the Linux
+host (Intel Core i7-10700K, Kubuntu 24.04, Linux 6.8.0), with image 0.6.0
+and a connection of 93 Mbit/s down (one download of 100 MB with `curl`, at
+11.6 MB/s, minutes before the setup). This host's setup predates the
+script's record, which listed the Python environment with Qt only:
+`./setup.sh --uninstall` removed that, and QEMU with the ARM build
+emulation, 32 packages, was removed by hand with `apt-get remove`. The
+container engine is this host's own Docker 20.10.18, which was left in
+place.
+
 | What | Disk space | Time | Taken |
 |---|---|---|---|
-| Host installation | not measured | not measured | |
-| of that: Qt for Python, in `build/host/gui` | 275 MB | not measured | 2026-11-15, `du -sm` (262, in units of 1024 × 1024 bytes) after `./setup.sh` installed PySide6-Essentials 6.12.0 |
-| Target: container image (x86-64) | not measured | not measured | |
-| Target: VM image, x86-64 (host-native) | not measured | not measured | |
-| Target: VM image, ARM64 | not measured | not measured | |
-| Target: VM image, ARM32 | not measured | not measured | |
-| Performance evaluation: container | | 2.9 min for one run of each workload; 8.7 min for the 12 recorded runs | runs recorded 2026-11-12 to 15 (images 0.2.0, 0.3.0 and 0.5.0), added up by `evaluation/footprint.py times` |
-| Performance evaluation: VM, host-native | | 2.9 min for one run of each workload; 10.5 min for the 16 recorded runs | runs recorded 2026-11-12 to 15 (images 0.2.0, 0.3.0 and 0.5.0), added up by `evaluation/footprint.py times` |
-| Performance evaluation: VM, ARM64 target | | 10.6 min for one run of each workload; 37.1 min for the 15 recorded runs | runs recorded 2026-11-12 to 15 (images 0.2.0, 0.3.0 and 0.5.0), added up by `evaluation/footprint.py times` |
-| Performance evaluation: VM, ARM32 target | | 11.2 min for one run of each workload; 52.8 min for the 15 recorded runs | runs recorded 2026-11-12 to 15 (images 0.2.0, 0.3.0 and 0.5.0), added up by `evaluation/footprint.py times` |
+| Host installation | 1.22 GB after `./setup.sh`; 25.9 GB with the four targets built once | 1.4 min | 2026-11-17, `./setup.sh --yes`, 82.5 s from its start to its end, with `sudo` given beforehand. The space is the places below added (`du -sk`); the used space on the volume grew by 1.22 GB (`df -k`) |
+| of that: QEMU 8.2.2 and the ARM build emulation, 32 packages of Ubuntu | 0.80 GB | 1.2 min | `apt-get update` 4.5 s, `apt-get install` 64.6 s, 48 s of that downloading 58.9 MB (at 1.2 MB/s from the package server). The sizes of the packages' files added: the system emulators with their firmware 630 MB, the user-mode emulators that image builds run ARM programs with 137 MB, libraries 32 MB |
+| of that: Qt for Python, in `build/host/gui` | 274 MB | 0.2 min | 12 s: the Python environment 2.6 s, PySide6-Essentials 6.12.0 9.4 s |
+| of that: downloads the tools keep | 144 MB | | pip 85 MB in `~/.cache/pip`, apt 59 MB in `/var/cache/apt/archives` |
+| of that: what the container engine holds, in `/var/lib/docker` | nothing new; 24.6 GB with the four targets built once | | the engine was there before. `sudo du -sk`, the growth from the engine without an image or a build step of the project |
+| Target: container image (x86-64) | 1.11 GB | 3.8 min | 2026-11-17, 230 s from an engine without the project's images and build cache. Size as `docker image ls` lists it |
+| Target: VM image, x86-64 (host-native) | 1.86 GB | 4.2 min | 252 s, likewise. The sizes of its three files in `build/vm/x86_64` added: root file system 1.84 GB, kernel 12 MB, initial RAM disk 10 MB |
+| Target: VM image, ARM64 | 1.95 GB | 32.5 min | 1953 s, likewise. The same in `build/vm/arm64`: root file system 1.90 GB, kernel 38 MB, initial RAM disk 10 MB |
+| Target: VM image, ARM32 | 1.49 GB | 8.9 min | 535 s, likewise. The same in `build/vm/arm32`: root file system 1.47 GB, kernel 6 MB, initial RAM disk 9 MB |
+| All four targets, one after the other in an emptied engine | | 45.8 min | the container image 233 s, then the host-native VM image 43 s (30 of its steps from the cache), then the ARM64 VM image 1949 s (5 from the cache), then the ARM32 VM image 523 s (5 from the cache) |
+| Performance evaluation: container | | 2.9 min for one run of each workload; 8.7 min for the 12 recorded runs | runs recorded 2026-11-12 to 15 (images 0.2.0, 0.3.0 and 0.5.0), added up by `evaluation/footprint.py times`. Run again on 2026-11-17 on the new installation with image 0.6.0, not recorded: 2.9 min, and 8.7 min for 12 runs |
+| Performance evaluation: VM, host-native | | 2.9 min for one run of each workload; 10.5 min for the 16 recorded runs | runs recorded 2026-11-12 to 15 (images 0.2.0, 0.3.0 and 0.5.0), added up by `evaluation/footprint.py times`. Run again on 2026-11-17 on the new installation with image 0.6.0, not recorded: 2.9 min, and 8.8 min for 12 runs |
+| Performance evaluation: VM, ARM64 target | | 10.6 min for one run of each workload; 37.1 min for the 15 recorded runs | runs recorded 2026-11-12 to 15 (images 0.2.0, 0.3.0 and 0.5.0), added up by `evaluation/footprint.py times`. Run again on 2026-11-17 on the new installation with image 0.6.0, not recorded: 10.1 min, and 30.2 min for 12 runs |
+| Performance evaluation: VM, ARM32 target | | 11.2 min for one run of each workload; 52.8 min for the 15 recorded runs | runs recorded 2026-11-12 to 15 (images 0.2.0, 0.3.0 and 0.5.0), added up by `evaluation/footprint.py times`. Run again on 2026-11-17 on the new installation with image 0.6.0, not recorded: 10.5 min, and 31.5 min for 12 runs |
+| Performance evaluation: the four modes, one after the other | | 79.3 min for the 48 runs | 2026-11-17, the runs on the new installation named above: 4756 s from the first launch to the last exit |
+
+What the values leave out, and what taking them showed:
+
+- **What was left in place is not in the installation's values.** Docker
+  (docker-ce 20.10.18 with buildx, from Docker's own package source), Python
+  3.12.3 with its module for environments, the sound server with its player
+  (`pacat`) and the libraries that Qt loads were there before and after. On
+  a host without them `setup.sh` installs Podman, Python, the player and
+  those libraries with apt; what they take and how long was not measured.
+  Two more QEMU packages stayed that the removal did not name (`ovmf`,
+  `virtiofsd`).
+- **The removal by hand named its packages one by one.** The record did not
+  list QEMU, so the 32 packages that `apt-get install` brings for the
+  script's five (`qemu-system-x86`, `qemu-system-arm`, `qemu-utils`,
+  `qemu-user-static`, `binfmt-support`) were given to `apt-get remove` by
+  name, after a trial run showed that it removes those and no other. No
+  `autoremove`: on this host it would take 35 packages that have nothing to
+  do with the emulator. The player's package was not removed either, because
+  apt removes the sound server with it. After the setup the installed
+  packages, their versions and their marks (installed on request, or with
+  another) were the same as before the removal. The record lists the 32
+  now, so `./setup.sh --uninstall` removes them from here on.
+- **Finding, corrected the same day: the setup script took the ARM build
+  emulation for present when it was gone.** It asked Docker's builder for
+  its platforms, and the builder still listed ARM after the emulators had
+  been removed from the kernel, so `./setup.sh --check` named QEMU and Qt as
+  missing and not the emulation. Where the engine runs on the host's own
+  kernel (Docker on Linux, other than Docker Desktop) the script now asks
+  that kernel. The value above is of the corrected script, which installed
+  the emulation.
+- **Most of the installation's time is one slow download.** The package
+  server gave the 58.9 MB of QEMU at 1.2 MB/s, a tenth of what the
+  connection gave the same morning; the 84 MB of Qt came at 10.6 MB/s.
+- **The removal.** `./setup.sh --uninstall --yes` took 0.2 s (the Python
+  environment), `apt-get remove` of the 32 packages 13.9 s. Together with
+  `apt-get clean` they freed 1.71 GB on the volume. pip's kept downloads
+  (335 MB, of other projects' packages too) were moved aside for the
+  measurement and put back after it.
+- **Each build from an emptied engine took no step from the cache** (its
+  log has none marked `CACHED`). Emptied means: the project's images, the
+  untagged images its builds left, the Debian base image and the engine's
+  whole build cache removed; other images of the host's owner stayed (8.5
+  GB), and no build uses them. On Linux the engine keeps its storage in a
+  directory, so removing gives the space back, and one engine served all
+  the builds. The ARM64 image takes eight times as long as the host-native
+  one because its build steps run ARM programs under emulation, among them
+  the compilation of the Flutter application; the ARM32 image has no Flutter
+  application.
+- **The build cache is where the space goes.** With the four targets built
+  once the engine holds 24.6 GB more than without them: 6.4 GB of images
+  (the container image and the three that the VM images are exported from)
+  and 18.9 GB of build cache, by `docker system df`. One target alone took
+  5.1 GB (container image), 9.8 GB (host-native VM image), 10.1 GB (ARM64)
+  and 6.0 GB (ARM32). The VM images themselves are in the repository's
+  `build/vm`, 5.29 GB, beside the installation.
+- **Finding, changed the same day: nothing removed old images and build
+  steps.** Before the measurement, after six days of builds for images
+  0.2.0 to 0.6.0, the engine held 106.7 GB of the project: 40 images, most
+  of them of older versions or without a name, and 73.8 GB of build cache.
+  Removing them freed that on the volume. A build now removes the images of
+  other versions, the images a build of the same version took the tag from,
+  and build steps unused for 48 hours (`./emu build --keep-old` does not).
+  Run on this host with images made for the purpose: one tagged as an older
+  version and one without a name that had the launcher's label went, one
+  without a name and with another label stayed. The values above were taken
+  before that change. `./setup.sh --uninstall` still leaves the images of
+  the current version where the engine was there before the setup.
+- **The runs on the new installation are not results.** They were made to
+  see that the installation as measured performs like the one the results
+  were recorded on, and they are not in `evaluation/results/`. They ran with
+  `--mute`, so that no sound left the host. All 48 ended normally. Of their
+  192 values, 8 are unavailable in both (Vulkan and Flutter on the ARM32
+  target), and the median of 174 is within 10 % of the recorded median,
+  though the recorded runs are of images 0.2.0 to 0.5.0 and these of 0.6.0.
+  Of the ten further apart, five are counts of dropped frames that differ
+  by one to three frames (ARM64 and ARM32 targets). The others: sequential
+  reading in container mode (0.88 of the recorded), synchronous writing on
+  the ARM32 target (1.29), OpenGL ES in the host-native VM (171 against 192
+  frames/s), and the decoding speed of the MPEG-2 stream in the host-native
+  VM (1.13) and of the AVC stream on the ARM64 target (1.14). The ARM
+  targets' totals are lower than the recorded ones, which have three more
+  runs each (the graphics workload with emulated graphics); that does not
+  account for all of the ARM32 target's difference (52.8 against 31.5 min),
+  and why was not looked into.
+- **The checks, measured along.** No requirement asks for their time: all
+  124 checks of `./emu verify` took 63.4 min on the new installation
+  (3804 s) and came out as before the removal: 119 passed, 4 failed (Vulkan
+  and Flutter on the ARM32 target) and 1 is not runnable on this host. The
+  five checks of the host-native VM that had failed in the complete run of
+  2026-11-15, and passed when run again, passed.
 
 ### Windows x86-64
 

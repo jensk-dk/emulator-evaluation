@@ -177,7 +177,7 @@ def cmd_build(args):
         else:
             archs = (native if args.arch == "native" else args.arch,)
         for arch in archs:
-            manifest = image.ensure(mode, container.detect, arch, rebuild=args.rebuild)
+            manifest = image.ensure(mode, container.detect, arch, rebuild=args.rebuild, keep_old=args.keep_old)
             print("emu: %s image for %s is current (definition %s)" % (mode, arch, manifest["definition_sha256"][:12]))
     return 0
 
@@ -369,6 +369,9 @@ def build_parser():
     build.add_argument("--arch", choices=("native", "arm32", "arm64", "x86_64", "all"), default="native",
                        help="VM image architecture (default: native)")
     build.add_argument("--rebuild", action="store_true", help="build even if the image is current")
+    build.add_argument("--keep-old", action="store_true",
+                       help="leave earlier builds' images and unused build steps in the container engine "
+                            "(a build removes them otherwise)")
     build.set_defaults(function=cmd_build)
 
     doctor = commands.add_parser("doctor", help="show the host, its dependencies and the built images")
