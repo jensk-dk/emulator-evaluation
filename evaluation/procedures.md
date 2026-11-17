@@ -472,7 +472,8 @@ is paused on a frame for the capture (not in a measured run).
 What the platform costs on a host, in disk space and in time, is kept in
 [footprint.md](footprint.md), which says what each value is. Those
 definitions are proposals until they are agreed; this is how the values of
-the macOS host were taken on 2026-11-16, and how another host's can be. The
+the macOS host were taken on 2026-11-16 and those of the Windows host on
+2026-11-16 and 17, and how another host's can be. The
 rules for every measurement hold here too: a quiet host, and a value that was
 not measured on the host reads "not measured".
 
@@ -487,20 +488,36 @@ not measured on the host reads "not measured".
   1. Remove the installation: `./setup.sh --uninstall` (`setup.cmd
      -Uninstall`). Then remove the downloads its tools kept, so that the
      installation has to fetch them again (on macOS the folders `Homebrew`,
-     `colima` and `pip` in `~/Library/Caches`).
+     `colima` and `pip` in `~/Library/Caches`; on Windows
+     `%LOCALAPPDATA%\pip\Cache`, and what is left of
+     `~\.local\share\containers`, where Podman keeps the download of its
+     machine image). On a Windows host whose record does not list QEMU and
+     Podman, because it was set up before the record was kept, remove those
+     two as well, or the setup does not install them:
+     `winget uninstall SoftwareFreedomConservancy.QEMU` and
+     `winget uninstall RedHat.Podman`.
   2. Note the used space on the volume (`df -k`).
   3. Run the setup script with `--yes` (`-Yes`) and time it from its start to
      its end. On macOS Homebrew's installer asks for an administrator's
      password: give it beforehand (`sudo -v`, once more after the removal,
      which makes `sudo` forget it) and set `NONINTERACTIVE=1`, and the time
-     has no waiting for a person in it.
+     has no waiting for a person in it. On Windows the installers of QEMU
+     and of Podman each ask for elevation, which cannot be given beforehand:
+     someone has to be at the host to answer at once, and the value says
+     that the two prompts are in it.
   4. Take the size of every place the installation uses (`du -sk`) and the
      used space on the volume again. On macOS the places are `/opt/homebrew`,
      `~/.colima`, `~/.docker`, the three cache folders and `build/host/gui`.
-     The places of a Linux and of a Windows host are not listed yet: neither
-     has been measured.
+     On Windows they are `C:\Program Files\qemu`,
+     `C:\Program Files\RedHat\Podman`, `~\.local\share\containers` (Podman's
+     machine: its disk `ext4.vhdx`, the machine image and the kept download),
+     `%LOCALAPPDATA%\pip\Cache` and `build\host\gui`, each as the sizes of
+     its files added (`Get-ChildItem -Recurse -Force -File | Measure-Object
+     Length -Sum`), and the volume's used space from `Get-PSDrive C`. The
+     places of a Linux host are not listed yet: it has not been measured.
   5. Name what the removal left in place and the installation therefore did
-     not install (on macOS the Xcode Command Line Tools).
+     not install (on macOS the Xcode Command Line Tools; on Windows Python,
+     WSL 2, the Windows Hypervisor Platform and winget).
 
 - **Target, build time.** For each target of the host: empty the container
   engine of every image but the ones the setup script brought, and of its
@@ -522,6 +539,19 @@ not measured on the host reads "not measured".
   The value must come from an engine that was never emptied: where the
   engine keeps its storage in a disk image, as Colima does, that file does
   not shrink when images are removed.
+- **On Windows, a new engine before every build, and room on the volume.**
+  Podman's machine keeps its storage in a disk file that only grows, and a
+  build in an emptied engine does not use the freed space first. So make the
+  machine anew before each timed build (`podman machine rm --force`, then
+  `setup.cmd -Yes`), and have more free on the volume than the 27 to 34 GB
+  of 2026-11-16: with those, the builds of the host-native VM image and of
+  the ARM64 VM image filled the volume at their last step, and all four
+  targets in one engine could not be tried. How much is enough was not
+  found. A machine that a full volume
+  has broken is removed with `wsl --unregister podman-machine-default`
+  followed by `podman machine rm --force`.
 - **Afterwards** run `./emu verify`: the installation that was measured has
   to be one that works. On the macOS host all 124 checks came out as they
-  had before the removal.
+  had before the removal. On the Windows host 122 did; of the other two, one
+  failed once and passed when run again, and one passed that had failed
+  before ([footprint.md](footprint.md#windows-x86-64)).

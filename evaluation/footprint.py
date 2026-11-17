@@ -118,7 +118,7 @@ def _bytes(count):
 def sizes(args):
     sys.path.insert(0, str(ROOT))
     sys.dont_write_bytecode = True
-    from emulator import host, image
+    from emulator import container, host, image
     print("Targets built on %s, image %s:\n" % (host.host_id(), image.definition()["version"]))
     found = False
     for arch in image.ARCHS:
@@ -138,7 +138,12 @@ def sizes(args):
             continue
         found = True
         tag = manifest["image_tag"]
-        cli = host.find_tool("docker") or host.find_tool("podman")
+        # The engine the launcher uses: a host can have a second runtime
+        # installed whose engine does not answer (seen on Windows).
+        try:
+            cli = container.detect(start_engine=False).cli
+        except Exception:
+            cli = host.find_tool("docker") or host.find_tool("podman")
         size = None
         if cli:
             asked = subprocess.run([cli, "image", "ls", "--format", "{{.Size}}", tag], capture_output=True,

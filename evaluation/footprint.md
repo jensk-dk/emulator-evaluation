@@ -7,8 +7,9 @@ evaluation take
 ([requirement](../openspec/specs/performance-reporting/spec.md), task 8.3 of
 the [task list](../openspec/changes/staged-emulator-delivery/tasks.md)).
 
-**The macOS host is measured; of the Linux and Windows hosts only the
-performance evaluation times and one size each.** A value is filled in when a
+**The macOS host is measured, and the Windows host but for three build
+values that its disk had no room for; of the Linux host only the performance
+evaluation times and one size.** A value is filled in when a
 task provides it, with the date and how it was taken. Until then it reads
 "not measured", and the report shows it as unavailable. No value is
 estimated. How the values are taken is in the
@@ -20,8 +21,8 @@ values are converted.
 
 ## What each value is
 
-Proposed, not agreed. The macOS values of 2026-11-16 were taken as written
-here; where taking them made a definition more exact than it was, that is now
+Proposed, not agreed. The macOS values of 2026-11-16 and the Windows values
+of 2026-11-16 and 17 were taken as written here; where taking them made a definition more exact than it was, that is now
 part of it, and still to be agreed.
 
 - **Host installation, disk space.** What the setup script (`setup.sh`,
@@ -81,18 +82,122 @@ and before it what is to be said about that host's values as a whole.
 
 ### Windows x86-64
 
+Installation, targets and builds were measured on 2026-11-16 and 17 on the
+Windows PC (Intel Core i7-10700K, Windows 11 Pro 10.0.26300), after
+`setup.cmd -Uninstall` and, by hand, `winget uninstall` had removed the
+installation of 2026-11-11, with image 0.6.0 and a connection of 91 Mbit/s
+down (one download of 100 MB with `curl`, at 11.3 MB/s, minutes after the
+setup). The volume had 27 to 34 GB free, which was too little for three of
+the build values: they read "not measured" for that, with what was seen
+instead.
+
 | What | Disk space | Time | Taken |
 |---|---|---|---|
-| Host installation | not measured | not measured | |
-| of that: Qt for Python, in `build/host/gui` | 245 MB | not measured | 2026-11-15, `du -sh` (234M, in units of 1024 × 1024 bytes) after `setup.cmd` installed PySide6-Essentials 6.12.0 |
-| Target: container image (x86-64) | not measured | not measured | |
-| Target: VM image, x86-64 (host-native) | not measured | not measured | |
-| Target: VM image, ARM64 | not measured | not measured | |
-| Target: VM image, ARM32 | not measured | not measured | |
-| Performance evaluation: container | | 3.0 min for one run of each workload; 10.9 min for the 16 recorded runs | runs recorded 2026-11-11 to 15 (images 0.2.0 to 0.5.0), added up by `evaluation/footprint.py times` |
-| Performance evaluation: VM, host-native | | 3.2 min for one run of each workload; 11.6 min for the 16 recorded runs | runs recorded 2026-11-11 to 15 (images 0.2.0 to 0.5.0), added up by `evaluation/footprint.py times` |
-| Performance evaluation: VM, ARM64 target | | 15.9 min for one run of each workload; 61.3 min for the 15 recorded runs | runs recorded 2026-11-11 to 15 (images 0.2.0 to 0.5.0), added up by `evaluation/footprint.py times` |
-| Performance evaluation: VM, ARM32 target | | 31.2 min for one run of each workload; 102.2 min for the 15 recorded runs | runs recorded 2026-11-11 to 15 (images 0.2.0 to 0.5.0), added up by `evaluation/footprint.py times` |
+| Host installation | 3.96 GB after `setup.cmd`; with the four targets built once in one engine: not measured (19.4 GB with the engine that the checks and the runs below used, see the notes) | 3.2 min | 2026-11-16, `setup.cmd -Yes`, 189.5 s from its start to its end, two elevation prompts answered by a person included. The space is the places below added (the sizes of their files); the used space on the volume grew by 4.79 GB |
+| of that: QEMU 11.1.0, in `C:\Program Files\qemu` | 1.26 GB | 1.2 min | winget, 69 s by the times of the log's lines: 34 s downloading, 34 s installing, its elevation prompt included |
+| of that: Podman 5.8.10, in `C:\Program Files\RedHat\Podman` | 71 MB | 0.2 min | winget, 14 s (6.5 s of that downloading), its elevation prompt included |
+| of that: the container engine's VM (Podman's machine, on WSL 2), in `~\.local\share\containers` | 2.31 GB new; 17.7 GB with the engine that the checks and the runs below used | 0.9 min | created and started in 46 s, 8 s more to register the ARM emulation that image builds need. New: its disk (`ext4.vhdx`) 1.25 GB, the machine image 0.81 GB, and the download of it that Podman keeps, 249 MB |
+| of that: Qt for Python, in `build/host/gui` | 237 MB | 0.4 min | 23 s: the Python environment 9 s, PySide6-Essentials 6.12.0 14 s |
+| of that: downloads pip keeps, in `%LOCALAPPDATA%\pip\Cache` | 83 MB | | |
+| Target: container image (x86-64) | 1.11 GB | 8.4 min | 2026-11-16, 502 s from an empty engine. Size as `podman image ls` lists it |
+| Target: VM image, x86-64 (host-native) | 1.86 GB | not measured | Two builds from an empty engine filled the volume at their last step and failed, after 633 s and 631 s. Built after the container image in the same engine: 150 s on 2026-11-15 (39 of its steps from the cache). The sizes of its three files in `build/vm/x86_64` added: root file system 1.84 GB, kernel 12 MB, initial RAM disk 10 MB |
+| Target: VM image, ARM64 | 1.95 GB | not measured | The build from an empty engine filled the volume at its last step and failed, after 2332 s. A build of 2026-11-15 in a new engine that held the container image only, without `--rebuild` and with no step from the cache, took 38.1 min (2286 s). The same in `build/vm/arm64`: root file system 1.90 GB, kernel 38 MB, initial RAM disk 10 MB |
+| Target: VM image, ARM32 | 1.49 GB | 20.1 min | 2026-11-16, 1207 s from an empty engine. The same in `build/vm/arm32`: root file system 1.47 GB, kernel 6 MB, initial RAM disk 9 MB |
+| All four targets, one after the other in a new engine | | not measured | the volume has too little free space for it: the build of one target alone took up to 27 GB of it |
+| Performance evaluation: container | | 3.0 min for one run of each workload; 10.9 min for the 16 recorded runs | runs recorded 2026-11-11 to 15 (images 0.2.0 to 0.5.0), added up by `evaluation/footprint.py times`. Run again on 2026-11-17 on the new installation with image 0.6.0, not recorded: 3.0 min, and 9.0 min for 12 runs |
+| Performance evaluation: VM, host-native | | 3.2 min for one run of each workload; 11.6 min for the 16 recorded runs | runs recorded 2026-11-11 to 15 (images 0.2.0 to 0.5.0), added up by `evaluation/footprint.py times`. Run again on 2026-11-17 on the new installation with image 0.6.0, not recorded: 3.2 min, and 9.5 min for 12 runs |
+| Performance evaluation: VM, ARM64 target | | 15.9 min for one run of each workload; 61.3 min for the 15 recorded runs | runs recorded 2026-11-11 to 15 (images 0.2.0 to 0.5.0), added up by `evaluation/footprint.py times`. Run again on 2026-11-17 on the new installation with image 0.6.0, not recorded: 16.0 min, and 48.0 min for 12 runs |
+| Performance evaluation: VM, ARM32 target | | 31.2 min for one run of each workload; 102.2 min for the 15 recorded runs | runs recorded 2026-11-11 to 15 (images 0.2.0 to 0.5.0), added up by `evaluation/footprint.py times`. Run again on 2026-11-17 on the new installation with image 0.6.0, not recorded: 20.9 min, and 62.7 min for 12 runs |
+| Performance evaluation: the four modes, one after the other | | 133.6 min for the 48 runs | 2026-11-17, the runs on the new installation named above: 8017 s from the first launch to the last exit |
+
+What the values leave out, and what taking them showed:
+
+- **What was left in place is not in the installation's values.** Python
+  3.13.1, WSL 2, the Windows Hypervisor Platform and winget were there
+  before and after: `setup.cmd` installs them on a host that lacks them, and
+  its `-Uninstall` removes only what its record lists. That record began
+  after this host was set up, so it did not list QEMU and Podman either;
+  those two were removed with `winget uninstall` by hand, and the setup
+  installed them. Podman came back as 5.8.10, where 5.8.9 had been.
+- **The time has a person in it.** The installers of QEMU and of Podman each
+  ask for elevation, and `-Yes` does not answer that. Both prompts were
+  answered at once; the time they waited is in the 189.5 s and was not
+  taken apart.
+- **The places added are 0.83 GB less than the volume's growth** (3.96
+  against 4.79 GB). What the rest is was not found; WSL and Windows keep
+  files of their own outside the places counted.
+- **Finding: a build needs far more of the volume than its images hold, and
+  the space does not come back.** Podman's machine keeps its storage in a
+  disk file (`ext4.vhdx`) that only grows: removing images and the build
+  cache frees space inside the machine, not on the volume, and a build that
+  follows does not use the freed space first. The container image's build
+  took the file from 1.25 to 11.45 GB, with 4.95 GB of images in the engine
+  afterwards. The host-native VM image's build in the same engine, emptied,
+  took it to 22.6 GB and the volume to 0 bytes free; alone in a new machine
+  it filled the volume again, from 27.5 GB free. The ARM64 build, alone in a
+  new machine with 30.2 GB free, did the same. The ARM32 build took 19.7 GB
+  of the volume. Only removing the machine gives the space back.
+- **Finding: a full volume breaks Podman's machine.** After each of the
+  three failures the machine no longer started and `podman machine rm` could
+  not remove it. `wsl --unregister podman-machine-default` removed its
+  distribution, and a second `podman machine rm --force` Podman's record of
+  it, without which `setup.cmd` fails with `WSL_E_DISTRO_NOT_FOUND`;
+  `setup.cmd -Yes` then made a new machine, in 45 to 66 s (five times).
+- **The targets as they are now were built without kept layers.** To get all
+  four images onto this volume, the ARM64 image, the container image and the
+  host-native VM image were built again with `BUILDAH_LAYERS=false` in the
+  environment, which keeps no intermediate layer and so no build cache.
+  That is not the build the definition names, so these are not the table's
+  values: ARM64 36.1 min (2169 s; the disk file reached 15.6 GB), the
+  container image 6.3 min (379 s; 9.1 GB), and after it in the same engine
+  the host-native VM image 7.6 min (457 s, no step from the cache;
+  16.7 GB). The 19.4 GB and 17.7 GB in the table are of that last engine,
+  which holds the container image and the image that the host-native VM
+  image was exported from (3.25 GB as `podman image ls` lists them). The VM
+  images are in the repository's `build/vm`, 5.29 GB, beside the
+  installation.
+- **The builds of 2026-11-15** that two rows name were made for the checks,
+  not for this measurement, each in a new machine, with Podman 5.8.9 and
+  image 0.6.0: the container image in 405 s, the host-native VM image after
+  it in 150 s, the ARM64 image in 2286 s and the ARM32 image in 1222 s. The
+  engine of the last two held the container image, loaded from a file.
+- **The container image's build reused one step** (its log has one line
+  `Using cache`, for a step the same build had made); the ARM32 build's log
+  has none.
+- **The removal.** `setup.cmd -Uninstall -Yes` took 11.7 s and freed 4.96 GB
+  on the volume: the ARM emulation's registration and image, Podman's
+  machine and the Python environment with Qt. Removing the machine ended
+  with an error (`podman machine rm`, status 125, over a socket file it
+  could not delete); the machine was gone all the same, and the script went
+  on. Left behind and removed by hand: the 249 MB download that Podman
+  keeps of its machine image, and pip's kept downloads (165 MB). QEMU's own
+  uninstaller left four programs and an empty folder in
+  `C:\Program Files\qemu` (6 MB).
+- **The runs on the new installation are not results.** They were made to
+  see that the installation as measured performs like the one the results
+  were recorded on, and they are not in `evaluation/results/`. All 48 ended
+  normally. Of their 192 values, 8 are unavailable in both (Vulkan and
+  Flutter on the ARM32 target), and the median of 164 is within 10 % of the
+  recorded median, though the recorded runs are of images 0.2.0 to 0.5.0
+  and these of 0.6.0. Of the 20 further apart, 18 are on the ARM32 target:
+  all 14 decoding speeds are 1.36 to 1.61 times the recorded ones (image
+  0.3.0), and that workload's run takes 13.7 min where 23.4 min is
+  recorded, which is why one run of each workload takes 20.9 min against
+  31.2; the frames dropped in the Wayland playback of the three streams are
+  more (95, 77 and 75 of 125, against 74, 68 and 68); and the web page
+  renders at 0.07 frames/s against 0.05. Why the ARM32 target decodes
+  faster now was not looked into. The other two are sequential writing, in
+  container mode (0.70 of the recorded) and on the ARM64 target (0.87).
+- **The checks, measured along.** No requirement asks for their time: all
+  124 checks of `./emu verify` took 116.6 min on the new installation
+  (6997 s): 116 passed, 6 failed and 2 are not runnable on this host, the
+  numbers from before the removal. Two checks came out differently, though.
+  The web page check on the ARM32 target failed, with a black capture; run
+  again twice, it passed both times, as it had before. The video on demand
+  check on the ARM64 target passed, and twice more after that, where it had
+  failed in two runs out of two on 2026-11-15; its image was built anew in
+  between, from the same definition. What made the difference is not known;
+  it is with the known issues of the results page.
 
 ### macOS ARM64
 

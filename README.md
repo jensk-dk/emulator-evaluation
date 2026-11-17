@@ -232,9 +232,26 @@ How far this has been run:
   Running it showed a fault, now corrected: where there was no answer to the
   question (`setup.cmd -Uninstall < NUL`), the script went on as if the
   answer were yes. No answer is a no now, also for the installation.
-  Not run on Windows: removing a winget package and removing the Podman
-  machine. Those passed only with stand-ins for winget, Podman and WSL, in
-  PowerShell 7 on Linux.
+  Not run on Windows: removing a winget package. That passed only with
+  stand-ins for winget, Podman and WSL, in PowerShell 7 on Linux.
+- Windows: on 2026-11-16 the setup was removed from that host and installed
+  again, for the [disk space and time values](evaluation/footprint.md).
+  `setup.cmd -Uninstall -Yes` removed what the record had, in 11.7 s: the
+  ARM build emulation with its image, the Podman machine and the Python
+  environment with Qt. `podman machine rm` ended with an error there (status
+  125, over a socket file it could not delete); the machine was gone all the
+  same, and the script went on and deleted the record. The record did not
+  list QEMU and Podman, which were on the host before it was kept: those
+  were removed by hand (`winget uninstall`). Left behind: the download that
+  Podman keeps of its machine image (249 MB in
+  `~\.local\share\containers`), and four programs in
+  `C:\Program Files\qemu` that QEMU's own uninstaller leaves. `setup.cmd
+  -Yes` then installed everything again in 3.2 min, with two elevation
+  prompts to answer, and its record lists QEMU and Podman now. Of the 124
+  checks, 122 came out as before the removal. The web page check on the
+  ARM32 target failed once and passed in two runs after it; the video on
+  demand check on the ARM64 target, which had failed before, passed in
+  three runs out of three.
 
 ### Linux
 
@@ -982,8 +999,9 @@ exception above).
 - `evaluation/verification/`: what `./emu verify` has confirmed, per host.
 - [evaluation/footprint.md](evaluation/footprint.md): the disk space of the
   host installation and of each target, and the install, build and run times
-  that the report has to state. The macOS host is measured; of the Linux and
-  Windows hosts only the run times and one size each.
+  that the report has to state. The macOS host is measured, and the Windows
+  host but for three build values that its disk had no room for; of the
+  Linux host only the run times and one size.
   [evaluation/footprint.py](evaluation/footprint.py) adds up the run times
   from the recorded results and prints the sizes of a host's targets
   ([procedures](evaluation/procedures.md#disk-space-and-times)).
@@ -1071,7 +1089,7 @@ a newly installed Chrome that had never been opened stopped at once with
 "Failed to get the path for 1001"; after it had been opened once, the command
 worked.
 
-The snapshot in the repository was made on the macOS host on 2026-11-16,
+The snapshot in the repository was made on the Windows host on 2026-11-17,
 with the CPU, graphics, media and browser results of all three hosts.
 Windows' MSE playback values in it
 are those measured again that day with version 1.1.0 of the workload; the

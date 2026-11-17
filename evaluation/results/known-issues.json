@@ -125,7 +125,7 @@
     {
       "kind": "fails", "area": "STB simulator",
       "title": "Windows: video on demand fails in the ARM VMs when the player changes representation",
-      "detail": "In two runs out of two each, the test title failed where the player leaves its smallest representation (426x240). ARM64: the browser's renderer process ends with 'video meta uses 432x240 instead of 426x240' from the GStreamer libav plugin; the simulator starts the browser again. ARM32: the title was refused once ('Unable to allocate memory'), and once the picture stayed at the smallest size while the player reported 1280x720. The title that stays at one representation played each time; the films were not reached. Container mode and the host-native VM pass. The cause is not known.",
+      "detail": "In two runs out of two each, the test title failed where the player leaves its smallest representation (426x240). ARM64: the browser's renderer process ends with 'video meta uses 432x240 instead of 426x240' from the GStreamer libav plugin; the simulator starts the browser again. ARM32: the title was refused once ('Unable to allocate memory'), and once the picture stayed at the smallest size while the player reported 1280x720. The title that stays at one representation played each time; the films were not reached. Container mode and the host-native VM pass. The cause is not known. On 2026-11-17, after the installation had been removed and made anew and the ARM64 image built again from the same definition (0.6.0), the ARM64 check passed in three runs out of three; what made the difference is not known. The ARM32 check failed in its one run that day, in the title that stays at one representation, the renderer process ending with the message quoted for ARM64.",
       "hosts": ["windows-x86_64"], "modes": ["vm-arm64", "vm-arm32"], "task": "7.9"
     },
     {
@@ -149,7 +149,7 @@
     {
       "kind": "missing", "area": "Qualification",
       "title": "Full matrix run, comparison report, and disk space and time measurements",
-      "detail": "The complete host matrix has not been run and the Slidev comparison is not written. Of the disk space and time values in evaluation/footprint.md the macOS host's are measured; the Linux and Windows hosts have their performance evaluation times and one size each.",
+      "detail": "The complete host matrix has not been run and the Slidev comparison is not written. Of the disk space and time values in evaluation/footprint.md the macOS host's are measured, and the Windows host's but for three: the build times of the host-native and the ARM64 VM image from an empty engine, and of all four targets in one engine, for which its disk had too little free space (27 to 34 GB). The Linux host has its performance evaluation times and one size.",
       "hosts": "all", "modes": "all", "task": "8.1 to 8.3"
     },
     {
