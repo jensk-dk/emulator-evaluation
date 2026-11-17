@@ -13,13 +13,22 @@ context: |
   The emulator must provide container-based execution for quick development and
   CI, and a VM-based mode that emulates the target OS kernel and drivers. Both
   modes must support emulated target-OS drivers, mocked drivers, and host-side
-  processes that reroute driver functionality to the host OS.
+  processes that reroute driver functionality to the host OS. A driver feature
+  can also be left out with a setting of the launcher.
   Container mode must provide a Dockerfile or equivalent build definition that
   constructs the simulated target OS environment, including its services,
   libraries, and other required runtime components.
+  After it has built a target image, the launcher must remove from the
+  container engine the project's target images of earlier builds, and the
+  build steps that no build has used for 48 hours; the engine keeps build
+  steps for everything it builds, so such steps of other projects go as well.
+  It says what it removed, and its build command has an option that leaves
+  all of it in place.
   The VM-based runtime must support host-native machine-code execution and
   ARM32 and ARM64 guest architectures for target CPU simulation. Host-native
-  examples include x86 on Windows/Linux and x86 or ARM on macOS.
+  examples include x86 on Windows/Linux and x86 or ARM on macOS. A simulated
+  x86-64 guest may be offered beside them as a diagnostic; it is not part of
+  the evaluation matrix.
   The emulator must support Wayland, Flutter, OpenGL ES, and Vulkan graphics.
   Graphics functionality may be emulated or mapped to host OS graphics
   acceleration; prefer host acceleration when it is available and compatible.
@@ -27,6 +36,17 @@ context: |
   full screen, and provide a hotkey to switch between those display modes.
   Windowed mode must support display scaling and include a compact icon toolbar
   with audio mute and 1:1 pixel-density controls.
+  The toolbar also has controls for full screen and, while remote control
+  input is on, for showing or hiding the on-screen remote control; it is not
+  shown in full screen. While the emulator's window has the input focus,
+  hotkeys do what the toolbar offers: Ctrl+Alt+F and F11 switch between window
+  and full screen, Ctrl+Alt+M mutes and unmutes, Ctrl+Alt+1 restores 1:1, and
+  Ctrl+Alt+R shows or hides the on-screen remote control, with the Command key
+  in place of Control on macOS. A hotkey is not delivered to the target.
+  The launcher must accept a setting that names a directory for captures of
+  the emulator's display: a picture is saved each time a workload reports a
+  finished frame, in container mode and in VM mode. Where a display cannot be
+  captured, or a capture holds only a part of it, the emulator says so.
   The emulator must accept the key input of a remote control in three
   selectable modes: host keyboard keys mapped to remote control keys while the
   emulator window has the input focus (the arrow keys for the D-pad, Enter for
@@ -34,7 +54,9 @@ context: |
   remote control in a window of its own, a picture of a TV remote control whose
   buttons are clicked with the mouse, with the host key mapping still applying
   when the emulator window is focused; and RedRat IR input. Every mode must
-  support all HbbTV input keys.
+  support all HbbTV input keys. The target OS image must provide a workload
+  that shows a picture and reports each remote control key that arrives, with
+  its key code, its symbol, and whether it was pressed or released.
   The target OS image must provide an STB simulator workload: it starts a
   set-top-box-like user interface that simulates a device with a channel list,
   video playback, and an app launcher. The app launcher includes a simulated
@@ -44,11 +66,33 @@ context: |
   DASH streams on the internet: Big Buck Bunny, Elephants Dream, and similar
   open-source content. The user interface takes its keys from the remote control input
   modes, and the performance workloads can be launched from it as well.
+  A channel can also be selected by its number, and the channels stepped
+  through with Up and Down while one plays. Beside the films the VOD
+  application offers a test title that is kept in the image, in three sizes,
+  once as it is and once over a path limited to its smallest size; its picture
+  shows the size that plays. The home screen has an entry that ends the
+  simulator, and the simulator reports on the launcher's output what its user
+  interface does.
+  The project must provide a means to time the STB simulator from the host, in
+  one emulator mode at a time: its start, its answer to a key, a channel
+  change, the pictures of a channel that reach the window each second, and the
+  start of a VOD title; and to compare what the performance workloads report
+  when started from its user interface with what they report when the launcher
+  runs them under the same conditions. These values are findings about the
+  simulator: they are kept apart from the recorded performance results and
+  are not presented as results of the performance evaluation.
   The emulator must support MPEG-2 Transport Stream (MP2TS) and MP4 containers,
   MSE-style fragment injection, MPEG-2/AVC/HEVC video, and MP2/AC-3/AAC/HE-AAC
   audio. It
   must render video through the supported graphics technologies and route audio
   through the host OS audio path with runtime mute support.
+  The launcher must accept a setting that starts the emulator muted, and offer
+  a command that mutes, unmutes, or toggles the audio output of the running
+  emulators whose audio is routed through the host, or of one named run, and
+  that reports its state. A muted target plays on unchanged. Emulator options
+  choose the host output device and take the sound in without playing it; on
+  macOS and Windows also the volume, and a file that gets the samples the
+  host's audio output takes.
   Performance evaluation must cover every supported host OS, host CPU
   architecture, and emulator mode combination, including each VM guest CPU
   architecture. Measure CPU, memory allocation and bandwidth, I/O, graphics,
@@ -60,6 +104,26 @@ context: |
   the time that installing, building each target, and running the performance
   evaluation took. These are actual measurements as well; a value that has not
   been measured is identified as unavailable.
+  The recorded results must also be shown on a results page, which a command
+  of the launcher serves on the host and opens in the host's browser. The page
+  reads the result records each time it loads. It describes the hosts as the
+  records describe them and shows, for each test, every host and emulator mode
+  combination with the median of its runs and the single runs; the user
+  chooses the hosts, and whether values are relative to container mode on the
+  same host. An unavailable result is shown as unavailable, and a record that
+  cannot be read is reported, not left out silently. The page also shows, per
+  feature, host and emulator mode, whether the verification checks verified
+  it, found it failing, or could not run it, with the known issues and limits
+  below; and the disk space and time values of every evaluated host. The page
+  can be printed to a PDF document, and a PDF snapshot of it is kept that
+  shows every result record there was when it was made and says how many.
+  The launcher must offer a command that runs verification checks on the
+  host. Each check goes by what it observes and ends as passed, failed, or
+  could not be run on this host; one that could not be run is counted as
+  neither of the other two. The command runs every check or the named ones,
+  lists the checks, and reports failure when one failed. It keeps a record
+  per host of each check's last outcome, with what the check found, when it
+  ran, and the source revision and image definition it ran against.
   The project must provide or acquire a Linux client OS image for VM simulation,
   with sufficient workloads and functionality to run the specified functional
   and performance evaluations. The client OS must include WPE WebKit and support
@@ -72,9 +136,29 @@ context: |
   in which the user chooses the mode (container or VM), the VM guest CPU mode
   (host-native, ARM32, or ARM64), the workload, the window mode, the options,
   and every other setting the launcher accepts as a parameter, and starts the
-  emulator. The window must be available on Linux, macOS, and Windows.
+  emulator. The window must be available on Linux, macOS, and Windows. It
+  shows the command line that its settings make.
+  The launcher must offer a command that shows what it finds on the host,
+  without starting the emulator: the host's hardware and operating system,
+  the VM emulators, the accelerator, the container runtime, whether host
+  graphics acceleration is available in each mode and why not, how the
+  target's sound is played, whether its windows can be shown, and the state
+  of each target image. It names each missing host dependency, points to the
+  setup script, and reports failure.
+  The launcher must also offer a command that lists the evaluation workloads
+  and one that shows the evaluation matrix. On request the first checks that
+  the workloads cover every required performance area, and the second that
+  the matrix is complete; each reports failure when not.
   A setup script is required for each supported host OS: Linux, macOS, and
   Windows. The script must check for and install any host dependencies.
+  It asks before it installs, unless told not to, and offers a check that
+  installs nothing and reports failure when a required dependency is missing.
+  Optional extras, on Linux the VM emulator's modules for host graphics
+  acceleration and a program that plays the target's sound, are installed with
+  the dependencies where the package manager offers them and are not reported
+  as missing dependencies. On a Linux host the script uses the host's package
+  manager and supports apt, dnf, zypper, and pacman; that does not add
+  distributions to the hosts the emulator must run on.
   The setup script must keep a record of what it installs on a host, and offer
   an uninstall option that removes that again and nothing the script did not
   install. Where the setup script installed a package manager itself,
@@ -84,5 +168,17 @@ context: |
   script installs it only when asked to with an option. On macOS (ARM64) that
   option installs a VM emulator build that maps OpenGL ES in VM mode to host
   graphics acceleration.
+  The simulated ARM64 and ARM32 guest CPU modes are slow and less complete, so
+  what only they need on a host is not a host dependency either: the ARM
+  system emulators, where they are separate from the host's own, and the
+  emulation of ARM programs in the container engine that building their
+  target images needs. The setup script installs that only when asked to with
+  an option, and otherwise neither checks for it nor reports it as missing.
+  The setup script builds no target image. The launcher builds an ARM target
+  image only when that mode is asked for by name; on a host that is not set
+  up for it, it starts no build and no VM, says so and names the option, and
+  a verification check for such a mode ends as could not be run. AGENTS.md
+  directs automated agents to set up with the option and to build and verify
+  the simulated ARM targets all the same, so that they stay checked.
   Keep proposals and evaluation findings distinct from agreed requirements, and
   express requirements as observable behavior.

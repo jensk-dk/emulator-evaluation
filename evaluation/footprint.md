@@ -24,6 +24,14 @@ Proposed, not agreed. The macOS values of 2026-11-16, the Windows values
 of 2026-11-16 and 17 and the Linux values of 2026-11-17 were taken as written here; where taking them made a definition more exact than it was, that is now
 part of it, and still to be agreed.
 
+Since 2026-11-17 the setup scripts set a host up for the simulated ARM64 and
+ARM32 targets only when asked to (`./setup.sh --arm-targets`,
+`setup.cmd -ArmTargets`). Every installation value below was taken before
+that, with a setup script that installed what those targets need without
+being asked: they are the values of a setup with the option. A setup without
+it has not been measured on any host. The sizes and build times of the
+targets are not affected.
+
 - **Host installation, disk space.** What the setup script (`setup.sh`,
   `setup.ps1`) installed on the host, as its record lists it, together with
   what that software keeps for the project: the container runtime's own
@@ -78,7 +86,7 @@ place.
 
 | What | Disk space | Time | Taken |
 |---|---|---|---|
-| Host installation | 1.22 GB after `./setup.sh`; 25.9 GB with the four targets built once | 1.4 min | 2026-11-17, `./setup.sh --yes`, 82.5 s from its start to its end, with `sudo` given beforehand. The space is the places below added (`du -sk`); the used space on the volume grew by 1.22 GB (`df -k`) |
+| Host installation | 1.22 GB after `./setup.sh`; 25.9 GB with the four targets built once | 1.4 min | 2026-11-17, `./setup.sh --yes`, 82.5 s from its start to its end, with `sudo` given beforehand. The space is the places below added (`du -sk`); the used space on the volume grew by 1.22 GB (`df -k`). Taken with the setup script as it was until 2026-11-17, which also installed what the simulated ARM targets need; that takes `--arm-targets` (`-ArmTargets`) now, and a setup without it is not measured |
 | of that: QEMU 8.2.2 and the ARM build emulation, 32 packages of Ubuntu | 0.80 GB | 1.2 min | `apt-get update` 4.5 s, `apt-get install` 64.6 s, 48 s of that downloading 58.9 MB (at 1.2 MB/s from the package server). The sizes of the packages' files added: the system emulators with their firmware 630 MB, the user-mode emulators that image builds run ARM programs with 137 MB, libraries 32 MB |
 | of that: Qt for Python, in `build/host/gui` | 274 MB | 0.2 min | 12 s: the Python environment 2.6 s, PySide6-Essentials 6.12.0 9.4 s |
 | of that: downloads the tools keep | 144 MB | | pip 85 MB in `~/.cache/pip`, apt 59 MB in `/var/cache/apt/archives` |
@@ -197,7 +205,7 @@ instead.
 
 | What | Disk space | Time | Taken |
 |---|---|---|---|
-| Host installation | 3.96 GB after `setup.cmd`; with the four targets built once in one engine: not measured (19.4 GB with the engine that the checks and the runs below used, see the notes) | 3.2 min | 2026-11-16, `setup.cmd -Yes`, 189.5 s from its start to its end, two elevation prompts answered by a person included. The space is the places below added (the sizes of their files); the used space on the volume grew by 4.79 GB |
+| Host installation | 3.96 GB after `setup.cmd`; with the four targets built once in one engine: not measured (19.4 GB with the engine that the checks and the runs below used, see the notes) | 3.2 min | 2026-11-16, `setup.cmd -Yes`, 189.5 s from its start to its end, two elevation prompts answered by a person included. The space is the places below added (the sizes of their files); the used space on the volume grew by 4.79 GB. Taken with the setup script as it was until 2026-11-17, which also installed what the simulated ARM targets need; that takes `--arm-targets` (`-ArmTargets`) now, and a setup without it is not measured |
 | of that: QEMU 11.1.0, in `C:\Program Files\qemu` | 1.26 GB | 1.2 min | winget, 69 s by the times of the log's lines: 34 s downloading, 34 s installing, its elevation prompt included |
 | of that: Podman 5.8.10, in `C:\Program Files\RedHat\Podman` | 71 MB | 0.2 min | winget, 14 s (6.5 s of that downloading), its elevation prompt included |
 | of that: the container engine's VM (Podman's machine, on WSL 2), in `~\.local\share\containers` | 2.31 GB new; 17.7 GB with the engine that the checks and the runs below used | 0.9 min | created and started in 46 s, 8 s more to register the ARM emulation that image builds need. New: its disk (`ext4.vhdx`) 1.25 GB, the machine image 0.81 GB, and the download of it that Podman keeps, 249 MB |
@@ -314,7 +322,7 @@ afternoon).
 
 | What | Disk space | Time | Taken |
 |---|---|---|---|
-| Host installation | 3.8 GB after `./setup.sh`; 25.4 GB with the three targets built once | 4.4 min | 2026-11-16, `./setup.sh --yes`, 264 s from its start to its end. The space is the places below added (`du -sk`); the used space on the volume grew by 3.84 GB (`df -k`) |
+| Host installation | 3.8 GB after `./setup.sh`; 25.4 GB with the three targets built once | 4.4 min | 2026-11-16, `./setup.sh --yes`, 264 s from its start to its end. The space is the places below added (`du -sk`); the used space on the volume grew by 3.84 GB (`df -k`). Taken with the setup script as it was until 2026-11-17, which also installed what the simulated ARM targets need; that takes `--arm-targets` (`-ArmTargets`) now, and a setup without it is not measured |
 | of that: Homebrew with QEMU 11.1.3, Colima 0.10.3, the Docker client 29.10.0 and buildx 0.39.0, in `/opt/homebrew` | 1.40 GB | 2.4 min | Homebrew itself 31 s, then its 34 packages 112 s (85 s of that downloading), by the times of the log's lines |
 | of that: the container engine's VM (Colima), in `~/.colima` | 1.30 GB new; 22.9 GB with the three targets built once | 1.3 min | created and started in 75 s (54 s of that downloading its disk image), 5 s more to register the ARM32 emulation that image builds need |
 | of that: Qt for Python, in `build/host/gui` | 345 MB | 0.5 min | 32 s, PySide6-Essentials 6.10.3 |
@@ -324,6 +332,7 @@ afternoon).
 | Target: VM image, ARM32 | 1.49 GB | 4.8 min | 290 s from an empty engine. The same in `build/vm/arm32`: root file system 1.47 GB, kernel 6 MB, initial RAM disk 9 MB |
 | All three targets, one after the other in a new engine | | 9.1 min | the container image 215 s, then the ARM64 VM image 53 s (30 of its steps from the cache), then the ARM32 VM image 277 s (5 from the cache) |
 | Option: the experimental QEMU (`./setup.sh --experimental-qemu`) | 2.87 GB more: 0.64 GB in `/opt/homebrew`, 2.22 GB of downloads that Homebrew keeps in `~/Library/Caches/Homebrew` | 6.8 min | 2026-11-16, one run of 405 s, after the build, the 16 packages that came with it, its tap and all of Homebrew's downloads had been removed. Of that Homebrew gives as build time: `gn` 16 s, `libangle` 66 s, `libepoxy-angle` 6 s, `virglrenderer` 17 s, `qemu-virgl` 61 s; most of the rest is fetching sources. A first build that day, in three runs with two commits fetched by hand, took 7.0 min in all and 2.83 GB |
+| Option: the x86-64 VM image for the diagnostic guest (`./emu build --mode vm --arch x86_64`); not a target of the matrix | 1.86 GB in `build/vm/x86_64`, and 11.4 GB more in the container engine's disk on the Mac | 6.7 min | 2026-11-17, one build of 399 s for another CPU architecture than the host's, in the engine that held the three targets, not in an emptied one; 5 of its steps from the cache. Root file system 1.84 GB, kernel 12 MB, initial RAM disk 10 MB. The engine's disk file grew from 23.96 GB to 35.40 GB (`du -sk`), its build cache from 16.7 GB to 26.6 GB (`docker system df`) |
 | Performance evaluation: container | | 2.6 min for one run of each workload; 7.8 min for the 12 recorded runs | runs recorded 2026-11-11 to 15 (images 0.1.0 to 0.4.0), added up by `evaluation/footprint.py times`. Run again on 2026-11-16 on the new installation with image 0.6.0, not recorded: 2.6 min and 7.9 min |
 | Performance evaluation: VM, host-native | | 2.6 min for one run of each workload; 7.9 min for the 12 recorded runs | runs recorded 2026-11-11 to 15 (images 0.1.0 to 0.4.0), added up by `evaluation/footprint.py times`. Run again on 2026-11-16 on the new installation with image 0.6.0, not recorded: 2.6 min and 7.9 min |
 | Performance evaluation: VM, ARM64 target | | 5.5 min for one run of each workload; 16.5 min for the 12 recorded runs | runs recorded 2026-11-11 to 15 (images 0.1.0 to 0.4.0), added up by `evaluation/footprint.py times`. Run again on 2026-11-16 on the new installation with image 0.6.0, not recorded: 5.6 min and 16.9 min |

@@ -44,6 +44,107 @@ The setup script MUST check for every host dependency the emulator requires and 
 - WHEN the setup script is run on a host where every required dependency is present
 - THEN it completes without installing anything
 
+### Requirement: Ask before installing, and check without installing
+
+Before it installs anything, the setup script MUST say what is missing and ask for confirmation, unless the developer has told it not to ask. Without confirmation it MUST install nothing, and MUST report failure when a required host dependency is missing. The setup script MUST also offer a way to check only: it then installs nothing, names what is missing, and reports failure when a required host dependency is missing.
+
+#### Scenario: Ask before installing
+
+- WHEN the setup script finds a required host dependency missing and was not told not to ask
+- THEN it names what is missing and asks for confirmation before it installs anything
+
+#### Scenario: Confirmation is not given
+
+- WHEN a required host dependency is missing and the developer does not confirm
+- THEN the setup script installs nothing and reports failure
+
+#### Scenario: Install without asking
+
+- WHEN the developer has told the setup script not to ask
+- THEN it installs what is missing without asking
+
+#### Scenario: Check only, with a dependency missing
+
+- WHEN the setup script is asked to check only and a required host dependency is missing
+- THEN it names that dependency, installs nothing, and reports failure
+
+#### Scenario: Check only, with every dependency present
+
+- WHEN the setup script is asked to check only and every required host dependency is present
+- THEN it installs nothing and reports success
+
+### Requirement: Install optional extras without requiring them
+
+An optional extra adds to what the emulator does on a host and is not needed to run it. On a Linux host the optional extras are the VM emulator's modules for host graphics acceleration, without which graphics are emulated in VM mode, and a program that plays the target's sound, without which the sound is not heard on the host. The setup script MUST report a missing optional extra as optional and MUST NOT report it as a missing host dependency: a check finds every host dependency present when only optional extras are missing. When it installs, the setup script MUST install the optional extras as well, where the host's package manager offers them, and MUST record them like everything else it installs. When an optional extra cannot be installed, the setup script MUST say what the host then goes without.
+
+#### Scenario: Only an optional extra is missing
+
+- WHEN the setup script checks a host on which only optional extras are missing
+- THEN it names them as optional and reports that every host dependency is present
+
+#### Scenario: Install an optional extra
+
+- WHEN the setup script installs on a host where an optional extra is missing and the package manager offers it
+- THEN it installs that extra and its record names it
+
+#### Scenario: An optional extra cannot be installed
+
+- WHEN an optional extra cannot be installed
+- THEN the setup script says what the host goes without
+
+### Requirement: Use the package manager of the Linux host
+
+On a Linux host the setup script MUST install host dependencies with the host's package manager, and MUST support apt, dnf, zypper, and pacman, for installing and for the uninstall option alike. On a Linux host that has none of these it MUST name the host dependencies that the developer has to install, and MUST report failure. Which Linux distributions the emulator has to run on is defined by the host platform support specification, not by this requirement.
+
+#### Scenario: Install with the host's package manager
+
+- WHEN the setup script finds a host dependency missing on a Linux host that has apt, dnf, zypper, or pacman
+- THEN it installs that dependency with that package manager
+
+#### Scenario: Uninstall with the host's package manager
+
+- WHEN the uninstall option is given on such a host
+- THEN the setup script removes the packages its record names with that package manager
+
+#### Scenario: No supported package manager
+
+- WHEN the setup script finds host dependencies missing on a Linux host that has none of these package managers
+- THEN it names the host dependencies to install and reports failure
+
+### Requirement: Set up the simulated ARM targets only on request
+
+The ARM64 and ARM32 guest CPU modes run on a simulated CPU, which is slow, and not every graphics technology runs in them. What only these two modes need on a host is therefore not a host dependency: the system emulators for ARM guests, where they are separate from the one for the host's own CPU architecture, and the emulation of ARM programs in the container engine, which building the ARM target images needs. The setup script MUST install this only when the developer asks for it with an option of the script. Without that option it MUST NOT check for it, MUST NOT install it, and MUST NOT report it as a missing host dependency; it MUST say that the simulated ARM targets are not set up by default and name the option. With the option it MUST check for it, install what is missing of it, record what it installs like everything else, and report failure when something of it is still missing afterwards. The setup script MUST NOT build a target image, with or without the option.
+
+#### Scenario: Run setup without the option
+
+- WHEN the setup script is run without the option for the simulated ARM targets
+- THEN it installs nothing that only those targets need, does not report any of it as missing, and names the option
+
+#### Scenario: Run setup with the option
+
+- WHEN the setup script is run with the option on a host that lacks what the simulated ARM targets need
+- THEN it installs that as well, and its record names what it installed
+
+#### Scenario: Check with the option
+
+- WHEN the setup script is asked to check only, with the option, on a host that lacks what the simulated ARM targets need
+- THEN it names what is missing of it, installs nothing, and reports failure
+
+#### Scenario: The host has it already
+
+- WHEN the setup script is run without the option on a host that has what the simulated ARM targets need
+- THEN it leaves that in place
+
+#### Scenario: Something for the ARM targets cannot be installed
+
+- WHEN the option is given and something that the simulated ARM targets need cannot be installed
+- THEN the setup script reports the failure
+
+#### Scenario: Uninstall what was installed for the ARM targets
+
+- WHEN the uninstall option is given on a host where the setup script installed something for the simulated ARM targets
+- THEN it lists and removes that with everything else its record names
+
 ### Requirement: Install experimental host software only on request
 
 Experimental host software adds a capability to the emulator on a host and is not a host dependency. The setup script MUST install experimental host software only when the developer asks for it with an option of the script, and MUST NOT report it as a missing host dependency. On a macOS host with an ARM64 CPU, the setup script MUST offer such an option for a build of the VM emulator that maps OpenGL ES graphics in VM mode to host OS graphics acceleration.

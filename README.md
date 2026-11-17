@@ -40,6 +40,7 @@ graphics acceleration, which the Linux host has in VM mode. The task list and
 ## Quick start
 
     ./setup.sh              # Linux and macOS: check and install host dependencies
+    ./setup.sh --arm-targets   # the same, and what the simulated ARM64 and ARM32 targets need
     ./emu                   # a window with the settings below, and a Start button
     ./emu run               # interactive prompt on the target OS, container mode
     ./emu run --mode vm     # the same in a host-native VM
@@ -50,9 +51,9 @@ graphics acceleration, which the Linux host has in VM mode. The task list and
     ./emu run --workload stb-simulator --remote-control window        # a set-top box: channels, apps, video on demand
     ./emu audio mute                                                  # from another terminal, while it plays
 
-On Windows use `setup.cmd` and `emu.cmd`. (`setup.cmd` runs `setup.ps1`
-where the PowerShell execution policy does not allow scripts, which is the
-default.)
+On Windows use `setup.cmd` and `emu.cmd`, and `setup.cmd -ArmTargets`.
+(`setup.cmd` runs `setup.ps1` where the PowerShell execution policy does not
+allow scripts, which is the default.)
 
 The first run builds the target OS image, which downloads Debian packages and
 takes a few minutes. Later runs start in seconds.
@@ -61,16 +62,19 @@ takes a few minutes. Later runs start in seconds.
 
 `setup.sh` (Linux, macOS) and `setup.ps1` (Windows) check for every host
 dependency and install what is missing. `--check` / `-Check` only reports.
+`--arm-targets` / `-ArmTargets` also sets up the simulated ARM targets (see
+[The simulated ARM targets](#the-simulated-arm-targets)).
 `--uninstall` / `-Uninstall` removes what they installed (see
-[Removing what setup installed](#removing-what-setup-installed)).
+[Removing what setup installed](#removing-what-setup-installed)). The setup
+scripts build no target image: the launcher builds an image when it is first
+needed.
 
 | Dependency | Used for | macOS | Linux | Windows |
 |---|---|---|---|---|
 | Python 3.9+ | the launcher | Xcode Command Line Tools | system package | winget |
-| QEMU system emulators | VM mode | Homebrew `qemu` | system package | winget |
+| QEMU system emulator for the host's own CPU | VM mode | Homebrew `qemu` | system package | winget |
 | Hardware virtualization | host-native VM mode | Hypervisor.framework | KVM | Windows Hypervisor Platform |
 | Container runtime | container mode, image builds | Colima + Docker CLI (Homebrew) | Podman | Podman |
-| Foreign-architecture emulation | building ARM target images | registered in the engine VM | `qemu-user-static` | registered in the engine VM |
 | Qt for Python (`PySide6-Essentials`) | the launcher's windows: display window, on-screen remote control, settings window | pip, into a Python environment of the project's own (`build/host/gui`) | the same; the libraries Qt loads come as system packages | pip, into `build\host\gui` |
 | Audio player (optional) | playing the target's sound on the host | built by the launcher with the Command Line Tools' compiler | `pacat`, `pw-cat` or `aplay`; system package | the launcher's own, run by Python; nothing to install |
 | QEMU OpenGL modules (optional) | mapping VM graphics to the host GPU | not in Homebrew's QEMU; an experimental build has them, installed only with `./setup.sh --experimental-qemu` (see [Experimental: host graphics on macOS](#experimental-host-graphics-on-macos)) | system package | in winget's QEMU; used when the display is in a window (see [Display and graphics](#display-and-graphics)) |
@@ -80,9 +84,66 @@ installed, Docker is used when its engine answers. To choose, set the
 environment variable `EMU_CONTAINER_RUNTIME` to `podman` or `docker`; the
 launcher and `setup.ps1` read it.
 
-The launcher starts a stopped container engine itself. On macOS, restarting
-Colima drops the ARM32 build emulation; `./setup.sh` restores it, and it is
-only needed to rebuild the ARM32 image.
+The launcher starts a stopped container engine itself.
+
+### The simulated ARM targets
+
+The ARM64 and ARM32 guest CPU modes run on a simulated CPU. That is slow
+(on the three hosts the browser drew its test page at 0.05 to 2.8 frames a
+second there, against 26 to 61 in a host-native VM), and Vulkan and Flutter
+do not run on the ARM32 target. So a host is not set up for them
+by default. `./setup.sh --arm-targets` (`setup.cmd -ArmTargets`) checks for
+what only they need and installs what is missing of it:
+
+| Only with the option | Used for | macOS | Linux | Windows |
+|---|---|---|---|---|
+| QEMU's ARM system emulators | VM mode with an ARM64 or ARM32 guest | in Homebrew's `qemu`, which is one package | system package | in winget's QEMU, which is one package |
+| ARM build emulation (binfmt) | building the ARM target images | registered in the engine VM | `qemu-user-static` | registered in the engine VM |
+
+Without the option the setup scripts neither check for these nor report
+them as missing; they say that the simulated ARM targets are not set up by
+default, and name the option. What the option installs is in the record
+like everything else, and `--uninstall` removes it.
+
+On a host that is not set up for them, the launcher starts no build and no
+VM for such a target. `./emu run --mode vm --arch arm32`, a build of that
+image and `./emu verify` say that the target is not set up and name the
+option; the checks for it end as "unavailable". `./emu doctor` says for each
+of the two whether it is set up, and does not count it as a missing
+dependency. Container mode and the host-native VM need none of this.
+
+On an ARM64 host, such as the macOS host, the ARM64 target runs on the
+emulator and the image of the host's own CPU, so only the ARM32 target needs
+the option there, for the emulation that builds its image. On macOS,
+restarting Colima drops that emulation; `./setup.sh --arm-targets` restores
+it, and it is only needed to rebuild the ARM32 image.
+
+Hosts that the evaluation is run on are set up with the option, since the
+evaluation covers the ARM targets. Agents set up, build and verify with them
+as well: [AGENTS.md](AGENTS.md) says so.
+
+How far this has been run (2026-11-17):
+
+- On the macOS host the ARM32 build emulation was taken out of the container
+  engine, as a restart of Colima does. `./setup.sh --check` then found every
+  dependency present, and with `--arm-targets` named the emulation as
+  missing. The launcher refused to rebuild the ARM32 image, said why and
+  named the option, and left the image as it was. `./setup.sh --arm-targets`
+  put the emulation back.
+- In an x86-64 Ubuntu 24.04 container on that host, `./setup.sh` installed
+  `qemu-system-x86` and no ARM emulator, and with `--arm-targets` it added
+  `qemu-system-arm`, which its record then listed. A container has no
+  container engine of its own, so the build emulation was not tried there.
+- The package lists for dnf, zypper and pacman were split in the same way
+  and not run again.
+- `setup.ps1` has not been run on Windows since the change. PowerShell on
+  Linux read it without errors, and its new check gave the expected lines
+  with stand-ins for the programs on the host.
+- The launcher's answers for a host without the ARM32 emulator, and `./emu
+  verify` ending the ARM32 checks as "unavailable", were tried on the macOS
+  host with stand-ins; no build was started.
+- Neither script has been run on the Linux or the Windows host since the
+  change.
 
 Qt is the one part of the launcher that is not Python's standard library. It
 is installed with pip from the Python Package Index into a Python environment
@@ -327,11 +388,16 @@ is not installed), the launcher prints its usage, as it did before.
 | `--mode container` | the target OS userland on the container runtime, for quick development and CI |
 | `--mode vm` | the target OS kernel and userland in a QEMU virtual machine |
 | `--mode vm --arch native` | the host's own CPU architecture on the host's hypervisor |
-| `--mode vm --arch arm64` | a simulated 64-bit ARM target CPU (Cortex-A53) |
-| `--mode vm --arch arm32` | a simulated 32-bit ARM target CPU (Cortex-A15) |
+| `--mode vm --arch arm64` | a simulated 64-bit ARM target CPU (Cortex-A53); needs a host set up with `--arm-targets` |
+| `--mode vm --arch arm32` | a simulated 32-bit ARM target CPU (Cortex-A15); needs a host set up with `--arm-targets` |
 
 `--arch x86_64` also exists, to try the x86-64 image under emulation on an
-ARM host. It is a diagnostic and not part of the test matrix.
+ARM host. It is a diagnostic and not part of the test matrix. On the macOS
+host its image (`./emu build --mode vm --arch x86_64`) built in 6.7 min and
+the guest booted to the prompt in 8 s (2026-11-17, `./emu verify vm-x86_64`).
+The image takes 1.86 GB, and its build added 11.4 GB to the container
+engine's disk there, which does not shrink again
+([disk space and times](evaluation/footprint.md)).
 
 Workloads: `prompt` (interactive shell), `bench` (CPU, memory and I/O
 benchmarks), `driver-check`, `graphics-demo`, `media-decode`, `web-bench`

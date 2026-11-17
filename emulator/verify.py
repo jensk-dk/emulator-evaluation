@@ -5,19 +5,26 @@ target OS reported. Outcomes are merged into
 evaluation/verification/HOST.json, which records what has been verified on
 which host.
 """
+import contextlib
 import datetime
+import http.client
+import io
 import json
 import os
+import re
+import shlex
+import shutil
+import socket
 import subprocess
 import sys
 import tempfile
 import threading
 import time
 
-from . import catalog, container, drivers as driver_features, graphics, host, hostaudio, image, imagefile, remote, \
-    results, vm, window
+from . import armtargets, catalog, container, drivers as driver_features, graphics, host, hostaudio, image, \
+    imagefile, remote, report, results, vm, window
 from .errors import EmuError
-from .paths import ROOT, VERIFICATION_DIR
+from .paths import EVALUATION_DIR, RESULTS_DIR, ROOT, VERIFICATION_DIR
 from .run import RunOptions, launch
 
 MOCK_PATTERN_HEX = b"MOCKED-HWRNG-V1.".hex()
@@ -805,6 +812,82 @@ def _audio_mute(mode):
     return lines + sink.evidence()
 
 
+def _audio_switch(mode):
+    """A run that starts muted, and the launcher's command for the switch:
+    its state, and toggling it, for one named run."""
+    from .cli import _running_audio
+    launcher = [sys.executable, "-m", "emulator", "audio"]
+    environment = host.tool_env({"PYTHONPATH": str(ROOT), "PYTHONDONTWRITEBYTECODE": "1"})
+    said = []
+    run = {}
+
+    def command(action):
+        done = subprocess.run(launcher + [action, "--run", run["id"]], capture_output=True, text=True, timeout=60,
+                              cwd=str(ROOT), env=environment, stdin=subprocess.DEVNULL)
+        return done.returncode, (done.stdout + done.stderr).strip()
+
+    def switch(info):
+        """Once the tone has arrived for a while: the state, the switch
+        turned for two seconds, turned back, and the state again."""
+        def work():
+            mine = [item["run_id"] for item in _running_audio() if item.get("control_port") == info["control_port"]]
+            if not mine:
+                return
+            run["id"] = mine[0]
+            deadline = time.time() + 1800
+            while time.time() < deadline:
+                try:
+                    with open(info["trace"]) as handle:
+                        loud = sum(1 for line in handle if json.loads(line)["level"] >= LOUD)
+                except (OSError, ValueError):
+                    loud = 0
+                if loud >= 15:
+                    break
+                time.sleep(0.1)
+            else:
+                return
+            for action, pause in (("status", 0.0), ("toggle", 2.0), ("toggle", 1.0), ("status", 0.0)):
+                said.append((action,) + command(action))
+                time.sleep(pause)
+        threading.Thread(target=work, daemon=True).start()
+
+    # The sound is taken in and not played: the switch is in the run's audio
+    # process, which records what it would send on.
+    _, outcome = _run(mode=mode, workload="media-decode",
+                      args=["--tests", "sound", "--streams", "audio-aac-mp4", "--sound-seconds", "7"],
+                      drivers=driver_features.parse(["audio=host"]), options={"audio-output": "none"}, muted=True,
+                      on_audio=switch, timeout=3600)
+    _require(run.get("id"), "the launcher's audio command would not have found the run: it left no note of its "
+             "audio process")
+
+    def state(text):
+        return "not muted" if ": not muted;" in text else "muted" if ": muted;" in text else None
+    failed = [(action, status, text) for action, status, text in said if status != 0]
+    _require(len(said) == 4 and not failed, "the audio command did not answer four times with success: %r" % (said,))
+    states = [state(text) for _, _, text in said]
+    _require(states == ["muted", "not muted", "muted", "muted"],
+             "started muted, then asked for the state, toggled twice and asked again, the command said: %r" % (said,))
+    rows = [row for row in _trace(outcome) if row["level"] >= LOUD]
+    phases = []
+    for row in rows:
+        now = "silent" if row["sent_level"] < hostaudio.SILENT_RMS else "sound"
+        if not phases or phases[-1][0] != now:
+            phases.append([now, 0])
+        phases[-1][1] += 1
+    summary = ", ".join("%s for %.1f s" % (now, count / 10) for now, count in phases)
+    _require([now for now, _ in phases] == ["silent", "sound", "silent"] and all(count >= 5 for _, count in phases),
+             "the sound sent on to the host was not: silence from the start, sound after the first toggle, silence "
+             "after the second (it was: %s)" % summary)
+    status, text = command("status")
+    _require(status != 0, "asked for a run that has ended, the audio command reported success: %s" % text)
+    return ["started with the mute setting, the run was muted from its first sound: while the target played a "
+            "%d Hz tone for %.1f s, the sound sent on to the host was: %s" % (TONE_HZ["aac"], len(rows) / 10, summary),
+            "the launcher's audio command, for this run by its id: state \"muted\"; toggle, \"not muted\"; toggle, "
+            "\"muted\"; state \"muted\"",
+            "its last answer: %s" % said[-1][2].split("): ", 1)[-1],
+            "after the run had ended the command reported failure: %s" % text.splitlines()[0]]
+
+
 def _audio_strategies(mode):
     """The emulated and the mocked audio device take sound at its own pace,
     without the host."""
@@ -850,6 +933,10 @@ def _media_checks():
                                         "audio is muted and unmuted while it plays, in " + where)
         checks["audio-strategies-" + mode] = (lambda m=mode: _audio_strategies(m), "3.2, 5.3",
                                               "the emulated and mocked audio devices in " + where)
+    for mode, where in (("container", "container mode"), ("vm", "VM mode")):
+        checks["audio-switch-" + mode] = (lambda m=mode: _audio_switch(m), "9.2",
+                                          "a run starts muted, and the audio command toggles it and says its "
+                                          "state, in " + where)
     return checks
 
 
@@ -1084,6 +1171,59 @@ def _drive_window(viewer, seen, width, height, directory):
             symbol = seen["keys"][start]["symbol"] if len(seen["keys"]) > start else None
         return {"code": code, "arrived": got, "ok": got == wanted, "symbol": symbol}
 
+    # The toolbar's other two buttons: full screen (back with the hotkey,
+    # since full screen has no toolbar), and the on-screen remote control.
+    controls = {}
+    before = ask(do="state")
+    ask(do="toolbar", action="full-screen")
+    _wait(lambda: ask(do="state")["full_screen"], 6)
+    time.sleep(1.0)
+    full = ask(do="state")
+    ask(do="host-key", key="F11")
+    _wait(lambda: ask(do="state")["widget"] == before["widget"], 6)
+    time.sleep(1.0)
+    controls["full_button"] = {"before": before, "full": full, "after": ask(do="state")}
+
+    def remote_shown(command):
+        """Whether the on-screen remote control is shown: as it is, and after
+        the command given once and once more."""
+        shown = [ask(do="state")["remote_window"]]
+        for _ in range(2):
+            ask(**command)
+            time.sleep(0.3)
+            shown.append(ask(do="state")["remote_window"])
+        return shown
+    controls["remote_button"] = remote_shown({"do": "toolbar", "action": "remote"})
+
+    # The other hotkeys: the remote control, mute, and 1:1 from another size.
+    controls["remote_hotkey"] = remote_shown({"do": "host-key", "key": "R", "with": ["ctrl", "alt"]})
+    mute = []
+    for _ in range(2):
+        ask(**{"do": "host-key", "key": "M", "with": ["ctrl", "alt"]})
+        time.sleep(0.3)
+        try:
+            switch = hostaudio.control(port, "status")["muted"] if port else None
+        except (OSError, ValueError, KeyError) as error:
+            switch = "no answer: %s" % error
+        mute.append({"window": ask(do="state")["muted"], "switch": switch})
+    controls["mute_hotkey"] = mute
+    wanted = [width // 2, height // 2]
+    ask(do="resize", display=wanted)
+    _wait(lambda: ask(do="state")["widget"] == wanted, 10)
+    resized = ask(do="state")
+    ask(**{"do": "host-key", "key": "1", "with": ["ctrl", "alt"]})
+    _wait(lambda: ask(do="state")["widget"] == ask(do="state")["natural"], 10)
+    time.sleep(0.5)
+    current, problems = shown_picture("one-to-one-hotkey")
+    controls["one_hotkey"] = {"resized": resized["widget"], "widget": current["widget"], "natural": current["natural"],
+                              "shown": current["shown"], "problems": problems}
+    # No hotkey is a remote control key: the first key the target gets is
+    # the one that is pressed now.
+    controls["first_key"] = press({"do": "host-key", "key": "Return"}, remote.CODES["ok"])
+    with seen["lock"]:
+        controls["keys"] = [(key["code"], key["state"]) for key in seen["keys"]]
+    seen["controls"] = controls
+
     seen["remote"] = ask(do="state")
     seen["host_keys"] = {}
     seen["buttons"] = {}
@@ -1179,6 +1319,17 @@ def _window_display(mode, arch="native"):
             "graphics provider: %s" % seen["emulator"]["graphics"]["provider"]]
 
 
+def _kept_its_size(full):
+    """What to say of a window that says it is full screen and did not grow.
+    Seen on macOS with a window that the system has not made the active
+    application, as it does not for one started from a session in the
+    background."""
+    return ("the window reported full screen but kept its size (%dx%d on a %dx%d screen): this host's window "
+            "system did not carry the switch out%s. That the display fills the screen was not observed"
+            % (full["window"][0], full["window"][1], full["screen"][0], full["screen"][1],
+               "" if full["active"] else ", and had not made the window the active one"))
+
+
 def _window_fullscreen(mode, arch="native"):
     """The hotkey switches the window to full screen and back."""
     seen = _window(mode, arch)
@@ -1193,14 +1344,7 @@ def _window_fullscreen(mode, arch="native"):
     lines = ["Ctrl+Alt+F: full screen, without the toolbar; F11: back to the %dx%d window with its toolbar"
              % tuple(before["window"])]
     if full["window"] != full["screen"]:
-        # The window says it is full screen and did not grow. Seen on macOS
-        # with a window that the system has not made the active application,
-        # as it does not for one started from a session in the background.
-        raise CheckUnavailable("\n".join(lines + [
-            "the window reported full screen but kept its size (%dx%d on a %dx%d screen): this host's window "
-            "system did not carry the switch out%s. That the display fills the screen was not observed"
-            % (full["window"][0], full["window"][1], full["screen"][0], full["screen"][1],
-               "" if full["active"] else ", and had not made the window the active one")]))
+        raise CheckUnavailable("\n".join(lines + [_kept_its_size(full)]))
     _require(not found["problems"], "full screen does not show the target's picture: %s" % "; ".join(found["problems"]))
     return lines + ["full screen the window covered the %dx%d screen, and the display in it, scaled to %dx%d, "
                     "shows the target's picture" % (full["screen"][0], full["screen"][1], full["shown"][0],
@@ -1244,6 +1388,63 @@ def _window_toolbar(mode, arch="native"):
             % (width, height, width, height),
             "mute: the button muted the run's audio process and then unmuted it (asked of the process itself each "
             "time)"]
+
+
+def _window_buttons(mode, arch="native"):
+    """The toolbar's buttons for full screen and for the on-screen remote control."""
+    seen = _window(mode, arch)
+    found = seen["controls"]
+    _require(found["remote_button"] == [True, False, True],
+             "the remote control button did not hide the on-screen remote control and show it again: it was shown "
+             "%r" % (found["remote_button"],))
+    lines = ["the remote control button hid the on-screen remote control and showed it again"]
+    step = found["full_button"]
+    before, full, after = step["before"], step["full"], step["after"]
+    _require(not before["full_screen"] and before["toolbar"], "the window was not windowed with its toolbar")
+    _require(full["full_screen"], "the full screen button did not switch the window to full screen")
+    _require(not full["toolbar"], "the toolbar stayed up in full screen")
+    _require(not after["full_screen"] and after["toolbar"] and after["widget"] == before["widget"],
+             "F11 did not bring the window back as it was, with its toolbar")
+    lines.append("the full screen button: full screen, without the toolbar; F11 brought the %dx%d window back with "
+                 "its toolbar" % tuple(before["window"]))
+    if full["window"] != full["screen"]:
+        raise CheckUnavailable("\n".join(lines + [_kept_its_size(full)]))
+    return lines + ["full screen the window covered the %dx%d screen" % tuple(full["screen"])]
+
+
+def _window_hotkeys(mode, arch="native"):
+    """The hotkeys for mute, 1:1 and the on-screen remote control, and that
+    no hotkey reaches the target."""
+    seen = _window(mode, arch)
+    found = seen["controls"]
+    _require(found["remote_hotkey"] == [True, False, True],
+             "Ctrl+Alt+R did not hide the on-screen remote control and show it again: it was shown %r"
+             % (found["remote_hotkey"],))
+    _require(seen.get("audio"), "the run had no audio process for the mute hotkey to switch")
+    _require(found["mute_hotkey"] == [{"window": True, "switch": True}, {"window": False, "switch": False}],
+             "Ctrl+Alt+M did not mute and unmute the run's audio: %r" % (found["mute_hotkey"],))
+    one = found["one_hotkey"]
+    width, height = graphics.resolution(WINDOW_RESOLUTION)
+    ratio = seen["one_to_one"]["pixel_ratio"]
+    _require(one["resized"] != one["natural"], "the window did not take another size before Ctrl+Alt+1")
+    _require(one["widget"] == one["natural"] == one["shown"], "after Ctrl+Alt+1 the display is drawn %r in a %r "
+             "area, not %r" % (one["shown"], one["widget"], one["natural"]))
+    _require([round(side * ratio) for side in one["shown"]] == [width, height],
+             "Ctrl+Alt+1 draws the %dx%d display on %r pixels at a pixel ratio of %s"
+             % (width, height, one["shown"], ratio))
+    _require(not one["problems"], "after Ctrl+Alt+1 the window does not show the target's picture: %s"
+             % "; ".join(one["problems"]))
+    code = remote.CODES["ok"]
+    _require(found["first_key"]["ok"], "the key pressed after the hotkeys did not reach the target: %r"
+             % (found["first_key"],))
+    _require([tuple(key) for key in found["keys"]] == [(code, "pressed"), (code, "released")],
+             "a hotkey reached the target as a remote control key: before OK the target got %r" % (found["keys"],))
+    return ["Ctrl+Alt+R hid the on-screen remote control and showed it again",
+            "Ctrl+Alt+M muted the run's audio process and then unmuted it (asked of the process itself each time)",
+            "Ctrl+Alt+1: from a %dx%d window the %dx%d display went back to %dx%d screen pixels"
+            % (one["resized"][0], one["resized"][1], width, height, width, height),
+            "none of the hotkeys pressed until then (Ctrl+Alt+F, F11, Ctrl+Alt+R, Ctrl+Alt+M, Ctrl+Alt+1) reached "
+            "the target: the first key it got was the OK pressed after them"]
 
 
 def _key_lines(found, how):
@@ -1318,8 +1519,13 @@ def check_settings_window():
                 "timeout": 120.0, "record": True, "workload_args": ["--", "--tests", "wayland", "--seconds", "1"]}
     wrong = {name: getattr(parsed, name) for name, value in expected.items() if getattr(parsed, name) != value}
     _require(not wrong, "the arguments from the window do not say what was set: %r" % wrong)
+    # The command line the window shows is the one of those arguments.
+    _require(shlex.split(answer["command"]) == ["emu"] + answer["arguments"],
+             "the window shows the command line %r, and Start produced %r" % (answer["command"], answer["arguments"]))
     plain = window.choose_settings(script={"press": "start"})
     _require(plain["arguments"] == ["run"], "with nothing changed, Start produced %r" % (plain["arguments"],))
+    _require(plain["command"] == "emu run", "with nothing changed, the window shows the command line %r"
+             % (plain["command"],))
     _require(plain["enabled"]["arch"] is False, "the VM guest CPU can be chosen in container mode")
     refused = window.choose_settings(script={"set": {"timeout": "soon"}, "press": "start"})
     _require(refused["arguments"] is None and refused["problem"], "a setting the launcher refuses was accepted")
@@ -1328,7 +1534,8 @@ def check_settings_window():
     return ["the window has a field for every argument of \"emu run\": %s" % ", ".join(answer["fields"]),
             "mode, VM guest CPU (off in container mode), workload, window mode and the others set as a person "
             "would; Start gave: %s" % answer["command"],
-            "the launcher's own parser reads those arguments as what was set",
+            "the launcher's own parser reads those arguments as what was set, and the command line the window "
+            "shows is the one of those arguments; with nothing set it shows \"emu run\"",
             "unchanged, Start gives \"emu run\"; a timeout of \"soon\" is refused with the launcher's reason (%s); "
             "closing the window starts nothing" % refused["problem"]]
 
@@ -1390,8 +1597,15 @@ def _window_checks():
                                               "the display scales with the window, with " + where)
         checks["window-toolbar-" + suffix] = (lambda m=mode, a=arch: _window_toolbar(m, a), "7.2",
                                               "the toolbar's 1:1 and mute buttons work, with " + where)
-    checks["settings-window"] = (check_settings_window, "7.3",
-                                 "the settings window offers every launcher setting and gives its arguments")
+    for suffix, mode, arch, where in variants:
+        checks["window-buttons-" + suffix] = (lambda m=mode, a=arch: _window_buttons(m, a), "9.2",
+                                              "the toolbar's full screen and remote control buttons work, with "
+                                              + where)
+        checks["window-hotkeys-" + suffix] = (lambda m=mode, a=arch: _window_hotkeys(m, a), "9.2",
+                                              "the hotkeys for mute, 1:1 and the remote control work, with " + where)
+    checks["settings-window"] = (check_settings_window, "7.3, 9.2",
+                                 "the settings window offers every launcher setting and gives its arguments and "
+                                 "their command line")
     checks["settings-launch"] = (check_settings_launch, "7.3",
                                  "without arguments the launcher shows the settings window and starts from it")
     for suffix, mode, arch, where in variants:
@@ -1946,6 +2160,442 @@ def _stb_checks():
     return checks
 
 
+# ------------------------------------------- the launcher's other commands ---
+
+def check_doctor():
+    """The command that shows what the launcher finds on the host."""
+    from .cli import cmd_doctor
+    # With the container image built, the command has graphics in container
+    # mode to say something about.
+    runtime = container.detect()
+    image.ensure("container", lambda: runtime, host.host_arch(), quiet=True)
+
+    def doctor():
+        said = io.StringIO()
+        with contextlib.redirect_stdout(said):
+            status = cmd_doctor(None)
+        return status, [line for line in said.getvalue().splitlines() if line.strip()]
+
+    status, lines = doctor()
+    kinds = {line.split()[0] for line in lines}
+    absent = [kind for kind in ("host", "audio", "qemu", "accelerator", "container", "graphics", "windows", "image")
+              if kind not in kinds]
+    _require(not absent, "the command says nothing about: %s" % ", ".join(absent))
+    for mode in ("VM mode", "container mode"):
+        _require(any(line.startswith("graphics") and mode + ":" in line and
+                     ("host acceleration available: " in line or "emulated only: " in line) for line in lines),
+                 "the command does not say whether host graphics acceleration is available in %s, and why" % mode)
+    states = [line.split()[-1] for line in lines if line.startswith("image")]
+    _require(states and all(state in ("built", "current", "date") for state in states),
+             "the command does not say the state of each target image: %r" % (states,))
+    missing = [line for line in lines if "MISSING" in line]
+    _require((status != 0) == bool(missing), "the command ended with status %d and named %d missing dependencies"
+             % (status, len(missing)))
+    _require(not missing or host.SETUP_HINT in lines, "with a dependency missing the command does not point to the "
+             "setup script")
+    targets = [line for line in lines if line.startswith("arm target")]
+    _require(len(targets) == len(armtargets.ARCHS) and all(": set up" in line or ": not set up: " in line
+                                                           for line in targets),
+             "the command does not say for each simulated ARM target whether it is set up: %r" % (targets,))
+
+    def without(hidden):
+        """The command once more, with one program hidden from the launcher:
+        a stand-in for a host that does not have it."""
+        find = host.find_tool
+        host.find_tool = lambda name: None if name == hidden else find(name)
+        try:
+            return doctor()
+        finally:
+            host.find_tool = find
+
+    # A dependency that is not there: the emulator for the host's own CPU.
+    native = vm.QEMU_BINARY[host.host_arch()]
+    native_status, native_lines = without(native)
+    _require(native_status != 0, "with %s hidden from it, the command reported success" % native)
+    _require(any("MISSING " + native in line for line in native_lines), "with %s hidden from it, the command did not "
+             "name it as missing" % native)
+    _require(host.SETUP_HINT in native_lines, "with %s hidden from it, the command did not point to the setup "
+             "script" % native)
+    # What only a simulated ARM target needs is no dependency: without the
+    # ARM32 emulator the command says that the target is not set up, names
+    # the setup option, and ends as it did with it.
+    arm = vm.QEMU_BINARY["arm32"]
+    arm_status, arm_lines = without(arm)
+    _require(not any("MISSING " + arm in line for line in arm_lines), "with %s hidden from it, the command named it "
+             "as a missing dependency" % arm)
+    _require(any(line.startswith("arm target") and "ARM32: not set up" in line and host.ARM_SETUP_HINT in line
+                 for line in arm_lines),
+             "with %s hidden from it, the command did not say that the ARM32 target is not set up, with the setup "
+             "option" % arm)
+    _require(arm_status == status, "with %s hidden from it, the command ended with status %d, not %d as with it"
+             % (arm, arm_status, status))
+    return ["the command shows the host, the VM emulators, the accelerator, the container runtime, the sound "
+            "output, the windows, graphics acceleration in VM and in container mode with the reason, and the state "
+            "of %d target images" % len(states),
+            "it ended with status %d and named %d missing dependencies; of the simulated ARM targets it says: %s"
+            % (status, len(missing), "; ".join(line.split(None, 2)[2] for line in targets)),
+            "with %s hidden from the launcher (a stand-in for a host without it) it named that as missing, "
+            "pointed to the setup script and ended with status %d" % (native, native_status),
+            "with %s hidden, it said that the ARM32 target is not set up and named the setup option, named no "
+            "missing dependency for it, and ended with status %d as before" % (arm, arm_status)]
+
+
+class _ResultsServer:
+    """The launcher's results server, started as the report command starts
+    it, without a browser and on a port of its own."""
+
+    def __enter__(self):
+        with socket.socket() as probe:
+            probe.bind(("127.0.0.1", 0))
+            self.port = probe.getsockname()[1]
+        self.address = "http://127.0.0.1:%d/" % self.port
+        self.process = subprocess.Popen(
+            [sys.executable, "-m", "emulator", "report", "--no-browser", "--port", str(self.port)], cwd=str(ROOT),
+            env=host.tool_env({"PYTHONPATH": str(ROOT), "PYTHONDONTWRITEBYTECODE": "1"}), stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        said = self.process.stdout.readline()
+        if self.address not in said:
+            self.__exit__()
+            raise CheckFailed("the results command did not start to serve the page: %s"
+                              % (said.strip() or "it said nothing"))
+        return self
+
+    def __exit__(self, *_):
+        self.process.terminate()
+        try:
+            self.process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            self.process.kill()
+        self.process.stdout.close()
+
+
+def _own_address():
+    """An address of this host that other machines reach it at, if it has
+    one. No packet is sent: the system only names the address it would use."""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
+            probe.connect(("192.0.2.1", 9))
+            address = probe.getsockname()[0]
+    except OSError:
+        return None
+    return None if address.startswith("127.") else address
+
+
+def check_report_serve():
+    """The results command serves the page and everything the page reads."""
+    records = sorted(path.name for path in results.record_paths())
+    reports = sorted(found.name for found in VERIFICATION_DIR.glob("*.json"))
+    footprint = EVALUATION_DIR / "footprint.md"
+    with _ResultsServer() as server:
+        connection = http.client.HTTPConnection("127.0.0.1", server.port, timeout=30)
+        closed = []
+
+        def get(path):
+            connection.request("GET", path)
+            answer = connection.getresponse()
+            body = answer.read()
+            if answer.will_close or answer.version != 11:
+                closed.append(path)
+            return answer.status, answer.getheader("Content-Type", ""), body
+
+        def read_json(path, key):
+            status, _, body = get(path)
+            try:
+                return status == 200 and key in json.loads(body)
+            except ValueError:
+                return False
+
+        status, kind, body = get("/")
+        _require(status == 200 and "text/html" in kind and body == (RESULTS_DIR / "index.html").read_bytes(),
+                 "the server does not answer with the results page (status %d, %s)" % (status, kind))
+        status, _, body = get(report.LIST_PATH)
+        listed = json.loads(body) if status == 200 else None
+        _require(listed is not None and sorted(listed) == records, "the list of records the server gives is not the "
+                 "record files: %r" % (listed if listed is None else sorted(set(listed) ^ set(records))[:5],))
+        unread = [name for name in listed if not read_json("/" + name, "host")]
+        _require(not unread, "%d of the %d records could not be read from the server: %s"
+                 % (len(unread), len(listed), ", ".join(unread[:3])))
+        status, _, body = get(report.VERIFICATION_PATH + "list")
+        _require(status == 200 and json.loads(body) == reports, "the list of verification records the server gives "
+                 "is not the files in %s" % VERIFICATION_DIR.name)
+        unread = [name for name in reports if not read_json(report.VERIFICATION_PATH + name, "checks")]
+        _require(not unread, "verification records could not be read from the server: %s" % ", ".join(unread))
+        _require(read_json("/" + results.ISSUES_FILE, "issues"), "the known issues could not be read from the server")
+        _require(read_json("/" + results.MACHINES_FILE, "hosts"), "what is stated about the hosts' machines could "
+                 "not be read from the server")
+        status, _, body = get(report.FOOTPRINT_PATH)
+        _require(footprint.is_file() and status == 200 and body == footprint.read_bytes(),
+                 "the server does not give the disk space and time values (status %d)" % status)
+        _require(not closed, "the server closed its connection after %d of the requests, the first for %s"
+                 % (len(closed), closed[0] if closed else ""))
+        connection.close()
+        lines = ["the results command served the page, and over one connection that it kept open: the list of "
+                 "%d records and each record, %d verification records, the known issues, what is stated about "
+                 "the machines, and the disk space and time values" % (len(records), len(reports))]
+        address = _own_address()
+        if address is None:
+            lines.append("not checked: that the page cannot be reached from another machine (this host has no "
+                         "network address of its own)")
+        else:
+            try:
+                socket.create_connection((address, server.port), timeout=2).close()
+                reached = True
+            except OSError:
+                reached = False
+            _require(not reached, "the page is served on the host's network address too, not to this host only")
+            lines.append("the server does not answer on the host's own network address: the page is served to "
+                         "this host only")
+    return lines
+
+
+def _page_browser():
+    """A browser that can render a page without a window and print what it
+    made of it: Chrome, Chromium or Edge, where one is installed."""
+    for name in ("google-chrome", "google-chrome-stable", "chromium", "chromium-browser", "microsoft-edge", "chrome",
+                 "msedge"):
+        found = shutil.which(name, path=host.tool_path())
+        if found:
+            return found
+    if host.host_os() == "macos":
+        places = ["/Applications/%s.app/Contents/MacOS/%s" % (name, name)
+                  for name in ("Google Chrome", "Chromium", "Microsoft Edge")]
+    elif host.host_os() == "windows":
+        roots = [os.environ.get(name) for name in ("ProgramFiles", "ProgramFiles(x86)", "LocalAppData")]
+        places = [os.path.join(root, *parts) for root in roots if root
+                  for parts in (("Google", "Chrome", "Application", "chrome.exe"),
+                                ("Microsoft", "Edge", "Application", "msedge.exe"))]
+    else:
+        places = []
+    return next((place for place in places if os.path.isfile(place)), None)
+
+
+def check_report_page():
+    """The results page, rendered by a browser without a window."""
+    browser = _page_browser()
+    if not browser:
+        raise CheckUnavailable("this host has no Chrome, Chromium or Edge to render the page with; none of them is "
+                               "a host dependency. What the page reads is covered by the check report-serve")
+    records = len(results.record_paths())
+    with _ResultsServer() as server, tempfile.TemporaryDirectory(prefix="emu-verify-") as directory:
+        try:
+            done = subprocess.run([browser, "--headless=new", "--disable-gpu", "--no-first-run",
+                                   "--user-data-dir=" + directory, "--virtual-time-budget=8000", "--dump-dom",
+                                   server.address], capture_output=True, text=True, timeout=180,
+                                  stdin=subprocess.DEVNULL)
+        except (OSError, subprocess.TimeoutExpired) as error:
+            raise CheckUnavailable("%s did not render the page: %s" % (os.path.basename(browser), error))
+    if done.returncode != 0 or "<html" not in done.stdout:
+        raise CheckUnavailable("%s did not render the page (status %d): %s"
+                               % (os.path.basename(browser), done.returncode, done.stderr.strip()[-300:]))
+    # What the page shows, without its own script and styles, which have
+    # some of the same words in them.
+    page = re.sub(r"<(script|style)\b.*?</\1>", "", done.stdout, flags=re.S)
+    _require("%d records, read from this directory" % records in page,
+             "the page does not say that it shows the %d records there are" % records)
+    _require("could not be read" not in page, "the page says that records could not be read")
+    for title in ("Hosts", "Platform support and known issues", "Disk space and times"):
+        _require("<h2>%s</h2>" % title in page, "the page has no section \"%s\"" % title)
+    counts = {name: page.count('class="%s"' % name) for name in ("card", "support", "issues", "footprint")}
+    _require(counts["card"] > 0, "the page has no chart")
+    _require(counts["support"] == 1 and counts["issues"] == 1, "the page has no support matrix or no list of "
+             "known issues")
+    _require(counts["footprint"] > 0, "the page has no table of disk space and times")
+    return ["rendered without a window by %s, the page says that it shows %d records, which is the number of "
+            "record files, and that none could not be read" % (os.path.basename(browser), records),
+            "it has the hosts, the support matrix with the list of known issues, %d charts, and %d tables of disk "
+            "space and times" % (counts["card"], counts["footprint"]),
+            "not checked: choosing the hosts, relative values, and what pointing at a row or a cell shows"]
+
+
+class _KeepBuildSteps:
+    """The container runtime for the clean-up check: it does everything but
+    remove build steps, which would empty the engine's store of them for
+    other projects too. What it was asked to remove there is kept."""
+
+    def __init__(self, runtime):
+        self._runtime = runtime
+        self.asked = []
+
+    def __getattr__(self, name):
+        return getattr(self._runtime, name)
+
+    def run(self, *args, **kwargs):
+        if args[:2] == ("builder", "prune"):
+            self.asked.append(args)
+            return subprocess.CompletedProcess(args, 0, "Total reclaimed space: 0B\n", "")
+        return self._runtime.run(*args, **kwargs)
+
+
+def check_build_cleanup():
+    """What a build removes from the container engine afterwards, tried on
+    stand-ins. Like a build, it also removes the project's own images of
+    earlier builds, should the engine hold any."""
+    runtime = container.detect()
+    manifest = image.ensure("container", lambda: runtime, host.host_arch(), quiet=True)
+    current = manifest["image_tag"]
+    spec = image.definition()
+    name, version = spec["name"], spec["version"]
+    earlier = "%s:0.0.0-verify" % current.rsplit(":", 1)[0]
+    foreign = "emu-verify-not-the-projects:standin"
+    replaced = None
+
+    def tags():
+        listed = runtime.run("image", "ls", "--format", "{{.Repository}} {{.Tag}}")
+        _require(listed.returncode == 0, "the container engine did not list its images: %s" % listed.stderr.strip())
+        return {tuple(line.split()) for line in listed.stdout.splitlines() if len(line.split()) == 2}
+
+    def ours(found):
+        return {(repository, tag) for repository, tag in found
+                if repository == name or repository.endswith("/" + name)}
+
+    def has(found, wanted):
+        repository, tag = wanted.rsplit(":", 1)
+        return any(tag == t and (r == repository or r.endswith("/" + repository)) for r, t in found)
+
+    try:
+        for tag in (earlier, foreign):
+            done = runtime.run("tag", current, tag)
+            _require(done.returncode == 0, "could not make the stand-in %s: %s" % (tag, done.stderr.strip()))
+        # An image without a name that carries the project's label, as the
+        # image is that a later build of the same version took the tag from.
+        created = runtime.run("create", current, "true")
+        _require(created.returncode == 0, "could not make a stand-in container: %s" % created.stderr.strip())
+        holder = created.stdout.strip().splitlines()[-1]
+        committed = runtime.run("commit", "--change", "LABEL %s=%s" % (image.OWNER_LABEL, name), holder)
+        runtime.run("rm", holder)
+        _require(committed.returncode == 0, "could not make the stand-in for a replaced image: %s"
+                 % committed.stderr.strip())
+        replaced = committed.stdout.strip().splitlines()[-1]
+        before = tags()
+        _require(has(before, earlier) and has(before, foreign) and runtime.image_id(replaced),
+                 "the stand-ins are not in the container engine")
+        engine = _KeepBuildSteps(runtime)
+        said = image.cleanup(engine)
+        after = tags()
+        _require(not has(after, earlier), "the project's image of another version stayed: %s" % earlier)
+        _require(runtime.image_id(replaced) is None, "the image that a later build replaced stayed")
+        _require(has(after, foreign), "an image that is not the project's was removed: %s" % foreign)
+        kept = {(r, t) for r, t in ours(before) if t.startswith(version + "-")}
+        _require(kept and kept <= after, "target images of the current version were removed: %s"
+                 % ", ".join("%s:%s" % pair for pair in sorted(kept - after)))
+        _require(not any(not t.startswith(version + "-") and t != "<none>" for _, t in ours(after)),
+                 "images of other versions of the project stayed: %r" % sorted(ours(after)))
+        _require(engine.asked == [("builder", "prune", "--force", "--filter", "until=" + image.CACHE_KEEP)],
+                 "the clean-up did not ask the engine to remove the build steps unused for %s: %r"
+                 % (image.CACHE_KEEP, engine.asked))
+        _require(said and "of earlier builds" in said, "the clean-up did not say what it removed: %r" % (said,))
+    finally:
+        for left in (earlier, foreign) + ((replaced,) if replaced else ()):
+            runtime.run("image", "rm", left)
+    return ["with stand-ins in the container engine, the clean-up after a build removed the project's image of "
+            "another version and the image a later build had replaced, and said so: %s" % said,
+            "it left the %d target images of version %s and an image that is not the project's"
+            % (len(kept), version),
+            "it asked the engine to remove the build steps unused for %s; the check held that request back, so "
+            "no build step was removed" % image.CACHE_KEEP,
+            "not checked: the option that keeps earlier builds, and the removal of build steps itself"]
+
+
+def _setup_record():
+    named = os.environ.get("EMU_SETUP_RECORD")
+    if named:
+        return named
+    if host.host_os() == "windows":
+        return os.path.join(os.environ.get("LOCALAPPDATA", ""), "emulator-evaluation", "setup-installed")
+    state = os.environ.get("XDG_STATE_HOME") or os.path.join(os.path.expanduser("~"), ".local", "state")
+    return os.path.join(state, "emulator-evaluation", "setup-installed")
+
+
+# The setup script is only ever asked to check and to list here: never to
+# install, and never to remove.
+SETUP_CHECK = {"windows": ["-Check"]}.get(host.host_os(), ["--check"])
+SETUP_LIST = {"windows": ["-Uninstall", "-Check"]}.get(host.host_os(), ["--uninstall", "--check"])
+
+
+def check_setup():
+    """The setup script's check without installing, and its list of what
+    the uninstall option would remove."""
+    script = ["cmd", "/c", str(ROOT / "setup.cmd")] if host.host_os() == "windows" else ["bash", str(ROOT / "setup.sh")]
+    record = _setup_record()
+
+    def recorded():
+        try:
+            with open(record, "rb") as handle:
+                return handle.read()
+        except OSError:
+            return None
+
+    def setup(arguments):
+        done = subprocess.run(script + arguments, capture_output=True, text=True, timeout=900, cwd=str(ROOT),
+                              stdin=subprocess.DEVNULL)
+        return done.returncode, done.stdout + done.stderr
+
+    before = recorded()
+    status, said = setup(SETUP_CHECK)
+    _require(status in (0, 1), "asked to check only, the setup script ended with status %d: %s"
+             % (status, said.strip()[-300:]))
+    if status == 0:
+        _require("All host dependencies are present" in said, "the check ended with success without saying that "
+                 "every host dependency is present")
+        found = "every host dependency is present"
+    else:
+        named = [line.strip() for line in said.splitlines() if line.strip().startswith("Missing:")]
+        _require(named, "the check reported failure without naming what is missing")
+        found = named[-1]
+    _require(recorded() == before, "asked to check only, the setup script changed its record of what it installed")
+    lines = ["asked to check only, the setup script ended with status %d: %s; its record of what it installed is "
+             "unchanged" % (status, found)]
+    status, said = setup(SETUP_LIST)
+    _require(status == 0, "asked to list what the uninstall option would remove, the setup script ended with "
+             "status %d: %s" % (status, said.strip()[-300:]))
+    _require("Nothing was removed" in said or "Nothing to remove" in said, "the setup script did not say that it "
+             "removed nothing")
+    _require(recorded() == before, "asked to list only, the setup script changed its record")
+    entries = 0 if before is None else sum(1 for line in before.decode(errors="replace").splitlines()
+                                           if line.strip() and not line.startswith("#"))
+    lines.append("asked to list what the uninstall option would remove, it listed and removed nothing; its record "
+                 "has %d entries, as before" % entries)
+    return lines + ["not checked: installing, asking before it, the optional extras and the package managers, "
+                    "which need a host where something is missing"]
+
+
+def check_vm_x86_64():
+    """The simulated x86-64 guest: a diagnostic, outside the evaluation matrix."""
+    modes = [mode["id"] for mode in catalog.matrix()["modes"]]
+    _require(not any("x86" in mode for mode in modes), "the evaluation matrix has an x86-64 guest mode: %s"
+             % ", ".join(modes))
+    lines = ["the evaluation matrix has no x86-64 guest mode (%s)" % ", ".join(modes)]
+    if host.host_arch() != "x86_64":
+        manifest = image.load_manifest("vm", "x86_64")
+        built = bool(manifest) and image.is_current(manifest) and all(
+            (image.artifact_dir("vm", "x86_64") / name).is_file() for name in image.VM_FILES)
+        if not built:
+            raise CheckUnavailable("\n".join(lines + [
+                "the x86-64 target image is not built on this host, and the check does not build it: the guest is "
+                "a diagnostic, and the build takes time and disk space. \"emu build --mode vm --arch x86_64\" "
+                "builds it"]))
+    outcome = _prompt("vm", "x86_64")
+    emulator = outcome.environment["emulator"]
+    _require(outcome.ready["machine"] == "x86_64", "the target reports machine %s, expected x86_64"
+             % outcome.ready["machine"])
+    _require(emulator["accelerator"] == "tcg", "the x86-64 guest ran on %s, not on a simulated CPU"
+             % emulator["accelerator"])
+    return lines + ["x86_64 guest on %s simulating the CPU model %s booted in %.1fs and ran the prompt workload" % (
+        emulator["accelerator"], emulator["cpu_model"], outcome.boot_seconds)]
+
+
+def _command_checks():
+    return {
+        "doctor": (check_doctor, "9.2", "the launcher shows what it finds on the host, and names what is missing"),
+        "report-serve": (check_report_serve, "9.2", "the results command serves the page and all that it reads"),
+        "report-page": (check_report_page, "9.2", "the results page shows every record and its sections"),
+        "build-cleanup": (check_build_cleanup, "9.2", "a build removes the project's earlier images and nothing "
+                                                      "else"),
+        "setup-check": (check_setup, "9.2", "the setup script checks and lists without installing or removing"),
+        "vm-x86_64": (check_vm_x86_64, "9.2", "the simulated x86-64 guest starts, and is outside the matrix"),
+    }
+
+
 # name -> (function, the task in openspec/changes/staged-emulator-delivery/tasks.md it supports, description)
 CHECKS = {
     "matrix": (check_matrix, "1.1", "the host test matrix covers every declared host combination"),
@@ -1968,6 +2618,7 @@ CHECKS.update(_media_checks())
 CHECKS.update(_web_checks())
 CHECKS.update(_window_checks())
 CHECKS.update(_stb_checks())
+CHECKS.update(_command_checks())
 
 
 def _report_path():
@@ -1982,9 +2633,21 @@ def load_report():
         return {"host": host.describe(), "checks": {}}
 
 
+def arm_target_of(name):
+    """The simulated ARM target that a check is for, by the check's name, or
+    None."""
+    for arch in armtargets.ARCHS:
+        if name == "vm-" + arch or name.endswith("-vm-" + arch):
+            return arch
+    return None
+
+
 def run_checks(names):
-    """Run the named checks; returns how many ended in each status."""
+    """Run the named checks; returns how many ended in each status. A check
+    for a simulated ARM target is not run on a host that is not set up for
+    that target: it ends as unavailable, with the reason."""
     report = load_report()
+    gaps = {}
     report["host"] = host.describe()
     # Outcomes of checks that no longer exist say nothing about this revision.
     report["checks"] = {name: entry for name, entry in report["checks"].items() if name in CHECKS}
@@ -1993,7 +2656,12 @@ def run_checks(names):
         function, task, description = CHECKS[name]
         print("%-26s %s" % (name, description), flush=True)
         started = time.time()
+        arch = arm_target_of(name)
+        if arch and arch not in gaps:
+            gaps[arch] = armtargets.gap(arch, container.detect)
         try:
+            if gaps.get(arch):
+                raise CheckUnavailable("%s\n%s" % (armtargets.not_set_up(arch, gaps[arch]), host.ARM_SETUP_HINT))
             details = function()
             status = "pass"
         except CheckUnavailable as error:

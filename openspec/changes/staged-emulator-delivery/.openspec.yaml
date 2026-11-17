@@ -13,4 +13,5 @@ affected_areas:
   - performance-reporting
   - remote-control-input
   - stb-simulator
+  - functional-verification
 skip_specs: true

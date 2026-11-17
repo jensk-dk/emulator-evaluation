@@ -77,3 +77,41 @@ When the startup launcher is started without any parameters, it MUST show a grap
 
 - WHEN a user invokes the launcher with parameters
 - THEN it acts on those parameters and does not show the settings window
+
+### Requirement: Show the command line of the chosen settings
+
+The settings window MUST show the launcher command line that starts the emulator with the settings chosen in the window, and MUST keep it current as the settings change.
+
+#### Scenario: Show the command line
+
+- WHEN the settings window is shown
+- THEN it shows the command line that starts the emulator with the settings as they are
+
+#### Scenario: Change a setting
+
+- WHEN the user changes a setting in the window
+- THEN the command line shown changes with it
+
+### Requirement: Show what the launcher finds on the host
+
+The startup launcher MUST offer a command that shows what it finds on the host, without starting the emulator: the host's operating system, CPU, memory, and GPUs; the VM emulator for each guest CPU mode, with its version; the accelerator that host-native VM mode uses; the container runtime with its version and the CPUs and memory of its engine; whether host graphics acceleration is available in VM mode and in container mode, with the reason where it is not; how the target's sound is played on the host; whether the launcher's windows can be shown; and for each target image whether it is built and current. The command MUST name each host dependency it finds missing, MUST then point to the setup script, and MUST report failure.
+
+#### Scenario: Show the host
+
+- WHEN the command is run on a host
+- THEN it shows the host's hardware and operating system, the VM emulators, the accelerator, the container runtime, the sound output, the windows, and the state of each target image
+
+#### Scenario: Say why graphics are emulated
+
+- WHEN host graphics acceleration is not available in an emulator mode on the host
+- THEN the command says that graphics are emulated in that mode, and why
+
+#### Scenario: A host dependency is missing
+
+- WHEN the command finds a host dependency missing
+- THEN it names that dependency, points to the setup script, and reports failure
+
+#### Scenario: Show the state of the target images
+
+- WHEN the command is run
+- THEN it says for each target image whether it is not built, current, or out of date

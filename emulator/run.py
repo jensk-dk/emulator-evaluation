@@ -8,7 +8,7 @@ import sys
 import threading
 import time
 
-from . import catalog, container, drivers as driver_features, graphics, host, image, remote, vm, window
+from . import armtargets, catalog, container, drivers as driver_features, graphics, host, image, remote, vm, window
 from .errors import EmuError
 from .paths import BUILD_DIR
 
@@ -264,6 +264,9 @@ def launch(opts):
             resolved = vm.resolve(opts.arch, opts.options.get("accel"), opts.options.get("cpu"))
             outcome.notes += resolved["notes"]
             guest = resolved["guest_arch"]
+            # Neither a build nor a VM for a simulated ARM target that this
+            # host is not set up for.
+            armtargets.require(guest, container.detect)
             manifest = image.ensure("vm", container.detect, guest, quiet=opts.quiet_build, rebuild=opts.rebuild)
             data_disk = run_dir / "data.img"
             with open(data_disk, "wb") as handle:

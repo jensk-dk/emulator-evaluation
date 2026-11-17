@@ -70,6 +70,63 @@ Workload `prompt` starts an interactive shell on the target OS. The automated
 check types a command into it and expects the computed answer back
 (`./emu verify prompt-container prompt-vm`).
 
+### The launcher's other commands and the setup script
+
+Checks for requirements that were written on 2026-11-17 for what had been
+built without one (task 9.2). None of them is a measurement.
+
+    ./emu verify doctor report-serve report-page build-cleanup setup-check vm-x86_64
+
+- **What the launcher finds on the host** (`doctor`). The command must say
+  something about the host, the VM emulators, the accelerator, the container
+  runtime, the sound output, the windows, graphics acceleration in VM and in
+  container mode with its reason, and each target image, and its status must
+  agree with whether it names something as missing. It must say for each
+  simulated ARM target whether it is set up. Then one program at a time is
+  hidden from the launcher, as a stand-in for a host without it; nothing is
+  removed for that. Without the emulator for the host's own CPU the command
+  must name it as missing, point to the setup script and report failure.
+  Without the ARM32 emulator it must say that the ARM32 target is not set
+  up, name the setup option, name no missing dependency for it, and end as
+  it did before: what only the simulated ARM targets need is set up on
+  request.
+- **The results page is served** (`report-serve`). The results command is
+  started on a port of its own, without a browser. Over one connection, which
+  the server must keep open, the check reads the page, the list of records
+  and every record, the verification records, the known issues, what is
+  stated about the machines, and the disk space and time values; the list
+  must be the record files. The server must not answer on the host's own
+  network address.
+- **The results page shows every record** (`report-page`). Chrome, Chromium
+  or Edge renders the page without a window and prints what it made of it.
+  The page must say that it shows as many records as there are record files
+  and that none could not be read, and must have the hosts, the support
+  matrix with the known issues, charts, and the tables of disk space and
+  times. Without such a browser the check is "unavailable": none of them is a
+  host dependency. Not checked: choosing the hosts, relative values, what
+  pointing at a row shows, and the PDF.
+- **Clean-up after a build** (`build-cleanup`). Three stand-ins are put in
+  the container engine: the current container image under the project's name
+  with another version, an unnamed image with the project's label, and the
+  same image under a name that is not the project's. The clean-up must
+  remove the first two, say so, and leave the third and the images of the
+  current version. It must ask the engine to remove the build steps unused
+  for 48 hours; the check holds that request back, so that it empties
+  nothing. Like a build, the check removes real images of earlier versions
+  of the project, should the engine hold any. Not checked: the option that
+  keeps earlier builds, and the removal of build steps itself.
+- **Setup script** (`setup-check`). The host's setup script is run twice, to
+  check only and to list what the uninstall option would remove; it is never
+  asked to install or to remove. Its status must agree with what it says, and
+  its record of what it installed must be unchanged. Not checked: installing,
+  asking before it, the optional extras and the package managers, which need
+  a host where something is missing.
+- **Simulated x86-64 guest** (`vm-x86_64`). The evaluation matrix must have
+  no x86-64 guest mode; then the guest is started with the prompt workload
+  and must report an x86-64 machine on a simulated CPU. On a host of another
+  CPU architecture the check is "unavailable" unless the x86-64 target image
+  has been built: it does not build it.
+
 ## Driver strategies
 
 Workload `driver-check` reads a driver feature through its target OS
@@ -217,6 +274,17 @@ they run. Where the recording is made depends on the host:
   check also asks the Windows audio service whether it has a session of the
   player process that is playing, and on which device.
 
+The start with the mute setting and the launcher's audio command have a check
+of their own (`./emu verify audio-switch-container audio-switch-vm`, task
+9.2). A run is started muted, with its sound taken in and not played. While
+the target plays a tone, `emu audio` is given for that run by its id: the
+state, a toggle, two seconds later another toggle, and the state again. It
+must answer muted, not muted, muted and muted, and what the run's audio
+process recorded as sent on to the host must be silence from the start, the
+tone, and silence again. After the run has ended the command must report
+failure for it. This check goes by the audio process's own record, not by a
+recording on the host, which the mute check has.
+
 ## Remote control input
 
 Functional checks of the launcher's windows and of remote control input
@@ -251,6 +319,17 @@ ones. What each check goes by:
   screen and show the whole picture scaled to it, and come back as it was. A
   window that reports full screen without growing makes the check
   "unavailable", with the reason: the window system did not carry it out.
+- **The toolbar's other buttons** (`window-buttons-*`). The full screen
+  button is pressed, and F11 brings the window back, since full screen has no
+  toolbar; the same holds as for the full screen check. The remote control
+  button is pressed twice: the on-screen remote control must be hidden and
+  shown again.
+- **The other hotkeys** (`window-hotkeys-*`). Ctrl+Alt+R twice hides and
+  shows the on-screen remote control; Ctrl+Alt+M twice mutes and unmutes,
+  asked of the run's audio process each time; Ctrl+Alt+1, in a window that
+  was given half the size, brings the display back to one screen pixel per
+  pixel. Then OK is pressed: it must be the first key the target has got, so
+  no hotkey reached it as a remote control key.
 - **Host keys** (`remote-keys-*`) and **the on-screen remote control**
   (`remote-window-*`). For each of the 32 keys, its host key is typed into
   the display window, and its button is clicked; each time the target must
@@ -258,9 +337,10 @@ ones. What each check goes by:
 - **Settings window** (`settings-window`, `settings-launch`). Fields are set
   and Start is clicked; the arguments must be what the launcher's parser reads
   as those settings, and there must be a field for every argument of
-  `emu run`. Then the launcher is started without arguments, a workload is
-  chosen in the window, and its results must be those of the same arguments
-  on the command line.
+  `emu run`. The command line the window shows must be the one of those
+  arguments, and `emu run` with nothing set. Then the launcher is started
+  without arguments, a workload is chosen in the window, and its results must
+  be those of the same arguments on the command line.
 
 Not checked: that keys stay away from the target while another window has the
 focus, and anything about RedRat IR input, which is not implemented.
@@ -330,7 +410,8 @@ goes by:
 
 How fast the simulator starts and answers its keys, and what the performance
 workloads report when they are started from its user interface, is taken by
-[stb-timings.py](stb-timings.py). No requirement asks for these, and they are
+[stb-timings.py](stb-timings.py). The stb-simulator spec asks for these since
+2026-11-17 ("Time the STB simulator from the host"), and they are
 not results of the performance evaluation: they are findings about the
 simulator, taken with a method of that script's own, and kept apart from
 `evaluation/results/` in [stb-timings](stb-timings).
@@ -510,7 +591,12 @@ not measured on the host reads "not measured".
      that was on the host before the setup stays.
   2. Note the used space on the volume (`df -k`).
   3. Run the setup script with `--yes` (`-Yes`) and time it from its start to
-     its end. On macOS Homebrew's installer asks for an administrator's
+     its end. Since 2026-11-17 the script sets a host up for the simulated
+     ARM targets only with `--arm-targets` (`-ArmTargets`); a host of the
+     evaluation has them, so give that option as well and say so with the
+     value. The values taken until then are of a script that installed what
+     those targets need without the option; a setup without it is not
+     measured. On macOS Homebrew's installer asks for an administrator's
      password: give it beforehand (`sudo -v`, once more after the removal,
      which makes `sudo` forget it) and set `NONINTERACTIVE=1`, and the time
      has no waiting for a person in it. On Windows the installers of QEMU

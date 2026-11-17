@@ -9,6 +9,12 @@
     .\setup.ps1           check, then install what is missing (asks first)
     .\setup.ps1 -Yes      same, without asking
     .\setup.ps1 -Check    check only; exit 1 if anything is missing
+    .\setup.ps1 -ArmTargets
+                          also set up the simulated ARM64 and ARM32 targets:
+                          check for what only they need, and install what is
+                          missing of it. They run on a simulated CPU, which is
+                          slow, and not every graphics technology runs in
+                          them, so this is not done without the option
     .\setup.ps1 -Uninstall
                           remove what this script installed on this host (asks
                           first; with -Check it only lists what that is)
@@ -22,14 +28,20 @@
 
   Host dependencies:
     Python >= 3.9             runs the launcher (emu.cmd)
-    QEMU system emulators     VM mode: host-native, ARM64 and ARM32 guests
+    QEMU system emulator      VM mode: the one for the host's own CPU
     Windows Hypervisor Platform   host-native VM mode (WHPX)
     container runtime         container mode and target image builds
-    foreign-arch emulation    building ARM32/ARM64 target images
     Qt for Python (PySide6)   the launcher's windows: the display window, the
                               on-screen remote control and the settings window.
                               Installed with pip into a Python environment of
                               this project's own, build\host\gui
+
+  Only with -ArmTargets, for the simulated ARM64 and ARM32 targets:
+    QEMU ARM system emulators VM mode with an ARM64 or ARM32 guest. QEMU for
+                              Windows has them in the one package it is
+    ARM build emulation       building the ARM target images: ARM programs
+                              run in the container engine through user-mode
+                              emulation (binfmt)
 
   Nothing to install, only reported:
     audio player              plays the target's sound through the Windows
@@ -54,6 +66,7 @@
 param(
   [switch]$Check,
   [switch]$Yes,
+  [switch]$ArmTargets,
   [switch]$Uninstall
 )
 
@@ -69,6 +82,7 @@ $script:GuiPackage = 'PySide6-Essentials'
 function Write-Ok($text)      { Write-Host "  [ ok ]  $text" }
 function Write-Missing($key, $text) { Write-Host "  [MISS]  $text"; $script:Missing += $key }
 function Write-Warn($text)    { Write-Host "  [warn]  $text" }
+function Write-Note($text)    { Write-Host "  [note]  $text" }
 function Test-Missing($key)   { $script:Missing -contains $key }
 function Test-Command($name)  { [bool](Get-Command $name -ErrorAction SilentlyContinue) }
 function Test-Admin {
@@ -241,12 +255,27 @@ function Test-GuiDep {
 
 function Test-QemuDep {
   $native = Get-NativeQemu
-  $absent = @($native, 'qemu-system-aarch64', 'qemu-system-arm') | Select-Object -Unique | Where-Object { -not (Test-Command $_) }
-  if ($absent) { Write-Missing 'qemu' "QEMU system emulators: $($absent -join ' ')" }
+  if (-not (Test-Command $native)) { Write-Missing 'qemu' "QEMU system emulator: $native" }
   else {
     $version = Get-FirstLine (Get-Output $native @('--version'))
-    Write-Ok "QEMU: $version (native, ARM64 and ARM32 system emulators)"
+    Write-Ok "QEMU: $version (the system emulator for the host's own CPU)"
   }
+}
+
+# What only the simulated ARM64 and ARM32 targets need is looked at, and
+# installed, when -ArmTargets asks for it: they are slow and less complete,
+# and not part of what a host needs. On an ARM64 host the ARM64 target runs on
+# the emulator for the host's own CPU.
+function Test-ArmTargetsDep {
+  if (-not $ArmTargets) {
+    Write-Note 'simulated ARM64 and ARM32 targets: not set up by default, and not checked. setup.cmd -ArmTargets sets them up'
+    return
+  }
+  $emulators = if ((Get-HostArch) -eq 'arm64') { @('qemu-system-arm') } else { @('qemu-system-aarch64', 'qemu-system-arm') }
+  $absent = @($emulators | Where-Object { -not (Test-Command $_) })
+  if ($absent.Count -gt 0) { Write-Missing 'qemu-arm' "QEMU's ARM system emulators, for the simulated ARM targets: $($absent -join ' ')" }
+  else { Write-Ok "QEMU's ARM system emulators, for the simulated ARM targets" }
+  Test-ForeignArchDep
 }
 
 # Host graphics acceleration for VM mode needs a QEMU with the GPU-accelerated
@@ -375,8 +404,8 @@ function Get-ForeignArchGaps {
 function Test-ForeignArchDep {
   if (-not $script:ContainerCli) { return }
   $gaps = @(Get-ForeignArchGaps)
-  if ($gaps.Count -eq 0) { Write-Ok 'foreign-architecture emulation for target image builds' }
-  else { Write-Missing 'binfmt' "foreign-architecture emulation (binfmt) for: $($gaps -join ' ')" }
+  if ($gaps.Count -eq 0) { Write-Ok 'ARM build emulation, for building the ARM target images' }
+  else { Write-Missing 'binfmt' "ARM build emulation (binfmt), for building the ARM target images: $($gaps -join ' ')" }
 }
 
 function Invoke-Checks {
@@ -389,7 +418,7 @@ function Invoke-Checks {
   Test-AudioNote
   Test-AccelDep
   Test-ContainerDep
-  Test-ForeignArchDep
+  Test-ArmTargetsDep
   Test-GuiDep
 }
 
@@ -426,7 +455,7 @@ function Install-Gui {
 }
 
 function Install-Missing {
-  if (((Test-Missing 'python') -or (Test-Missing 'qemu') -or (Test-Missing 'container')) -and -not (Test-Command 'winget')) {
+  if (((Test-Missing 'python') -or (Test-Missing 'qemu') -or (Test-Missing 'qemu-arm') -or (Test-Missing 'container')) -and -not (Test-Command 'winget')) {
     Write-Host 'Registering winget (App Installer)...'
     Add-AppxPackage -RegisterByFamilyName -MainPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe
     Update-Path
@@ -436,7 +465,8 @@ function Install-Missing {
   }
 
   if (Test-Missing 'python') { Install-WingetPackage 'Python.Python.3.13' }
-  if (Test-Missing 'qemu')   { Install-WingetPackage 'SoftwareFreedomConservancy.QEMU' }
+  # QEMU for Windows is one package with every system emulator in it.
+  if ((Test-Missing 'qemu') -or (Test-Missing 'qemu-arm')) { Install-WingetPackage 'SoftwareFreedomConservancy.QEMU' }
 
   if (Test-Missing 'whpx') {
     if (Test-Admin) {
@@ -497,7 +527,9 @@ function Install-Missing {
       if (Test-Engine docker) { $script:ContainerCli = 'docker' }
     }
 
-    if ($script:ContainerCli -and @(Get-ForeignArchGaps).Count -gt 0) {
+    # The emulation of ARM programs in the container engine: only when the
+    # simulated ARM targets are asked for.
+    if ($ArmTargets -and $script:ContainerCli -and @(Get-ForeignArchGaps).Count -gt 0) {
       $binfmt = @('run', '--rm', '--privileged', 'docker.io/tonistiigi/binfmt')
       if (-not (Test-EngineImage $script:ContainerCli 'docker.io/tonistiigi/binfmt')) {
         Add-Record 'engine-image' "$($script:ContainerCli) docker.io/tonistiigi/binfmt"
@@ -697,6 +729,10 @@ function Invoke-Uninstall {
 
 # ------------------------------------------------------------------- main ---
 
+if ($Uninstall -and $ArmTargets) {
+  Write-Host 'setup.ps1: -Uninstall removes all that this script installed, what the simulated ARM targets need with it; give it alone'
+  exit 2
+}
 if ($Uninstall) { Invoke-Uninstall }
 
 
@@ -709,7 +745,7 @@ if ($script:Missing.Count -eq 0) {
 }
 
 if ($Check) {
-  Write-Host "`nMissing: $($script:Missing -join ' '). Run setup without -Check to install."
+  Write-Host "`nMissing: $($script:Missing -join ' '). Run setup without -Check to install$(if ($ArmTargets) { ', with -ArmTargets' })."
   exit 1
 }
 

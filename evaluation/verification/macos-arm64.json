@@ -23,9 +23,9 @@
         "4 hosts x 4 modes = 16 combinations, each measuring 6 performance areas",
         "every declared host combination has a host entry: linux-x86_64, windows-x86_64, macos-x86_64, macos-arm64"
       ],
-      "checked_at": "2026-11-16T20:47:15Z",
+      "checked_at": "2026-11-17T20:35:11Z",
       "seconds": 0.0,
-      "revision": "c293ade3e457f6d38f52c0bb15a2f48c7503138f",
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
       "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
     },
     "workloads": {
@@ -67,9 +67,9 @@
         "target OS environment up in 0.1s; the prompt answered a typed command",
         "image sha256:d3363e532544436aedf3e0d5dda16cb6522381aaf9eadb271a461719cce799ab"
       ],
-      "checked_at": "2026-11-16T18:59:22Z",
-      "seconds": 0.9,
-      "revision": "c293ade3e457f6d38f52c0bb15a2f48c7503138f",
+      "checked_at": "2026-11-17T20:58:10Z",
+      "seconds": 0.8,
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
       "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
     },
     "prompt-vm": {
@@ -77,11 +77,11 @@
       "task": "2.2, 2.4",
       "description": "the target OS boots in host-native VM mode to a prompt",
       "details": [
-        "booted on hvf (aarch64, cpu host) in 0.3s; the prompt answered a typed command"
+        "booted on hvf (aarch64, cpu host) in 0.4s; the prompt answered a typed command"
       ],
-      "checked_at": "2026-11-16T18:59:22Z",
-      "seconds": 1.0,
-      "revision": "c293ade3e457f6d38f52c0bb15a2f48c7503138f",
+      "checked_at": "2026-11-17T20:58:11Z",
+      "seconds": 1.1,
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
       "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
     },
     "bench-container": {
@@ -118,9 +118,9 @@
         "168 records, all fully identified",
         "this host has bench results for: container, vm-arm32, vm-arm64, vm-native"
       ],
-      "checked_at": "2026-11-16T20:47:15Z",
+      "checked_at": "2026-11-17T20:35:01Z",
       "seconds": 0.1,
-      "revision": "c293ade3e457f6d38f52c0bb15a2f48c7503138f",
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
       "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
     },
     "vm-arm32": {
@@ -128,11 +128,11 @@
       "task": "3.1",
       "description": "ARM32 VM guest mode starts the target OS workload",
       "details": [
-        "armv7l guest on tcg simulating cortex-a15 (CPU part 0xc0f) booted in 21.1s and ran the prompt workload"
+        "armv7l guest on tcg simulating cortex-a15 (CPU part 0xc0f) booted in 22.3s and ran the prompt workload"
       ],
-      "checked_at": "2026-11-16T18:59:56Z",
-      "seconds": 22.1,
-      "revision": "c293ade3e457f6d38f52c0bb15a2f48c7503138f",
+      "checked_at": "2026-11-17T20:58:40Z",
+      "seconds": 23.1,
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
       "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
     },
     "vm-arm64": {
@@ -140,11 +140,11 @@
       "task": "3.1",
       "description": "ARM64 VM guest mode starts the target OS workload",
       "details": [
-        "aarch64 guest on tcg simulating cortex-a53 (CPU part 0xd03) booted in 4.6s and ran the prompt workload"
+        "aarch64 guest on tcg simulating cortex-a53 (CPU part 0xd03) booted in 4.8s and ran the prompt workload"
       ],
-      "checked_at": "2026-11-16T19:00:01Z",
-      "seconds": 5.3,
-      "revision": "c293ade3e457f6d38f52c0bb15a2f48c7503138f",
+      "checked_at": "2026-11-17T20:58:17Z",
+      "seconds": 5.5,
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
       "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
     },
     "drivers-container": {
@@ -180,13 +180,13 @@
       "task": "3.2",
       "description": "the three driver strategies in an ARM32 VM",
       "details": [
-        "emulated: no host-side process ran; provider kernel:virtio_rng.0; 986228.6 bytes/s",
-        "mocked: sample is the stub's fixed pattern; provider mock:fixed-pattern; 104533646.3 bytes/s",
-        "host: sample found in the 393408 bytes served by the host-side process; provider kernel:virtio_rng.0; 662065.6 bytes/s"
+        "emulated: no host-side process ran; provider kernel:virtio_rng.0; 989967.9 bytes/s",
+        "mocked: sample is the stub's fixed pattern; provider mock:fixed-pattern; 67290421.8 bytes/s",
+        "host: sample found in the 327872 bytes served by the host-side process; provider kernel:virtio_rng.0; 643970.7 bytes/s"
       ],
-      "checked_at": "2026-11-16T19:01:12Z",
-      "seconds": 66.2,
-      "revision": "c293ade3e457f6d38f52c0bb15a2f48c7503138f",
+      "checked_at": "2026-11-17T20:59:46Z",
+      "seconds": 66.5,
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
       "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
     },
     "drivers-vm-arm64": {
@@ -1235,9 +1235,9 @@
         "windowed, with its toolbar; the display took 1280x720 of the window at a pixel ratio of 1.0",
         "graphics provider: emulated"
       ],
-      "checked_at": "2026-11-16T19:31:07Z",
-      "seconds": 10.7,
-      "revision": "c293ade3e457f6d38f52c0bb15a2f48c7503138f",
+      "checked_at": "2026-11-17T20:31:57Z",
+      "seconds": 13.7,
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
       "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
     },
     "window-fullscreen-container": {
@@ -1248,9 +1248,9 @@
         "Ctrl+Alt+F: full screen, without the toolbar; F11: back to the 1280x752 window with its toolbar",
         "full screen the window covered the 2560x1440 screen, and the display in it, scaled to 2560x1440, shows the target's picture"
       ],
-      "checked_at": "2026-11-16T19:41:05Z",
-      "seconds": 9.6,
-      "revision": "c293ade3e457f6d38f52c0bb15a2f48c7503138f",
+      "checked_at": "2026-11-17T20:31:57Z",
+      "seconds": 0.0,
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
       "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
     },
     "window-scaling-container": {
@@ -1261,9 +1261,9 @@
         "window resized to 640x360: the 720p display is drawn 640x360, all of it, in its own shape",
         "window resized to 900x700: the 720p display is drawn 900x506, all of it, in its own shape"
       ],
-      "checked_at": "2026-11-16T19:32:06Z",
+      "checked_at": "2026-11-17T20:33:10Z",
       "seconds": 0.0,
-      "revision": "c293ade3e457f6d38f52c0bb15a2f48c7503138f",
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
       "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
     },
     "window-toolbar-container": {
@@ -1274,9 +1274,9 @@
         "1:1: the 1280x720 display is drawn on 1280x720 screen pixels, after the window had been another size",
         "mute: the button muted the run's audio process and then unmuted it (asked of the process itself each time)"
       ],
-      "checked_at": "2026-11-16T19:32:06Z",
+      "checked_at": "2026-11-17T20:33:10Z",
       "seconds": 0.0,
-      "revision": "c293ade3e457f6d38f52c0bb15a2f48c7503138f",
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
       "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
     },
     "remote-keys-container": {
@@ -1290,9 +1290,9 @@
         "host keys: Up for Up, Down for Down, Left for Left, Right for Right, Return for OK, Backspace for BACK, 0 for 0, 1 for 1, 2 for 2, 3 for 3, 4 for 4, 5 for 5, 6 for 6, 7 for 7, 8 for 8, 9 for 9, R for Red, G for Green, Y for Yellow, B for Blue, P for Play, U for Pause, Space for Play/pause, S for Stop, F for Fast forward, W for Rewind, C for Record, T for TEXT, PageUp for P+, PageDown for P-, H for WEBTV, Escape for EXIT",
         "not checked: that the keys stay away from the target while another window has the focus"
       ],
-      "checked_at": "2026-11-16T19:32:11Z",
+      "checked_at": "2026-11-17T20:33:10Z",
       "seconds": 0.0,
-      "revision": "c293ade3e457f6d38f52c0bb15a2f48c7503138f",
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
       "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
     },
     "remote-window-container": {
@@ -1306,24 +1306,24 @@
         "with a key code but no symbol in the target's keymap: text",
         "with the remote control shown, the host keys still worked in the emulator's window (32 keys) and in the remote control's own"
       ],
-      "checked_at": "2026-11-16T19:32:11Z",
+      "checked_at": "2026-11-17T20:33:10Z",
       "seconds": 0.0,
-      "revision": "c293ade3e457f6d38f52c0bb15a2f48c7503138f",
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
       "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
     },
     "settings-window": {
       "status": "pass",
-      "task": "7.3",
-      "description": "the settings window offers every launcher setting and gives its arguments",
+      "task": "7.3, 9.2",
+      "description": "the settings window offers every launcher setting and gives its arguments and their command line",
       "details": [
         "the window has a field for every argument of \"emu run\": arch, cpus, driver, emulator_arg, graphics, memory, mode, mute, option, rebuild, record, remote_control, repeat, resolution, screenshot, timeout, window_mode, workload, workload_args",
         "mode, VM guest CPU (off in container mode), workload, window mode and the others set as a person would; Start gave: emu run --mode vm --arch arm64 --workload graphics-demo --cpus 2 --memory 1024 --resolution 4k --graphics emulated --fullscreen --remote-control window --mute --driver hwrng=mocked --option accel=tcg --option verbose-boot=yes --record --repeat 2 --timeout 120 -- --tests wayland --seconds 1",
-        "the launcher's own parser reads those arguments as what was set",
+        "the launcher's own parser reads those arguments as what was set, and the command line the window shows is the one of those arguments; with nothing set it shows \"emu run\"",
         "unchanged, Start gives \"emu run\"; a timeout of \"soon\" is refused with the launcher's reason (Argument --timeout: invalid float value: 'soon'); closing the window starts nothing"
       ],
-      "checked_at": "2026-11-16T19:32:09Z",
-      "seconds": 2.9,
-      "revision": "c293ade3e457f6d38f52c0bb15a2f48c7503138f",
+      "checked_at": "2026-11-17T20:29:23Z",
+      "seconds": 2.8,
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
       "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
     },
     "settings-launch": {
@@ -1349,9 +1349,9 @@
         "windowed, with its toolbar; the display took 1280x720 of the window at a pixel ratio of 1.0",
         "graphics provider: emulated"
       ],
-      "checked_at": "2026-11-16T19:31:17Z",
-      "seconds": 9.8,
-      "revision": "c293ade3e457f6d38f52c0bb15a2f48c7503138f",
+      "checked_at": "2026-11-17T20:32:12Z",
+      "seconds": 15.1,
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
       "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
     },
     "window-fullscreen-vm": {
@@ -1362,9 +1362,9 @@
         "Ctrl+Alt+F: full screen, without the toolbar; F11: back to the 1280x752 window with its toolbar",
         "full screen the window covered the 2560x1440 screen, and the display in it, scaled to 2560x1440, shows the target's picture"
       ],
-      "checked_at": "2026-11-16T19:41:16Z",
-      "seconds": 10.4,
-      "revision": "c293ade3e457f6d38f52c0bb15a2f48c7503138f",
+      "checked_at": "2026-11-17T20:32:12Z",
+      "seconds": 0.0,
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
       "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
     },
     "window-scaling-vm": {
@@ -1375,9 +1375,9 @@
         "window resized to 640x360: the 720p display is drawn 640x360, all of it, in its own shape",
         "window resized to 900x700: the 720p display is drawn 900x506, all of it, in its own shape"
       ],
-      "checked_at": "2026-11-16T19:32:06Z",
+      "checked_at": "2026-11-17T20:33:10Z",
       "seconds": 0.0,
-      "revision": "c293ade3e457f6d38f52c0bb15a2f48c7503138f",
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
       "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
     },
     "window-toolbar-vm": {
@@ -1388,9 +1388,9 @@
         "1:1: the 1280x720 display is drawn on 1280x720 screen pixels, after the window had been another size",
         "mute: the button muted the run's audio process and then unmuted it (asked of the process itself each time)"
       ],
-      "checked_at": "2026-11-16T19:32:06Z",
+      "checked_at": "2026-11-17T20:33:10Z",
       "seconds": 0.0,
-      "revision": "c293ade3e457f6d38f52c0bb15a2f48c7503138f",
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
       "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
     },
     "remote-keys-vm": {
@@ -1404,9 +1404,9 @@
         "host keys: Up for Up, Down for Down, Left for Left, Right for Right, Return for OK, Backspace for BACK, 0 for 0, 1 for 1, 2 for 2, 3 for 3, 4 for 4, 5 for 5, 6 for 6, 7 for 7, 8 for 8, 9 for 9, R for Red, G for Green, Y for Yellow, B for Blue, P for Play, U for Pause, Space for Play/pause, S for Stop, F for Fast forward, W for Rewind, C for Record, T for TEXT, PageUp for P+, PageDown for P-, H for WEBTV, Escape for EXIT",
         "not checked: that the keys stay away from the target while another window has the focus"
       ],
-      "checked_at": "2026-11-16T19:32:11Z",
+      "checked_at": "2026-11-17T20:33:10Z",
       "seconds": 0.0,
-      "revision": "c293ade3e457f6d38f52c0bb15a2f48c7503138f",
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
       "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
     },
     "remote-window-vm": {
@@ -1420,9 +1420,9 @@
         "with a key code but no symbol in the target's keymap: text",
         "with the remote control shown, the host keys still worked in the emulator's window (32 keys) and in the remote control's own"
       ],
-      "checked_at": "2026-11-16T19:32:11Z",
+      "checked_at": "2026-11-17T20:33:10Z",
       "seconds": 0.0,
-      "revision": "c293ade3e457f6d38f52c0bb15a2f48c7503138f",
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
       "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
     },
     "window-display-vm-arm64": {
@@ -1434,9 +1434,9 @@
         "windowed, with its toolbar; the display took 1280x720 of the window at a pixel ratio of 1.0",
         "graphics provider: emulated"
       ],
-      "checked_at": "2026-11-16T19:31:33Z",
-      "seconds": 15.4,
-      "revision": "c293ade3e457f6d38f52c0bb15a2f48c7503138f",
+      "checked_at": "2026-11-17T20:32:32Z",
+      "seconds": 20.2,
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
       "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
     },
     "window-fullscreen-vm-arm64": {
@@ -1447,9 +1447,9 @@
         "Ctrl+Alt+F: full screen, without the toolbar; F11: back to the 1280x752 window with its toolbar",
         "full screen the window covered the 2560x1440 screen, and the display in it, scaled to 2560x1440, shows the target's picture"
       ],
-      "checked_at": "2026-11-16T19:41:31Z",
-      "seconds": 15.4,
-      "revision": "c293ade3e457f6d38f52c0bb15a2f48c7503138f",
+      "checked_at": "2026-11-17T20:32:32Z",
+      "seconds": 0.0,
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
       "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
     },
     "window-scaling-vm-arm64": {
@@ -1460,9 +1460,9 @@
         "window resized to 640x360: the 720p display is drawn 640x360, all of it, in its own shape",
         "window resized to 900x700: the 720p display is drawn 900x506, all of it, in its own shape"
       ],
-      "checked_at": "2026-11-16T19:32:06Z",
+      "checked_at": "2026-11-17T20:33:10Z",
       "seconds": 0.0,
-      "revision": "c293ade3e457f6d38f52c0bb15a2f48c7503138f",
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
       "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
     },
     "window-toolbar-vm-arm64": {
@@ -1473,9 +1473,9 @@
         "1:1: the 1280x720 display is drawn on 1280x720 screen pixels, after the window had been another size",
         "mute: the button muted the run's audio process and then unmuted it (asked of the process itself each time)"
       ],
-      "checked_at": "2026-11-16T19:32:06Z",
+      "checked_at": "2026-11-17T20:33:10Z",
       "seconds": 0.0,
-      "revision": "c293ade3e457f6d38f52c0bb15a2f48c7503138f",
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
       "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
     },
     "remote-keys-vm-arm64": {
@@ -1489,9 +1489,9 @@
         "host keys: Up for Up, Down for Down, Left for Left, Right for Right, Return for OK, Backspace for BACK, 0 for 0, 1 for 1, 2 for 2, 3 for 3, 4 for 4, 5 for 5, 6 for 6, 7 for 7, 8 for 8, 9 for 9, R for Red, G for Green, Y for Yellow, B for Blue, P for Play, U for Pause, Space for Play/pause, S for Stop, F for Fast forward, W for Rewind, C for Record, T for TEXT, PageUp for P+, PageDown for P-, H for WEBTV, Escape for EXIT",
         "not checked: that the keys stay away from the target while another window has the focus"
       ],
-      "checked_at": "2026-11-16T19:32:11Z",
+      "checked_at": "2026-11-17T20:33:10Z",
       "seconds": 0.0,
-      "revision": "c293ade3e457f6d38f52c0bb15a2f48c7503138f",
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
       "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
     },
     "remote-window-vm-arm64": {
@@ -1505,9 +1505,9 @@
         "with a key code but no symbol in the target's keymap: text",
         "with the remote control shown, the host keys still worked in the emulator's window (32 keys) and in the remote control's own"
       ],
-      "checked_at": "2026-11-16T19:32:11Z",
+      "checked_at": "2026-11-17T20:33:10Z",
       "seconds": 0.0,
-      "revision": "c293ade3e457f6d38f52c0bb15a2f48c7503138f",
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
       "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
     },
     "window-display-vm-arm32": {
@@ -1519,9 +1519,9 @@
         "windowed, with its toolbar; the display took 1280x720 of the window at a pixel ratio of 1.0",
         "graphics provider: emulated"
       ],
-      "checked_at": "2026-11-16T19:32:06Z",
-      "seconds": 33.1,
-      "revision": "c293ade3e457f6d38f52c0bb15a2f48c7503138f",
+      "checked_at": "2026-11-17T20:33:10Z",
+      "seconds": 37.4,
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
       "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
     },
     "window-fullscreen-vm-arm32": {
@@ -1532,9 +1532,9 @@
         "Ctrl+Alt+F: full screen, without the toolbar; F11: back to the 1280x752 window with its toolbar",
         "full screen the window covered the 2560x1440 screen, and the display in it, scaled to 2560x1440, shows the target's picture"
       ],
-      "checked_at": "2026-11-16T19:42:05Z",
-      "seconds": 33.9,
-      "revision": "c293ade3e457f6d38f52c0bb15a2f48c7503138f",
+      "checked_at": "2026-11-17T20:33:10Z",
+      "seconds": 0.0,
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
       "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
     },
     "window-scaling-vm-arm32": {
@@ -1545,9 +1545,9 @@
         "window resized to 640x360: the 720p display is drawn 640x360, all of it, in its own shape",
         "window resized to 900x700: the 720p display is drawn 900x506, all of it, in its own shape"
       ],
-      "checked_at": "2026-11-16T19:32:06Z",
+      "checked_at": "2026-11-17T20:33:10Z",
       "seconds": 0.0,
-      "revision": "c293ade3e457f6d38f52c0bb15a2f48c7503138f",
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
       "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
     },
     "window-toolbar-vm-arm32": {
@@ -1558,9 +1558,9 @@
         "1:1: the 1280x720 display is drawn on 1280x720 screen pixels, after the window had been another size",
         "mute: the button muted the run's audio process and then unmuted it (asked of the process itself each time)"
       ],
-      "checked_at": "2026-11-16T19:32:06Z",
+      "checked_at": "2026-11-17T20:33:10Z",
       "seconds": 0.0,
-      "revision": "c293ade3e457f6d38f52c0bb15a2f48c7503138f",
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
       "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
     },
     "remote-keys-vm-arm32": {
@@ -1574,9 +1574,9 @@
         "host keys: Up for Up, Down for Down, Left for Left, Right for Right, Return for OK, Backspace for BACK, 0 for 0, 1 for 1, 2 for 2, 3 for 3, 4 for 4, 5 for 5, 6 for 6, 7 for 7, 8 for 8, 9 for 9, R for Red, G for Green, Y for Yellow, B for Blue, P for Play, U for Pause, Space for Play/pause, S for Stop, F for Fast forward, W for Rewind, C for Record, T for TEXT, PageUp for P+, PageDown for P-, H for WEBTV, Escape for EXIT",
         "not checked: that the keys stay away from the target while another window has the focus"
       ],
-      "checked_at": "2026-11-16T19:32:11Z",
+      "checked_at": "2026-11-17T20:33:10Z",
       "seconds": 0.0,
-      "revision": "c293ade3e457f6d38f52c0bb15a2f48c7503138f",
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
       "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
     },
     "remote-window-vm-arm32": {
@@ -1590,9 +1590,9 @@
         "with a key code but no symbol in the target's keymap: text",
         "with the remote control shown, the host keys still worked in the emulator's window (32 keys) and in the remote control's own"
       ],
-      "checked_at": "2026-11-16T19:32:11Z",
+      "checked_at": "2026-11-17T20:33:10Z",
       "seconds": 0.0,
-      "revision": "c293ade3e457f6d38f52c0bb15a2f48c7503138f",
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
       "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
     },
     "stb-start-container": {
@@ -1897,6 +1897,236 @@
       "checked_at": "2026-11-16T19:40:44Z",
       "seconds": 0.0,
       "revision": "c293ade3e457f6d38f52c0bb15a2f48c7503138f",
+      "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
+    },
+    "doctor": {
+      "status": "pass",
+      "task": "9.2",
+      "description": "the launcher shows what it finds on the host, and names what is missing",
+      "details": [
+        "the command shows the host, the VM emulators, the accelerator, the container runtime, the sound output, the windows, graphics acceleration in VM and in container mode with the reason, and the state of 3 target images",
+        "it ended with status 0 and named 0 missing dependencies; of the simulated ARM targets it says: ARM64: set up; ARM32: set up",
+        "with qemu-system-aarch64 hidden from the launcher (a stand-in for a host without it) it named that as missing, pointed to the setup script and ended with status 1",
+        "with qemu-system-arm hidden, it said that the ARM32 target is not set up and named the setup option, named no missing dependency for it, and ended with status 0 as before"
+      ],
+      "checked_at": "2026-11-17T21:00:48Z",
+      "seconds": 0.9,
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
+      "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
+    },
+    "report-serve": {
+      "status": "pass",
+      "task": "9.2",
+      "description": "the results command serves the page and all that it reads",
+      "details": [
+        "the results command served the page, and over one connection that it kept open: the list of 168 records and each record, 3 verification records, the known issues, what is stated about the machines, and the disk space and time values",
+        "the server does not answer on the host's own network address: the page is served to this host only"
+      ],
+      "checked_at": "2026-11-17T21:00:46Z",
+      "seconds": 0.1,
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
+      "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
+    },
+    "report-page": {
+      "status": "pass",
+      "task": "9.2",
+      "description": "the results page shows every record and its sections",
+      "details": [
+        "rendered without a window by Google Chrome, the page says that it shows 168 records, which is the number of record files, and that none could not be read",
+        "it has the hosts, the support matrix with the list of known issues, 47 charts, and 3 tables of disk space and times",
+        "not checked: choosing the hosts, relative values, and what pointing at a row or a cell shows"
+      ],
+      "checked_at": "2026-11-17T21:00:47Z",
+      "seconds": 0.9,
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
+      "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
+    },
+    "setup-check": {
+      "status": "pass",
+      "task": "9.2",
+      "description": "the setup script checks and lists without installing or removing",
+      "details": [
+        "asked to check only, the setup script ended with status 0: every host dependency is present; its record of what it installed is unchanged",
+        "asked to list what the uninstall option would remove, it listed and removed nothing; its record has 66 entries, as before",
+        "not checked: installing, asking before it, the optional extras and the package managers, which need a host where something is missing"
+      ],
+      "checked_at": "2026-11-17T20:58:09Z",
+      "seconds": 0.9,
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
+      "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
+    },
+    "vm-x86_64": {
+      "status": "pass",
+      "task": "9.2",
+      "description": "the simulated x86-64 guest starts, and is outside the matrix",
+      "details": [
+        "the evaluation matrix has no x86-64 guest mode (container, vm-native, vm-arm32, vm-arm64)",
+        "x86_64 guest on tcg simulating the CPU model max booted in 8.0s and ran the prompt workload"
+      ],
+      "checked_at": "2026-11-17T20:59:55Z",
+      "seconds": 8.7,
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
+      "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
+    },
+    "build-cleanup": {
+      "status": "pass",
+      "task": "9.2",
+      "description": "a build removes the project's earlier images and nothing else",
+      "details": [
+        "with stand-ins in the container engine, the clean-up after a build removed the project's image of another version and the image a later build had replaced, and said so: removed from the container engine: 2 images of earlier builds",
+        "it left the 4 target images of version 0.6.0 and an image that is not the project's",
+        "it asked the engine to remove the build steps unused for 48h; the check held that request back, so no build step was removed",
+        "not checked: the option that keeps earlier builds, and the removal of build steps itself"
+      ],
+      "checked_at": "2026-11-17T20:59:57Z",
+      "seconds": 2.0,
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
+      "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
+    },
+    "audio-switch-container": {
+      "status": "pass",
+      "task": "9.2",
+      "description": "a run starts muted, and the audio command toggles it and says its state, in container mode",
+      "details": [
+        "started with the mute setting, the run was muted from its first sound: while the target played a 880 Hz tone for 7.0 s, the sound sent on to the host was: silent for 1.7 s, sound for 2.2 s, silent for 3.1 s",
+        "the launcher's audio command, for this run by its id: state \"muted\"; toggle, \"not muted\"; toggle, \"muted\"; state \"muted\"",
+        "its last answer: muted; 4.9 s of sound received, 2.1 s played, 2.8 s muted",
+        "after the run had ended the command reported failure: emu: no running emulator has audio routed through the host (run 20261117T203310Z-ad9288)"
+      ],
+      "checked_at": "2026-11-17T20:33:18Z",
+      "seconds": 8.2,
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
+      "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
+    },
+    "audio-switch-vm": {
+      "status": "pass",
+      "task": "9.2",
+      "description": "a run starts muted, and the audio command toggles it and says its state, in VM mode",
+      "details": [
+        "started with the mute setting, the run was muted from its first sound: while the target played a 880 Hz tone for 6.8 s, the sound sent on to the host was: silent for 1.7 s, sound for 2.1 s, silent for 3.0 s",
+        "the launcher's audio command, for this run by its id: state \"muted\"; toggle, \"not muted\"; toggle, \"muted\"; state \"muted\"",
+        "its last answer: muted; 4.9 s of sound received, 2.1 s played, 2.8 s muted",
+        "after the run had ended the command reported failure: emu: no running emulator has audio routed through the host (run 20261117T203318Z-c013d9)"
+      ],
+      "checked_at": "2026-11-17T20:33:29Z",
+      "seconds": 11.3,
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
+      "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
+    },
+    "window-buttons-container": {
+      "status": "pass",
+      "task": "9.2",
+      "description": "the toolbar's full screen and remote control buttons work, with container mode",
+      "details": [
+        "the remote control button hid the on-screen remote control and showed it again",
+        "the full screen button: full screen, without the toolbar; F11 brought the 1280x752 window back with its toolbar",
+        "full screen the window covered the 2560x1440 screen"
+      ],
+      "checked_at": "2026-11-17T20:30:15Z",
+      "seconds": 13.8,
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
+      "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
+    },
+    "window-hotkeys-container": {
+      "status": "pass",
+      "task": "9.2",
+      "description": "the hotkeys for mute, 1:1 and the remote control work, with container mode",
+      "details": [
+        "Ctrl+Alt+R hid the on-screen remote control and showed it again",
+        "Ctrl+Alt+M muted the run's audio process and then unmuted it (asked of the process itself each time)",
+        "Ctrl+Alt+1: from a 640x360 window the 1280x720 display went back to 1280x720 screen pixels",
+        "none of the hotkeys pressed until then (Ctrl+Alt+F, F11, Ctrl+Alt+R, Ctrl+Alt+M, Ctrl+Alt+1) reached the target: the first key it got was the OK pressed after them"
+      ],
+      "checked_at": "2026-11-17T20:30:15Z",
+      "seconds": 0.0,
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
+      "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
+    },
+    "window-buttons-vm": {
+      "status": "pass",
+      "task": "9.2",
+      "description": "the toolbar's full screen and remote control buttons work, with a host-native VM",
+      "details": [
+        "the remote control button hid the on-screen remote control and showed it again",
+        "the full screen button: full screen, without the toolbar; F11 brought the 1280x752 window back with its toolbar",
+        "full screen the window covered the 2560x1440 screen"
+      ],
+      "checked_at": "2026-11-17T20:30:30Z",
+      "seconds": 15.1,
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
+      "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
+    },
+    "window-hotkeys-vm": {
+      "status": "pass",
+      "task": "9.2",
+      "description": "the hotkeys for mute, 1:1 and the remote control work, with a host-native VM",
+      "details": [
+        "Ctrl+Alt+R hid the on-screen remote control and showed it again",
+        "Ctrl+Alt+M muted the run's audio process and then unmuted it (asked of the process itself each time)",
+        "Ctrl+Alt+1: from a 640x360 window the 1280x720 display went back to 1280x720 screen pixels",
+        "none of the hotkeys pressed until then (Ctrl+Alt+F, F11, Ctrl+Alt+R, Ctrl+Alt+M, Ctrl+Alt+1) reached the target: the first key it got was the OK pressed after them"
+      ],
+      "checked_at": "2026-11-17T20:30:30Z",
+      "seconds": 0.0,
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
+      "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
+    },
+    "window-buttons-vm-arm64": {
+      "status": "pass",
+      "task": "9.2",
+      "description": "the toolbar's full screen and remote control buttons work, with an ARM64 VM",
+      "details": [
+        "the remote control button hid the on-screen remote control and showed it again",
+        "the full screen button: full screen, without the toolbar; F11 brought the 1280x752 window back with its toolbar",
+        "full screen the window covered the 2560x1440 screen"
+      ],
+      "checked_at": "2026-11-17T20:30:50Z",
+      "seconds": 20.7,
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
+      "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
+    },
+    "window-hotkeys-vm-arm64": {
+      "status": "pass",
+      "task": "9.2",
+      "description": "the hotkeys for mute, 1:1 and the remote control work, with an ARM64 VM",
+      "details": [
+        "Ctrl+Alt+R hid the on-screen remote control and showed it again",
+        "Ctrl+Alt+M muted the run's audio process and then unmuted it (asked of the process itself each time)",
+        "Ctrl+Alt+1: from a 640x360 window the 1280x720 display went back to 1280x720 screen pixels",
+        "none of the hotkeys pressed until then (Ctrl+Alt+F, F11, Ctrl+Alt+R, Ctrl+Alt+M, Ctrl+Alt+1) reached the target: the first key it got was the OK pressed after them"
+      ],
+      "checked_at": "2026-11-17T20:30:50Z",
+      "seconds": 0.0,
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
+      "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
+    },
+    "window-buttons-vm-arm32": {
+      "status": "pass",
+      "task": "9.2",
+      "description": "the toolbar's full screen and remote control buttons work, with an ARM32 VM",
+      "details": [
+        "the remote control button hid the on-screen remote control and showed it again",
+        "the full screen button: full screen, without the toolbar; F11 brought the 1280x752 window back with its toolbar",
+        "full screen the window covered the 2560x1440 screen"
+      ],
+      "checked_at": "2026-11-17T20:31:26Z",
+      "seconds": 35.2,
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
+      "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
+    },
+    "window-hotkeys-vm-arm32": {
+      "status": "pass",
+      "task": "9.2",
+      "description": "the hotkeys for mute, 1:1 and the remote control work, with an ARM32 VM",
+      "details": [
+        "Ctrl+Alt+R hid the on-screen remote control and showed it again",
+        "Ctrl+Alt+M muted the run's audio process and then unmuted it (asked of the process itself each time)",
+        "Ctrl+Alt+1: from a 640x360 window the 1280x720 display went back to 1280x720 screen pixels",
+        "none of the hotkeys pressed until then (Ctrl+Alt+F, F11, Ctrl+Alt+R, Ctrl+Alt+M, Ctrl+Alt+1) reached the target: the first key it got was the OK pressed after them"
+      ],
+      "checked_at": "2026-11-17T20:31:26Z",
+      "seconds": 0.0,
+      "revision": "b65c3379fbf7443d6d72dfd01abe2f0c682d78d7-dirty",
       "image_definition_sha256": "8068945b186b7e7a748bf935e19174ab44ecf5559312c46baef9d33fbf33c385"
     }
   }

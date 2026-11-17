@@ -94,3 +94,61 @@ The emulator MUST allow audio output to be muted and unmuted while running.
 
 - WHEN audio is playing
 - THEN the audio output can be muted and subsequently unmuted
+
+### Requirement: Start muted, and switch and ask for the audio state from the launcher
+
+The startup launcher MUST accept a setting that starts the emulator with its audio output muted. It MUST offer a command that mutes, unmutes, or toggles the audio output of a running emulator, and that reports its state: whether it is muted, and how many seconds of sound it has received, played, and muted. The command MUST act on every running emulator that was started from the same copy of the project and whose audio is routed through the host, or on the one run that is named. When there is none, it MUST say so and report failure. While audio output is muted the target MUST go on playing unchanged, and the host gets silence in place of the sound.
+
+#### Scenario: Start muted
+
+- WHEN the emulator is started with the setting that mutes it
+- THEN its audio output is muted from the start and can be unmuted while it runs
+
+#### Scenario: Toggle the audio output
+
+- WHEN the command is asked to toggle a running emulator's audio output
+- THEN the audio output is muted, or unmuted if it was muted
+
+#### Scenario: Ask for the audio state
+
+- WHEN the command is asked for the state
+- THEN it says for each such emulator whether it is muted and how much sound it has received, played, and muted
+
+#### Scenario: Name one run
+
+- WHEN the command names a run
+- THEN it acts on that run only
+
+#### Scenario: No emulator with audio is running
+
+- WHEN the command is given and no running emulator has audio routed through the host
+- THEN it says so and reports failure
+
+#### Scenario: Play on while muted
+
+- WHEN audio output is muted while target software plays sound
+- THEN the target software plays on unchanged and the host gets silence
+
+### Requirement: Choose how the host plays the target's sound
+
+The startup launcher MUST accept emulator options that choose the host output device on which the target's sound is played, and that take the sound in without playing it on the host. On macOS and Windows hosts it MUST also accept an option that sets the volume to play at, from 0 to 100, and an option that writes the samples that the host's audio output takes to a file as well.
+
+#### Scenario: Choose the output device
+
+- WHEN an output device of the host is named
+- THEN the target's sound is played on that device
+
+#### Scenario: Take the sound in without playing it
+
+- WHEN the option that plays nowhere is given
+- THEN the target's sound is taken in by the host and not played
+
+#### Scenario: Set the volume
+
+- WHEN a volume is given on a macOS or Windows host
+- THEN the target's sound is played at that volume
+
+#### Scenario: Write what the host's audio output takes
+
+- WHEN a file for the samples is named on a macOS or Windows host
+- THEN the samples that the host's audio output takes are written to that file while they are played

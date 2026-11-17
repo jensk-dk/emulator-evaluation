@@ -135,10 +135,12 @@ def _build_command(runtime, arch, stage, tag, definition_hash):
 
 def _run_build(command, quiet, arch):
     # Building for another CPU architecture runs its binaries under emulation,
-    # which the container engine loses when it restarts; setup restores it.
+    # which the container engine loses when it restarts; setup restores it,
+    # for the simulated ARM targets when it is asked to set those up.
     hint = None
     if arch != host.host_arch():
-        hint = "if the build could not run %s programs, %s" % (arch, host.SETUP_HINT)
+        hint = "if the build could not run %s programs: %s" % (
+            arch, host.ARM_SETUP_HINT if arch in ("arm64", "arm32") else host.SETUP_HINT)
     # Docker engines before version 23 build with their old builder unless
     # told otherwise, and that one cannot build for another architecture: it
     # reuses a stage it built for the host's. Later engines ignore the setting.
@@ -290,10 +292,19 @@ def cleanup(runtime):
     return "removed from the container engine: " + " and ".join(said) if said else None
 
 
+def vm_built(arch):
+    """Whether the VM image of this architecture is built from the current
+    definition, with its files in place."""
+    manifest = load_manifest("vm", arch)
+    return bool(manifest) and is_current(manifest) and all(
+        (artifact_dir("vm", arch) / name).is_file() for name in VM_FILES)
+
+
 def ensure(kind, runtime_factory, arch, quiet=False, rebuild=False, keep_old=False):
     """Return the manifest of an up-to-date image, building it when it is
     missing or was built from a different definition. A build is followed by
-    cleanup(), unless keep_old."""
+    cleanup(), unless keep_old. No build is started for a simulated ARM
+    target on a host whose container engine cannot run ARM programs."""
     manifest = load_manifest(kind, arch)
     present = is_current(manifest)
     if present and kind == "vm":
@@ -303,11 +314,15 @@ def ensure(kind, runtime_factory, arch, quiet=False, rebuild=False, keep_old=Fal
     if present and not rebuild:
         return manifest
     check_definition()
+    runtime = runtime_factory()
+    from . import armtargets                # it reads this module
+    gap = armtargets.build_gap(runtime, arch)
+    if gap:
+        raise EmuError(armtargets.not_set_up(arch, gap), hint=host.ARM_SETUP_HINT)
     reason = "rebuilding" if manifest else "building"
     print("emu: %s the %s image for %s (the first build downloads packages and takes a while)" % (reason, kind, arch),
           flush=True)
     builder = build_vm if kind == "vm" else build_container
-    runtime = runtime_factory()
     manifest = builder(runtime, arch, quiet=quiet)
     if not keep_old:
         said = cleanup(runtime)

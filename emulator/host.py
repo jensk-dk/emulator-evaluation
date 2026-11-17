@@ -23,6 +23,9 @@ _EXTRA_TOOL_DIRS = {
 }
 
 SETUP_HINT = "run setup.ps1 to install host dependencies" if os.name == "nt" else "run ./setup.sh to install host dependencies"
+# What only the simulated ARM64 and ARM32 targets need is installed on request.
+ARM_SETUP_HINT = ("the simulated ARM targets are set up on request: run setup.cmd -ArmTargets" if os.name == "nt"
+                  else "the simulated ARM targets are set up on request: run ./setup.sh --arm-targets")
 
 
 def host_os():

@@ -5,8 +5,8 @@ import os
 import statistics
 import sys
 
-from . import catalog, container, drivers as driver_features, graphics, host, hostaudio, image, remote, report, results, \
-    verify, vm, window
+from . import armtargets, catalog, container, drivers as driver_features, graphics, host, hostaudio, image, remote, \
+    report, results, verify, vm, window
 from .errors import EmuError
 from .paths import BUILD_DIR
 from .run import DEFAULT_CPUS, DEFAULT_MEMORY_MB, KNOWN_OPTIONS, RunOptions, launch
@@ -205,9 +205,12 @@ def cmd_doctor(args):
                "host-native guests" if arch == native else "%s guests" % arch.upper()
         if binary:
             print("qemu        %s: %s (%s)" % (role, vm.qemu_version(binary), binary))
-        else:
+        elif arch == native:
             print("qemu        %s: MISSING %s" % (role, vm.QEMU_BINARY[arch]))
             problems += 1
+        else:
+            # Not a dependency: the simulated ARM targets are set up on request.
+            print("qemu        %s: %s is not installed" % (role, vm.QEMU_BINARY[arch]))
     resolved = vm.resolve("native")
     print("accelerator %s for host-native VM mode%s" % (
         resolved["accelerator"], " (no hardware virtualization available)" if resolved["notes"] else ""))
@@ -221,6 +224,17 @@ def cmd_doctor(args):
         print("container   MISSING: %s" % error)
         runtime = None
         problems += 1
+
+    def engine():
+        if runtime is None:
+            raise EmuError("no container engine")
+        return runtime
+    # The simulated ARM targets are set up on request; not a problem where
+    # they are not.
+    for arch in armtargets.ARCHS:
+        reason = armtargets.gap(arch, engine)
+        print("arm target  %s: %s" % (armtargets.NAMES[arch], "set up" if not reason else
+                                      "not set up: %s; %s" % (reason, host.ARM_SETUP_HINT)))
     binary = host.find_tool(vm.QEMU_BINARY[native])
     if binary:
         probe = graphics.probe_vm(binary)

@@ -134,3 +134,17 @@ The startup launcher MUST accept a setting that selects the remote control input
 
 - WHEN a user selects RedRat IR input
 - THEN the emulator takes remote control input from a RedRat IR device
+
+### Requirement: Provide a workload that shows the keys that arrive
+
+The target OS image MUST provide a workload, selectable through the startup launcher like any other, that shows a picture on the emulator's display and reports each remote control key that a program on the target's display receives: its key code, its symbol in the target, and whether it was pressed or released. It MUST run in container mode and in VM mode, so that remote control input can be tried and checked in each.
+
+#### Scenario: Report a key
+
+- WHEN the workload runs and a remote control key is pressed and released through an input mode
+- THEN the workload reports that key's code and symbol, once as pressed and once as released
+
+#### Scenario: Run in both modes
+
+- WHEN the workload is selected in container mode or in VM mode
+- THEN it shows its picture and reports the keys that arrive

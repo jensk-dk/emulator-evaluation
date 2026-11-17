@@ -163,6 +163,18 @@
       "title": "Hosts of the matrix that have not been run",
       "detail": "macOS on x86-64, and Ubuntu 22.04 and 26.04 (the Linux host is Kubuntu 24.04). The setup script's dnf, zypper and pacman paths were run in containers only.",
       "hosts": "all", "modes": "all", "task": "2.1, 2.2"
+    },
+    {
+      "kind": "unverified", "area": "Evaluation",
+      "title": "The checks added on 2026-11-17 have run on macOS only",
+      "detail": "Sixteen checks for requirements written that day: what the launcher finds on the host, the results page, the clean-up after a build, the setup script's check, the audio command, the toolbar's other buttons, the other hotkeys, and the simulated x86-64 guest. Linux and Windows have not run them. The check of the x86-64 guest, a diagnostic outside the matrix, does not build that image on a host of another CPU architecture; on macOS it passed after the image had been built for it. No check covers installing with the setup scripts, the PDF of the results page, or the page's controls.",
+      "hosts": "all", "modes": "all", "task": "9.2"
+    },
+    {
+      "kind": "unverified", "area": "Hosts",
+      "title": "Setting up the simulated ARM targets on request has not been run on the Linux and Windows hosts",
+      "detail": "Since 2026-11-17 the setup scripts install what the ARM64 and ARM32 targets need only with --arm-targets (-ArmTargets), and the launcher says where a host is not set up for them. Run on the macOS host and in an x86-64 Ubuntu container there; setup.ps1 was only read by PowerShell on Linux and its new check run with stand-ins. Without the option the checks for these targets end as could not be run.",
+      "hosts": ["linux-x86_64", "windows-x86_64"], "modes": ["vm-arm64", "vm-arm32"], "task": "2.1"
     }
   ]
 }

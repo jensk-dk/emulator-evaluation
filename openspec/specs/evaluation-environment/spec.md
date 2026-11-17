@@ -56,3 +56,22 @@ Each performance result MUST identify the Linux client OS image used by its sour
 
 - WHEN a performance result is reviewed
 - THEN its image, workload, host, CPU architecture, and emulator mode can be identified
+
+### Requirement: List the evaluation workloads
+
+The startup launcher MUST offer a command that lists the evaluation workloads, each with its version and the performance areas it measures. On request the command MUST check that the workloads together cover every required performance area, name each one that is not covered, and report failure when one is not.
+
+#### Scenario: List the workloads
+
+- WHEN the command is run
+- THEN it lists each workload with its version and the performance areas it measures
+
+#### Scenario: Check the coverage
+
+- WHEN the command is asked to check and every required performance area is covered
+- THEN it says so and reports success
+
+#### Scenario: A performance area is not covered
+
+- WHEN the command is asked to check and no workload measures a required performance area
+- THEN it names what is not covered and reports failure

@@ -7,6 +7,12 @@
 #   ./setup.sh           check, then install what is missing (asks first)
 #   ./setup.sh --yes     same, without asking
 #   ./setup.sh --check   check only; exit 1 if anything is missing
+#   ./setup.sh --arm-targets
+#                        also set up the simulated ARM64 and ARM32 targets:
+#                        check for what only they need, and install what is
+#                        missing of it. They run on a simulated CPU, which is
+#                        slow, and not every graphics technology runs in
+#                        them, so this is not done without the option
 #   ./setup.sh --experimental-qemu
 #                        macOS on ARM64: also build and install an experimental
 #                        QEMU that maps a VM's graphics to the host GPU. It is
@@ -24,14 +30,20 @@
 #
 # Host dependencies:
 #   python3 >= 3.9            runs the launcher (./emu)
-#   QEMU system emulators     VM mode: host-native, ARM64 and ARM32 guests
+#   QEMU system emulator      VM mode: the one for the host's own CPU
 #   hardware virtualization   host-native VM mode (HVF on macOS, KVM on Linux)
 #   container runtime         container mode and target image builds
-#   foreign-arch emulation    building ARM32/ARM64/x86-64 target images
 #   Qt for Python (PySide6)   the launcher's windows: the display window, the
 #                             on-screen remote control and the settings window.
 #                             Installed with pip into a Python environment of
 #                             this project's own, build/host/gui
+#
+# Only with --arm-targets, for the simulated ARM64 and ARM32 targets:
+#   QEMU ARM system emulators VM mode with an ARM64 or ARM32 guest. Homebrew's
+#                             QEMU has them in the one package it is
+#   ARM build emulation       building the ARM target images: ARM programs
+#                             run in the container engine through user-mode
+#                             emulation (binfmt)
 #
 # Optional, installed where the package manager offers it:
 #   QEMU OpenGL modules       VM mode maps graphics to the host GPU; without
@@ -48,11 +60,13 @@ set -u
 MODE=install
 ASSUME_YES=0
 EXPERIMENTAL_QEMU=0
+ARM_TARGETS=0
 UNINSTALL=0
 for arg in "$@"; do
   case "$arg" in
     --check) MODE=check ;;
     -y|--yes) ASSUME_YES=1 ;;
+    --arm-targets) ARM_TARGETS=1 ;;
     --experimental-qemu) EXPERIMENTAL_QEMU=1 ;;
     --uninstall) UNINSTALL=1 ;;
     -h|--help) sed -n '2,/^# Written for/p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
@@ -86,6 +100,10 @@ if [ "$EXPERIMENTAL_QEMU" = 1 ] && ! { [ "$OS" = Darwin ] && [ "$ARCH" = arm64 ]
 fi
 if [ "$UNINSTALL" = 1 ] && [ "$EXPERIMENTAL_QEMU" = 1 ]; then
   echo "setup.sh: --uninstall removes all that this script installed, the experimental QEMU with it; give it alone" >&2
+  exit 2
+fi
+if [ "$UNINSTALL" = 1 ] && [ "$ARM_TARGETS" = 1 ]; then
+  echo "setup.sh: --uninstall removes all that this script installed, what the simulated ARM targets need with it; give it alone" >&2
   exit 2
 fi
 
@@ -324,16 +342,37 @@ install_gui() {
 }
 
 check_qemu() {
+  if have "$QEMU_NATIVE"; then
+    ok "QEMU: $("$QEMU_NATIVE" --version | head -1) (the system emulator for the host's own CPU)"
+  else
+    missing qemu "QEMU system emulator: $QEMU_NATIVE"
+  fi
+}
+
+# The system emulators that only the simulated ARM targets need. On an ARM64
+# host the ARM64 target runs on the emulator for the host's own CPU.
+arm_emulators() {
+  if [ "$ARCH" = arm64 ]; then echo "qemu-system-arm"; else echo "qemu-system-aarch64 qemu-system-arm"; fi
+}
+
+# What only the simulated ARM64 and ARM32 targets need is looked at, and
+# installed, when --arm-targets asks for it: they are slow and less complete,
+# and not part of what a host needs.
+check_arm_targets() {
+  if [ "$ARM_TARGETS" = 0 ]; then
+    note "simulated ARM64 and ARM32 targets: not set up by default, and not checked. ./setup.sh --arm-targets sets them up"
+    return 0
+  fi
   local bin absent=""
-  for bin in "$QEMU_NATIVE" qemu-system-aarch64 qemu-system-arm; do
-    case " $absent " in *" $bin "*) continue ;; esac
+  for bin in $(arm_emulators); do
     have "$bin" || absent="$absent $bin"
   done
   if [ -z "$absent" ]; then
-    ok "QEMU: $("$QEMU_NATIVE" --version | head -1) (native, ARM64 and ARM32 system emulators)"
+    ok "QEMU's ARM system emulators, for the simulated ARM targets"
   else
-    missing qemu "QEMU system emulators:$absent"
+    missing qemu-arm "QEMU's ARM system emulators, for the simulated ARM targets:$absent"
   fi
+  check_foreign_arch
 }
 
 # Host graphics acceleration for VM mode needs a QEMU with the GPU-accelerated
@@ -510,9 +549,9 @@ check_foreign_arch() {
   is_missing buildx && return 0
   local gaps; gaps=$(foreign_arch_gaps)
   if [ -z "$gaps" ]; then
-    ok "foreign-architecture emulation for target image builds"
+    ok "ARM build emulation, for building the ARM target images"
   else
-    missing binfmt "foreign-architecture emulation (binfmt) for:$gaps"
+    missing binfmt "ARM build emulation (binfmt), for building the ARM target images:$gaps"
   fi
 }
 
@@ -526,7 +565,7 @@ run_checks() {
   check_audio
   check_accel
   check_container
-  check_foreign_arch
+  check_arm_targets
   check_gui
 }
 
@@ -592,7 +631,8 @@ install_macos() {
 
   local pkgs=""
   is_missing python && pkgs="$pkgs python"
-  is_missing qemu && pkgs="$pkgs qemu"
+  # Homebrew's QEMU is one package with every system emulator in it.
+  if is_missing qemu || is_missing qemu-arm; then pkgs="$pkgs qemu"; fi
   if is_missing container; then pkgs="$pkgs colima docker docker-buildx"; fi
   if is_missing buildx; then pkgs="$pkgs docker-buildx"; fi
   if is_missing engine && ! have colima && ! [ -d /Applications/Docker.app ]; then pkgs="$pkgs colima"; fi
@@ -643,8 +683,9 @@ install_macos() {
     fi
   fi
 
-  # Register user-mode emulation for the other target architectures.
-  if have docker && docker info >/dev/null 2>&1; then
+  # Register user-mode emulation for the ARM target architectures that this
+  # host cannot run itself: only when the simulated ARM targets are asked for.
+  if [ "$ARM_TARGETS" = 1 ] && have docker && docker info >/dev/null 2>&1; then
     CONTAINER_CLI=docker
     if [ -n "$(foreign_arch_gaps)" ]; then
       # Emulators for the target architectures this host cannot run itself.
@@ -801,6 +842,12 @@ add_to_group() {
   info "  Added $(id -un) to the $1 group; log out and back in for it to apply."
 }
 
+# The first name on an x86-64 host, the second on an ARM64 host: the package
+# with the system emulator for the host's own CPU.
+native_of() {
+  if [ "$ARCH" = arm64 ]; then echo "$2"; else echo "$1"; fi
+}
+
 install_linux() {
   local native_pkg cli="" before="" pkgs="" status=0
   have docker && cli=docker
@@ -810,7 +857,9 @@ install_linux() {
   # of what the installation adds.
   if have apt-get; then
     is_missing python && pkgs="$pkgs python3"
-    is_missing qemu && pkgs="$pkgs qemu-system-x86 qemu-system-arm qemu-utils"
+    # Debian's qemu-system-arm has the ARM64 and the ARM32 emulator.
+    is_missing qemu && pkgs="$pkgs $(native_of qemu-system-x86 qemu-system-arm) qemu-utils"
+    is_missing qemu-arm && pkgs="$pkgs qemu-system-arm"
     is_missing container && pkgs="$pkgs podman"
     is_missing binfmt && pkgs="$pkgs qemu-user-static binfmt-support"
     is_missing gui && pkgs="$pkgs $(linux_gui_packages)"
@@ -823,7 +872,8 @@ install_linux() {
     fi
   elif have dnf; then
     is_missing python && pkgs="$pkgs python3"
-    is_missing qemu && pkgs="$pkgs qemu-system-x86 qemu-system-aarch64 qemu-system-arm qemu-img"
+    is_missing qemu && pkgs="$pkgs $(native_of qemu-system-x86 qemu-system-aarch64) qemu-img"
+    is_missing qemu-arm && pkgs="$pkgs qemu-system-aarch64 qemu-system-arm"
     is_missing container && pkgs="$pkgs podman"
     is_missing binfmt && pkgs="$pkgs qemu-user-static"
     is_missing gui && pkgs="$pkgs $(linux_gui_packages)"
@@ -833,7 +883,8 @@ install_linux() {
     [ -z "$pkgs" ] || as_root dnf install -y $pkgs || status=1
   elif have pacman; then
     is_missing python && pkgs="$pkgs python"
-    is_missing qemu && pkgs="$pkgs qemu-system-x86 qemu-system-aarch64 qemu-system-arm qemu-img"
+    is_missing qemu && pkgs="$pkgs $(native_of qemu-system-x86 qemu-system-aarch64) qemu-img"
+    is_missing qemu-arm && pkgs="$pkgs qemu-system-aarch64 qemu-system-arm"
     is_missing container && pkgs="$pkgs podman"
     is_missing binfmt && pkgs="$pkgs qemu-user-static qemu-user-static-binfmt"
     is_missing gui && pkgs="$pkgs $(linux_gui_packages)"
@@ -843,7 +894,8 @@ install_linux() {
     [ -z "$pkgs" ] || as_root pacman -S --needed --noconfirm $pkgs || status=1
   elif have zypper; then
     is_missing python && pkgs="$pkgs python3"
-    is_missing qemu && pkgs="$pkgs qemu-x86 qemu-arm qemu-tools"
+    is_missing qemu && pkgs="$pkgs $(native_of qemu-x86 qemu-arm) qemu-tools"
+    is_missing qemu-arm && pkgs="$pkgs qemu-arm"
     is_missing container && pkgs="$pkgs podman"
     is_missing binfmt && pkgs="$pkgs qemu-linux-user"
     is_missing gui && pkgs="$pkgs $(linux_gui_packages)"
@@ -853,8 +905,9 @@ install_linux() {
     [ -z "$pkgs" ] || as_root zypper --non-interactive install $pkgs || status=1
   else
     info "No supported package manager found (apt-get, dnf, pacman or zypper)."
-    info "Install these yourself: python3 >= 3.9, QEMU system emulators for $ARCH, aarch64 and arm,"
-    info "podman or docker, and qemu-user-static with binfmt_misc."
+    info "Install these yourself: python3 >= 3.9, the QEMU system emulator for $ARCH, and podman or docker."
+    info "For the simulated ARM targets also: QEMU's system emulators for aarch64 and arm, and"
+    info "qemu-user-static with binfmt_misc."
     return 1
   fi
   # shellcheck disable=SC2086
@@ -1447,7 +1500,8 @@ if [ -z "$MISSING" ] && [ -z "$OPTIONAL" ]; then
 fi
 
 RERUN="./setup.sh"
-[ "$EXPERIMENTAL_QEMU" = 0 ] || RERUN="./setup.sh --experimental-qemu"
+[ "$ARM_TARGETS" = 0 ] || RERUN="$RERUN --arm-targets"
+[ "$EXPERIMENTAL_QEMU" = 0 ] || RERUN="$RERUN --experimental-qemu"
 
 if [ "$MODE" = check ]; then
   info ""

@@ -635,7 +635,11 @@ function hostCard(id) {
 // here still gets a row, under its own name.
 const SUPPORT_GROUPS = [
   ["Launcher and target", [["prompt", "Interactive prompt"], ["guest", "ARM target starts"],
-                           ["bench", "CPU, memory and I/O benchmark"], ["drivers", "Driver features: host, emulated, mocked"]]],
+                           ["vm-x86_64", "Simulated x86-64 target (a diagnostic)"],
+                           ["bench", "CPU, memory and I/O benchmark"], ["drivers", "Driver features: host, emulated, mocked"],
+                           ["doctor", "What the launcher finds on the host"],
+                           ["build-cleanup", "Clean-up of the container engine after a build"],
+                           ["setup-check", "Setup script: check and list, without installing or removing"]]],
   ["Graphics", [["wayland", "Wayland"], ["gles", "OpenGL ES"], ["vulkan", "Vulkan"], ["flutter", "Flutter"],
                 ["graphics-emulated", "Emulated graphics"], ["graphics-host", "Host GPU graphics"],
                 ["resolution", "720p, 1080p and 4K"]]],
@@ -643,12 +647,15 @@ const SUPPORT_GROUPS = [
              ["video-wayland", "Video through Wayland"], ["video-gles", "Video through OpenGL ES"],
              ["video-vulkan", "Video through Vulkan"], ["video-flutter", "Video through Flutter"],
              ["audio-host", "Sound through the host"], ["audio-mute", "Mute and unmute while playing"],
+             ["audio-switch", "Start muted; the audio command's toggle and state"],
              ["audio-strategies", "Audio driver: emulated and mocked"]]],
   ["Browser", [["web-launch", "WPE WebKit launches"], ["web-render", "Web page rendering"],
                ["web-mse", "MSE playback"]]],
   ["Windows and input", [["settings-window", "Settings window"], ["settings-launch", "Start from the settings window"],
                          ["window-display", "Display window"], ["window-fullscreen", "Full screen and its hotkeys"],
                          ["window-scaling", "Scaling with the window"], ["window-toolbar", "Toolbar: 1:1 and mute"],
+                         ["window-buttons", "Toolbar: full screen and remote control"],
+                         ["window-hotkeys", "Hotkeys: mute, 1:1 and remote control"],
                          ["remote-keys", "Remote control keys from the keyboard"],
                          ["remote-window", "On-screen remote control"]]],
   ["STB simulator", [["stb-start", "Starts, and is operated with remote control keys"],
@@ -656,7 +663,9 @@ const SUPPORT_GROUPS = [
                      ["stb-vod", "Video on demand: MPEG-DASH with dash.js"],
                      ["stb-workloads", "Performance workloads from its user interface"]]],
   ["Evaluation", [["matrix", "Host test matrix"], ["image", "Target image and its record"],
-                  ["workloads", "Workload definitions"], ["results", "Result records are identified"]]],
+                  ["workloads", "Workload definitions"], ["results", "Result records are identified"],
+                  ["report-serve", "Results page and what it reads are served"],
+                  ["report-page", "Results page shows every record"]]],
 ];
 const SUPPORT_MODES = [["container", "Container"], ["vm-native", "VM"], ["vm-arm64", "ARM64"], ["vm-arm32", "ARM32"]];
 const STATUS = { pass: ["\u2713", "verified"], fail: ["\u2715", "fails"], unavailable: ["\u2013", "could not be run on this host"] };
