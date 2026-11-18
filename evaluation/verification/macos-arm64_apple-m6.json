@@ -1,6 +1,7 @@
 {
   "host": {
     "id": "macos-arm64",
+    "machine": "apple-m6",
     "os": "macos",
     "os_version": "27.2.1",
     "arch": "arm64",
@@ -23,9 +24,9 @@
         "4 hosts x 4 modes = 16 combinations, each measuring 6 performance areas",
         "every declared host combination has a host entry: linux-x86_64, windows-x86_64, macos-x86_64, macos-arm64"
       ],
-      "checked_at": "2026-11-18T17:55:51Z",
+      "checked_at": "2026-11-18T21:11:34Z",
       "seconds": 0.0,
-      "revision": "4caef26fc989eeb25068d384113949199eecb15b",
+      "revision": "5db0e4069882ba54949aad9ad47ae26a7f3da65d-dirty",
       "image_definition_sha256": "55f8b5f1d35b0b2fc918a52311eab8599e9b7aa38487380a2435702798aa7375"
     },
     "workloads": {
@@ -40,9 +41,9 @@
         "graphics: graphics-demo 1.0.0 (implemented), web-bench 1.1.0 (implemented)",
         "audio_video_decoding: media-decode 1.0.0 (implemented), web-bench 1.1.0 (implemented)"
       ],
-      "checked_at": "2026-11-18T17:55:52Z",
+      "checked_at": "2026-11-18T21:11:23Z",
       "seconds": 0.0,
-      "revision": "4caef26fc989eeb25068d384113949199eecb15b",
+      "revision": "5db0e4069882ba54949aad9ad47ae26a7f3da65d-dirty",
       "image_definition_sha256": "55f8b5f1d35b0b2fc918a52311eab8599e9b7aa38487380a2435702798aa7375"
     },
     "image": {
@@ -90,11 +91,11 @@
       "description": "CPU, memory and I/O workloads run in container mode",
       "details": [
         "13 measurements across cpu, io, memory_allocation, memory_bandwidth",
-        "record identifies host macos-arm64, mode container, image emu-target-debian 0.6.0, workload bench 1.0.0"
+        "record identifies host macos-arm64 on machine apple-m6, mode container, image emu-target-debian 0.6.0, workload bench 1.0.0"
       ],
-      "checked_at": "2026-11-18T17:55:59Z",
-      "seconds": 5.3,
-      "revision": "4caef26fc989eeb25068d384113949199eecb15b",
+      "checked_at": "2026-11-18T21:11:48Z",
+      "seconds": 5.5,
+      "revision": "5db0e4069882ba54949aad9ad47ae26a7f3da65d-dirty",
       "image_definition_sha256": "55f8b5f1d35b0b2fc918a52311eab8599e9b7aa38487380a2435702798aa7375"
     },
     "bench-vm": {
@@ -118,9 +119,9 @@
         "216 records, all fully identified",
         "this host has bench results for: container, vm-arm32, vm-arm64, vm-native"
       ],
-      "checked_at": "2026-11-18T19:42:15Z",
-      "seconds": 0.1,
-      "revision": "4caef26fc989eeb25068d384113949199eecb15b",
+      "checked_at": "2026-11-18T21:11:23Z",
+      "seconds": 0.2,
+      "revision": "5db0e4069882ba54949aad9ad47ae26a7f3da65d-dirty",
       "image_definition_sha256": "55f8b5f1d35b0b2fc918a52311eab8599e9b7aa38487380a2435702798aa7375"
     },
     "vm-arm32": {
@@ -1909,9 +1910,9 @@
         "with qemu-system-aarch64 hidden from the launcher (a stand-in for a host without it) it named that as missing, pointed to the setup script and ended with status 1",
         "with qemu-system-arm hidden, it said that the ARM32 target is not set up and named the setup option, named no missing dependency for it, and ended with status 0 as before"
       ],
-      "checked_at": "2026-11-18T18:37:39Z",
-      "seconds": 0.8,
-      "revision": "4caef26fc989eeb25068d384113949199eecb15b",
+      "checked_at": "2026-11-18T21:11:24Z",
+      "seconds": 0.9,
+      "revision": "5db0e4069882ba54949aad9ad47ae26a7f3da65d-dirty",
       "image_definition_sha256": "55f8b5f1d35b0b2fc918a52311eab8599e9b7aa38487380a2435702798aa7375"
     },
     "report-serve": {
@@ -1922,9 +1923,9 @@
         "the results command served the page, and over one connection that it kept open: the list of 216 records and each record, 3 verification records, the known issues, what is stated about the machines, and the disk space and time values",
         "the server does not answer on the host's own network address: the page is served to this host only"
       ],
-      "checked_at": "2026-11-18T19:42:15Z",
+      "checked_at": "2026-11-18T21:11:24Z",
       "seconds": 0.1,
-      "revision": "4caef26fc989eeb25068d384113949199eecb15b",
+      "revision": "5db0e4069882ba54949aad9ad47ae26a7f3da65d-dirty",
       "image_definition_sha256": "55f8b5f1d35b0b2fc918a52311eab8599e9b7aa38487380a2435702798aa7375"
     },
     "report-page": {
@@ -1936,9 +1937,9 @@
         "it has the hosts, the support matrix with the list of known issues, 47 charts, and 3 tables of disk space and times",
         "not checked: choosing the hosts, relative values, and what pointing at a row or a cell shows"
       ],
-      "checked_at": "2026-11-18T19:42:15Z",
-      "seconds": 0.5,
-      "revision": "4caef26fc989eeb25068d384113949199eecb15b",
+      "checked_at": "2026-11-18T21:11:25Z",
+      "seconds": 0.7,
+      "revision": "5db0e4069882ba54949aad9ad47ae26a7f3da65d-dirty",
       "image_definition_sha256": "55f8b5f1d35b0b2fc918a52311eab8599e9b7aa38487380a2435702798aa7375"
     },
     "setup-check": {
@@ -1950,9 +1951,9 @@
         "asked to list what the uninstall option would remove, it listed and removed nothing; its record has 41 entries, as before",
         "not checked: installing, asking before it, the optional extras and the package managers, which need a host where something is missing"
       ],
-      "checked_at": "2026-11-18T18:37:42Z",
-      "seconds": 0.6,
-      "revision": "4caef26fc989eeb25068d384113949199eecb15b",
+      "checked_at": "2026-11-18T21:11:26Z",
+      "seconds": 0.7,
+      "revision": "5db0e4069882ba54949aad9ad47ae26a7f3da65d-dirty",
       "image_definition_sha256": "55f8b5f1d35b0b2fc918a52311eab8599e9b7aa38487380a2435702798aa7375"
     },
     "vm-x86_64": {

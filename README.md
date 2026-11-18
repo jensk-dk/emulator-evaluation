@@ -1087,7 +1087,8 @@ exception above).
 - [evaluation/procedures.md](evaluation/procedures.md): how measurements are made.
 - `evaluation/results/`: recorded results (`./emu run ... --record`), and a
   page that shows them as charts (see below).
-- `evaluation/verification/`: what `./emu verify` has confirmed, per host.
+- `evaluation/verification/`: what `./emu verify` has confirmed, per host and
+  machine (`HOST_MACHINE.json`; see "Machines" in the procedures).
 - [evaluation/footprint.md](evaluation/footprint.md): the disk space of the
   host installation and of each target, and the install, build and run times
   that the report has to state. The macOS and the Linux host are measured,
@@ -1126,8 +1127,15 @@ The page starts with the hosts the results were measured on: CPU, memory,
 GPU with its driver, operating system and emulator software, as the records
 describe them. (Records made before the launcher recorded the GPU name it only
 where a test rendered on it.) [machines.json](evaluation/results/machines.json)
-adds what was stated about each host's machine, such as its GPU where the
+adds what was stated about each machine, such as its GPU where the
 records do not have it; the page marks that as stated.
+
+A host on the page is a host OS on one machine. Every record names its
+machine (`host.machine`, made from the CPU model, or the name in
+`EMU_MACHINE`), so two machines with the same host OS are two hosts, each
+named with its machine id, and their results are not put together. One
+machine measured under two host operating systems is two hosts as well, and
+the description of each says that the other is the same machine.
 
 Under the hosts is "Platform support and known issues": a matrix with a row
 for each feature the launcher's checks cover and, for each host, a cell per

@@ -103,6 +103,30 @@ The project MUST provide a results page that shows the recorded performance resu
 - WHEN a result record cannot be read
 - THEN the page says that what it shows is incomplete
 
+### Requirement: Keep the results of different machines apart
+
+Every result record and every verification record MUST name the machine it was made on with a machine id, beside the host operating system and host CPU architecture. The launcher MUST make the id from the machine's CPU model, and MUST take a name given by the person who runs it in its place, so that two machines with the same CPU model can be told apart. A record made before the id was recorded MUST be given the id that its CPU model gives. The results page, and the tools that add up or compare recorded results, MUST treat each host operating system on each machine as a host of its own: they MUST NOT take a median over, or show as one host, the results of two machines with the same host operating system. Where one machine was measured under more than one host operating system, the results page MUST say for each of those hosts which other hosts are the same machine.
+
+#### Scenario: Two machines with the same host OS
+
+- WHEN the records hold results of two machines with the same host operating system and CPU architecture
+- THEN the results page shows each machine as a host of its own, named with its machine id, with its own description, results and verification outcomes
+
+#### Scenario: One machine with two host operating systems
+
+- WHEN the records hold results of one machine under two host operating systems
+- THEN the description of each of the two hosts names the other as the same machine
+
+#### Scenario: Name a machine
+
+- WHEN the launcher is run with a machine name given
+- THEN the records it writes carry that name as the machine id
+
+#### Scenario: Read an earlier record
+
+- WHEN a record has no machine id
+- THEN it is grouped under the id that its CPU model gives
+
 ### Requirement: Show platform support and known issues on the results page
 
 The results page MUST show, for each feature that the verification checks cover and for each host and emulator mode, whether the feature was verified there, fails there, or could not be run there, as the verification records of the hosts say. It MUST show what a check found when the user asks for it. Below that it MUST list the known issues and limits, each with the hosts and emulator modes it applies to, and MUST tell apart what fails a check, what is a limit, what no check covers, and what is not implemented.

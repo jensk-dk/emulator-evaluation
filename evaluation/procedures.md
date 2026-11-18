@@ -36,13 +36,30 @@ Every record in `evaluation/results/` carries:
 
 | Field | Identifies |
 |---|---|
-| `host` | host OS and version, CPU architecture, CPU model, CPU count, memory, GPUs with their drivers (`gpus`; absent in records made before it was added) |
+| `host` | host id (OS and CPU architecture) and machine id (`machine`), host OS and version, CPU architecture, CPU model, CPU count, memory, GPUs with their drivers (`gpus`; absent in records made before it was added) |
 | `emulator` | mode and variant, guest architecture, accelerator, CPU model, runtime and its version, CPUs, memory, options; for runs with a display, its resolution and whether graphics were emulated or mapped to the host, with the reason |
 | `image` | client OS image name and version, its source (Debian release, base image digest, apt snapshot), the SHA-256 of its build definition, the repository revision it was built from, and the SHA-256 of the root filesystem or the container image ID; plus what the running target reported about itself |
 | `workload` | workload id, version and arguments |
 | `boot_seconds` | time from starting the emulator until the target OS reported ready |
 
 `./emu verify results` fails if any record lacks one of these.
+
+**Machines.** Results and verification records are kept apart by host id and
+machine id together, written `HOST@MACHINE` (`linux-x86_64@intel-core-i7-10700k`).
+The launcher makes the machine id from the CPU model. A machine that starts
+two host operating systems so has the same id under both, and the results
+page says that the two hosts are one machine. Two machines with the same host
+OS get different ids unless their CPU models are the same: then, and whenever
+another name is wanted, set `EMU_MACHINE` to a name for the machine on every
+run of the launcher there (`EMU_MACHINE=lab-pc-2 ./emu verify`). A record
+made before the id was recorded (2026-11-18) is read with the id its CPU
+model gives. A verification record is the file
+`evaluation/verification/HOST_MACHINE.json`, the timings of the STB simulator
+are `evaluation/stb-timings/HOST_MACHINE_MODE.json`, and
+[machines.json](results/machines.json) states what is known about a machine
+under its machine id. The known issues, the disk space and time tables and
+the matrix still name host ids: they hold for a host OS, whatever the
+machine.
 
 ## Resource benchmarks
 
@@ -421,7 +438,8 @@ simulator, taken with a method of that script's own, and kept apart from
     python3 evaluation/stb-timings.py table > evaluation/stb-timings/HOST.md
 
 `run` takes one mode, on a quiet host as for every measurement, and writes
-`stb-timings/HOST_VARIANT.json`; `table` prints a host's files as tables.
+`stb-timings/HOST_MACHINE_VARIANT.json`; `table` prints the files of a host on
+one machine as tables.
 
 - **The run.** The simulator is started as `./emu run --workload
   stb-simulator` starts it: at 1080p, with 4 CPUs and 2048 MiB, in the

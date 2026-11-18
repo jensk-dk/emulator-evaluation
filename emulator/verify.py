@@ -146,8 +146,8 @@ def _bench(mode):
     missing = results.missing_identity(record)
     _require(not missing, "the result record lacks identity fields: %s" % ", ".join(missing))
     return ["%d measurements across %s" % (len(outcome.results), ", ".join(sorted(areas))),
-            "record identifies host %s, mode %s, image %s %s, workload %s %s" % (
-                record["host"]["id"], record["emulator"]["variant"], record["image"]["name"],
+            "record identifies host %s on machine %s, mode %s, image %s %s, workload %s %s" % (
+                record["host"]["id"], record["host"]["machine"], record["emulator"]["variant"], record["image"]["name"],
                 record["image"]["version"], record["workload"]["id"], record["workload"]["version"])]
 
 
@@ -168,7 +168,7 @@ def check_results():
     for path, record in records:
         missing = results.missing_identity(record)
         _require(not missing, "%s lacks identity fields: %s" % (path.name, ", ".join(missing)))
-        if record["workload"]["id"] == "bench" and record["host"]["id"] == host.host_id():
+        if record["workload"]["id"] == "bench" and host.host_key(record["host"]) == host.host_key():
             seen.setdefault(record["emulator"]["variant"], set()).update(
                 r["area"] for r in record["results"] if r.get("value") is not None)
     for variant in ("container", "vm-native"):
@@ -2326,7 +2326,7 @@ def check_report_serve():
         unread = [name for name in reports if not read_json(report.VERIFICATION_PATH + name, "checks")]
         _require(not unread, "verification records could not be read from the server: %s" % ", ".join(unread))
         _require(read_json("/" + results.ISSUES_FILE, "issues"), "the known issues could not be read from the server")
-        _require(read_json("/" + results.MACHINES_FILE, "hosts"), "what is stated about the hosts' machines could "
+        _require(read_json("/" + results.MACHINES_FILE, "machines"), "what is stated about the hosts' machines could "
                  "not be read from the server")
         status, _, body = get(report.FOOTPRINT_PATH)
         _require(footprint.is_file() and status == 200 and body == footprint.read_bytes(),
@@ -2627,15 +2627,33 @@ CHECKS.update(_command_checks())
 
 
 def _report_path():
+    """One record per host OS, host CPU architecture and machine."""
+    return VERIFICATION_DIR / ("%s_%s.json" % (host.host_id(), host.machine_id()))
+
+
+def _legacy_report_path():
+    """Where the record was kept before machines were told apart: one per host
+    OS and CPU architecture."""
     return VERIFICATION_DIR / ("%s.json" % host.host_id())
 
 
-def load_report():
+def _read_report(path):
     try:
-        with open(_report_path()) as handle:
-            return json.load(handle)
+        with open(path) as handle:
+            found = json.load(handle)
     except (OSError, ValueError):
-        return {"host": host.describe(), "checks": {}}
+        return None
+    return found if isinstance(found, dict) and isinstance(found.get("checks"), dict) else None
+
+
+def load_report():
+    found = _read_report(_report_path())
+    if found is None:
+        # A record under the earlier name is this machine's only if it says so.
+        legacy = _read_report(_legacy_report_path())
+        if legacy and host.host_key(legacy.get("host") or {"id": ""}) == host.host_key():
+            found = legacy
+    return found or {"host": host.describe(), "checks": {}}
 
 
 def arm_target_of(name):
@@ -2693,4 +2711,8 @@ def run_checks(names):
         with open(_report_path(), "w") as handle:
             json.dump(report, handle, indent=2)
             handle.write("\n")
+        # This machine's record under the earlier name is now in the new one.
+        legacy = _read_report(_legacy_report_path())
+        if legacy and host.host_key(legacy.get("host") or {"id": ""}) == host.host_key():
+            _legacy_report_path().unlink()
     return counts

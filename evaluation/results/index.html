@@ -300,7 +300,7 @@ const state = { records: [], machines: {}, verification: {}, issues: [], footpri
 // Stated facts about the hosts' machines, beside the records.
 const MACHINES_FILE = "machines.json";
 // Known issues and limits, kept by hand; and the verification reports of
-// `emu verify`, one per host, which `emu report` serves from their directory.
+// `emu verify`, one per host and machine, which `emu report` serves from their directory.
 const ISSUES_FILE = "known-issues.json";
 const VERIFICATION_PATH = "verification/";
 // The disk space and time values, kept by hand in a document beside the
@@ -322,12 +322,44 @@ function el(tag, attrs, ...children) {
   return node;
 }
 
-function hostColor(id) {
+// A machine's id as the launcher makes it from the CPU model (machine_slug in
+// emulator/host.py): records made before the id was recorded get it here.
+function machineSlug(text) {
+  return String(text || "").toLowerCase().replace(/\((r|tm|c)\)/g, " ").replace(/@.*$/, " ")
+    .replace(/\b(cpu|processor)\b/g, " ").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+const machineOf = (host) => host.machine || machineSlug(host.cpu_model) || "unknown";
+// Results and verification reports are kept apart by host and machine: two
+// machines with the same host OS are two hosts here, and one machine that
+// starts two host operating systems is two hosts on the same machine.
+const hostKey = (host) => host.id + "@" + machineOf(host);
+const hostIdOf = (key) => String(key).split("@")[0];
+const machineIdOf = (key) => String(key).split("@")[1] || "";
+// Every host key among the records and the verification reports, in order.
+function knownKeys() {
+  const keys = new Set([...state.records.map((r) => hostKey(r.host)), ...Object.keys(state.verification)]);
+  return [...keys].sort(byHost);
+}
+const keysOf = (id) => knownKeys().filter((key) => hostIdOf(key) === id);
+const byHost = (a, b) => order(HOST_ORDER, hostIdOf(a)) - order(HOST_ORDER, hostIdOf(b)) || String(a).localeCompare(String(b));
+// A host keeps its color whatever else is loaded or filtered: the first machine
+// of a host OS has that host's color, a further machine one of the colors after.
+function hostColor(key) {
+  const id = hostIdOf(key), mine = keysOf(id);
+  const place = Math.max(0, mine.indexOf(String(key).includes("@") ? key : mine[0]));
   let index = HOST_ORDER.indexOf(id);
   if (index < 0) { HOST_ORDER.push(id); index = HOST_ORDER.length - 1; }
+  if (place > 0) {
+    const extra = knownKeys().filter((k) => keysOf(hostIdOf(k)).indexOf(k) > 0);
+    index = HOST_ORDER.length + extra.indexOf(key);
+  }
   return index < 8 ? "var(--host-" + (index + 1) + ")" : "var(--other)";
 }
-const hostName = (id) => HOST_NAMES[id] || id;
+// The host's name; with the machine where a host OS has more than one.
+function hostName(key) {
+  const id = hostIdOf(key), name = HOST_NAMES[id] || id, machine = machineIdOf(key);
+  return machine && keysOf(id).length > 1 ? name + " \u00b7 " + machine : name;
+}
 const modeName = (id) => MODES[id] || id;
 const order = (list, id) => { const i = list.indexOf(id); return i < 0 ? list.length : i; };
 
@@ -365,7 +397,7 @@ async function loadFromServer() {
   const urls = (await response.json()).map((name) => new URL(encodeURIComponent(name), base).href);
   if (!urls.length) throw new Error("the list names no records");
   try {
-    state.machines = (await (await fetch(MACHINES_FILE, { cache: "no-store" })).json()).hosts || {};
+    { const stated = await (await fetch(MACHINES_FILE, { cache: "no-store" })).json(); state.machines = stated.machines || {}; }
   } catch (error) { state.machines = {}; }
   const json = async (url) => (await fetch(url, { cache: "no-store" })).json();
   try { state.issues = (await json(ISSUES_FILE)).issues || []; } catch (error) { state.issues = []; }
@@ -379,7 +411,7 @@ async function loadFromServer() {
     for (const name of await json(VERIFICATION_PATH + "list")) {
       try {
         const report = await json(VERIFICATION_PATH + encodeURIComponent(name));
-        if (isVerification(report)) state.verification[report.host.id] = report;
+        if (isVerification(report)) state.verification[hostKey(report.host)] = report;
       } catch (error) { /* one unreadable report leaves the others */ }
     }
   } catch (error) { /* a plain web server has no such list */ }
@@ -407,7 +439,7 @@ async function loadFromServer() {
 async function loadFromFiles(fileList) {
   const files = [...fileList].filter((file) => /\.json$/i.test(file.name));
   const machines = files.find((file) => file.name === MACHINES_FILE);
-  try { state.machines = machines ? JSON.parse(await machines.text()).hosts || {} : {}; } catch (error) { state.machines = {}; }
+  try { state.machines = machines ? JSON.parse(await machines.text()).machines || {} : {}; } catch (error) { state.machines = {}; }
   const issues = files.find((file) => file.name === ISSUES_FILE);
   try { state.issues = issues ? JSON.parse(await issues.text()).issues || [] : []; } catch (error) { state.issues = []; }
   state.unread = 0;
@@ -419,7 +451,7 @@ async function loadFromFiles(fileList) {
     try {
       const data = JSON.parse(await file.text());
       // A verification report among the chosen files (evaluation/verification).
-      if (isVerification(data)) { state.verification[data.host.id] = data; return null; }
+      if (isVerification(data)) { state.verification[hostKey(data.host)] = data; return null; }
       return isRecord(data) ? Object.assign(data, { _file: file.name }) : null;
     } catch (error) { return null; }
   }));
@@ -429,7 +461,7 @@ async function loadFromFiles(fileList) {
 function show(records, source) {
   state.records = records.sort((a, b) => String(a.recorded_at).localeCompare(String(b.recorded_at)));
   state.source = source;
-  state.hosts = new Set(records.map((r) => r.host.id));
+  state.hosts = new Set(records.map((r) => hostKey(r.host)));
   $("loader").hidden = records.length > 0;
   $("report").hidden = records.length === 0;
   if (!records.length) { $("status").textContent = "No result records were found."; return; }
@@ -478,10 +510,10 @@ function collect() {
       // Results that depend on how graphics were provided are kept apart by it.
       const drawn = result.area === "graphics" || LOWER_IS_BETTER.has(result.test);
       const provider = drawn && graphics ? graphics.provider : "";
-      const seriesKey = [record.emulator.variant, record.host.id, provider].join("|");
+      const seriesKey = [record.emulator.variant, hostKey(record.host), provider].join("|");
       const chart = charts.get(chartKey);
       if (!chart.series.has(seriesKey)) {
-        chart.series.set(seriesKey, { mode: record.emulator.variant, host: record.host.id, provider, values: [],
+        chart.series.set(seriesKey, { mode: record.emulator.variant, host: hostKey(record.host), provider, values: [],
                                      runs: [], unavailable: null });
       }
       const series = chart.series.get(seriesKey);
@@ -521,7 +553,7 @@ function collect() {
 
 function render() {
   const records = state.records;
-  const hosts = [...new Set(records.map((r) => r.host.id))].sort((a, b) => order(HOST_ORDER, a) - order(HOST_ORDER, b));
+  const hosts = [...new Set(records.map((r) => hostKey(r.host)))].sort(byHost);
   hosts.forEach(hostColor);
   const modes = new Set(records.map((r) => r.emulator.variant));
   const last = records[records.length - 1].recorded_at;
@@ -587,7 +619,7 @@ const distinct = (values) => [...new Set(values.filter((v) => v !== null && v !=
 // What the records say about one host. The newest record speaks for the
 // machine; software that changed between runs is listed with every version.
 function hostCard(id) {
-  const mine = state.records.filter((r) => r.host.id === id);
+  const mine = state.records.filter((r) => hostKey(r.host) === id);
   const host = mine[mine.length - 1].host;
   // Newer records name the host's GPUs and their drivers. For a host with
   // only older records the GPU is known where a test rendered on it, from the
@@ -596,7 +628,9 @@ function hostCard(id) {
   const gpuText = (g) => g.model + (g.driver || g.driver_version
     ? " (" + [g.driver && "driver " + g.driver, g.driver_version].filter(Boolean).join(" ") + ")" : "");
   // What the person who ran the evaluation stated about this host's machine.
-  const stated = state.machines[id] || {};
+  const stated = state.machines[machineIdOf(id)] || {};
+  // The other host operating systems that the same machine was measured under.
+  const siblings = knownKeys().filter((key) => key !== id && machineIdOf(key) === machineIdOf(id)).map((key) => HOST_NAMES[hostIdOf(key)] || hostIdOf(key));
   const gpus = described ? described.host.gpus.map(gpuText)
     : Array.isArray(stated.gpus) && stated.gpus.length ? stated.gpus.map((g) => gpuText(g) + " \u2013 stated, not in the records")
     : distinct(mine.flatMap((r) => r.results.filter((x) => x.accelerated === true)
@@ -607,6 +641,7 @@ function hostCard(id) {
     .map((e) => e.cpus + " CPUs, " + gib(e.memory_bytes) + (e.os ? " (" + e.os + ")" : "")));
   const rows = [
     ["Machine", [stated.machine]],
+    ["Machine id", [machineIdOf(id) + (siblings.length ? " \u2013 the same machine as " + siblings.join(", ") : "")]],
     ["CPU", [host.cpu_model]],
     ["Logical CPUs", [host.cpus]],
     ["Memory", [host.memory_bytes ? gib(host.memory_bytes) : ""]],
@@ -694,14 +729,22 @@ function checkTooltip(host, name, check) {
     details.map((line) => el("div", { class: "small", style: "margin-top:6px" }, line)));
 }
 
+// Whether a host id (of a known issue, or of a table of disk space and times)
+// is among what is shown: it has no records, or a machine of it is chosen.
+function idShown(id) {
+  const mine = keysOf(id).filter((key) => state.records.some((r) => hostKey(r.host) === key));
+  return !mine.length || mine.some((key) => state.hosts.has(key));
+}
+
 // The section: the matrix of checks by host and mode, and the known issues.
 function support() {
-  const recorded = new Set(state.records.map((r) => r.host.id));
+  const recorded = new Set(state.records.map((r) => hostKey(r.host)));
   const hosts = Object.keys(state.verification)
     .filter((id) => !recorded.has(id) || state.hosts.has(id))
-    .sort((a, b) => order(HOST_ORDER, a) - order(HOST_ORDER, b));
+    .sort(byHost);
+  // An issue names host ids: it is shown while any machine of such a host is.
   const issues = state.issues.filter((issue) => issue.hosts === "all" || !Array.isArray(issue.hosts)
-    || issue.hosts.some((id) => !recorded.has(id) || state.hosts.has(id)));
+    || issue.hosts.some(idShown));
   if (!hosts.length && !issues.length) return [];
   const out = [el("h2", {}, "Platform support and known issues"),
                el("p", { class: "sub" }, hosts.length
@@ -840,10 +883,9 @@ function inline(text) {
 
 // The section: for each host, the table as the document has it.
 function costs() {
-  const recorded = new Set(state.records.map((r) => r.host.id));
   const idOf = (title) => Object.keys(HOST_NAMES).find((id) => HOST_NAMES[id] === title) || "";
   const hosts = state.footprint.map((found) => Object.assign({ id: idOf(found.title) }, found))
-    .filter((found) => !found.id || !recorded.has(found.id) || state.hosts.has(found.id))
+    .filter((found) => !found.id || idShown(found.id))
     .sort((a, b) => order(HOST_ORDER, a.id || a.title) - order(HOST_ORDER, b.id || b.title));
   if (!hosts.length) return [];
   const out = [el("h2", {}, "Disk space and times"),
@@ -880,7 +922,7 @@ function card(chart) {
   const scale = (v, s) => state.relative ? (s.base ? 100 * v / s.base : null) : v;
   const max = Math.max(0, ...all.map((s) => Math.max(...s.values.map((v) => scale(v, s) || 0), 0)));
   all.sort((a, b) => order(MODE_ORDER, a.mode) - order(MODE_ORDER, b.mode)
-                     || order(HOST_ORDER, a.host) - order(HOST_ORDER, b.host)
+                     || byHost(a.host, b.host)
                      || (a.provider === "host" ? 0 : 1) - (b.provider === "host" ? 0 : 1));
   const body = [];
   let mode = null;
@@ -965,12 +1007,12 @@ function attachTooltip(node, content) {
 
 function renderTable() {
   const head = ["Recorded (UTC)", "Host", "Mode", "Workload", "Graphics", "Resolution", "Accelerator", "Boot s", "File"];
-  const rows = [...state.records].reverse().filter((r) => state.hosts.has(r.host.id)).map((r) => {
+  const rows = [...state.records].reverse().filter((r) => state.hosts.has(hostKey(r.host))).map((r) => {
     const e = r.emulator;
     const file = r._url ? el("a", { href: r._url }, r._file) : r._file;
     return el("tr", {},
       el("td", {}, String(r.recorded_at).replace("T", " ").replace("Z", "")),
-      el("td", {}, hostName(r.host.id)),
+      el("td", {}, hostName(hostKey(r.host))),
       el("td", {}, modeName(e.variant)),
       el("td", {}, r.workload.id + " " + (r.workload.version || "")),
       el("td", {}, e.graphics ? (e.graphics.provider === "host" ? "host GPU" : "emulated") : ""),

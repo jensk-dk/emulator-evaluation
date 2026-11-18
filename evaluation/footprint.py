@@ -48,10 +48,18 @@ def _records(host):
             continue
         if not isinstance(record, dict) or "duration_seconds" not in record or "emulator" not in record:
             continue        # the machines and the known issues are kept there too
-        if host and record["host"]["id"] != host:
+        if host and host not in (record["host"]["id"], _key(record)):
             continue
         found.append(record)
     return found
+
+
+def _key(record):
+    """Host id and machine id of a record: what its results are grouped by."""
+    sys.path.insert(0, str(ROOT)) if str(ROOT) not in sys.path else None
+    sys.dont_write_bytecode = True
+    from emulator import host
+    return host.host_key(record["host"])
 
 
 def _provider(record):
@@ -73,8 +81,8 @@ def times(args):
     for record in records:
         if record["workload"]["id"] not in workloads:
             workloads.append(record["workload"]["id"])
-    for host in sorted({record["host"]["id"] for record in records}):
-        mine = [record for record in records if record["host"]["id"] == host]
+    for host in sorted({_key(record) for record in records}):
+        mine = [record for record in records if _key(record) == host]
         dates = sorted(record["recorded_at"][:10] for record in mine)
         images = sorted({record["image"]["version"] for record in mine}, key=_version)
         print("### %s\n" % host)
@@ -162,7 +170,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     commands = parser.add_subparsers(dest="command", required=True)
     timed = commands.add_parser("times", help="add up the recorded performance runs' durations")
-    timed.add_argument("--host", metavar="ID", help="one host, such as macos-arm64 (default: every host with records)")
+    timed.add_argument("--host", metavar="ID", help="one host, such as macos-arm64, or one host on one machine, such as "
+                       "macos-arm64@apple-m6 (default: every host and machine with records)")
     timed.set_defaults(function=times)
     sized = commands.add_parser("sizes", help="the sizes of the targets built on this host")
     sized.set_defaults(function=sizes)

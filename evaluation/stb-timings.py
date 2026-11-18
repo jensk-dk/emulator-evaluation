@@ -504,7 +504,7 @@ def run(args):
                 simulator={key: value for key, value in (seen["described"] or {}).items() if key != "_at"},
                 notes=outcome.notes, parts=seen["parts"])
         os.makedirs(OUT, exist_ok=True)
-        path = os.path.join(OUT, "%s_%s.json" % (environment["host"]["id"], environment["emulator"]["variant"]))
+        path = _timings_path(environment["host"], environment["emulator"]["variant"])
         if not only:
             with open(path, "w") as handle:
                 json.dump(report, handle, indent=1)
@@ -539,17 +539,28 @@ def seconds(values, digits=None):
     return (form + " s (" + form + " to " + form + ", %d times)") % (middle, min(values), max(values), len(values))
 
 
+def _timings_path(described, variant):
+    """One file per host, machine and mode."""
+    return os.path.join(OUT, "%s_%s_%s.json" % (described["id"], host.machine_of(described), variant))
+
+
 def table(args):
-    host_id = args.host or host.describe()["id"]
+    # A host id, or a host id and a machine id as HOST@MACHINE.
+    host_id, _, machine = (args.host or host.host_key()).partition("@")
     data = {}
     for variant, _ in VARIANTS:
-        path = os.path.join(OUT, "%s_%s.json" % (host_id, variant))
-        if os.path.exists(path):
-            with open(path) as handle:
+        found = sorted(glob.glob(os.path.join(OUT, "%s_%s_%s.json" % (host_id, machine or "*", variant))))
+        if len(found) > 1:
+            print("%s has timings of more than one machine; name one as %s@MACHINE: %s" % (
+                host_id, host_id, ", ".join(os.path.basename(path) for path in found)))
+            return 1
+        if found:
+            with open(found[0]) as handle:
                 data[variant] = json.load(handle)
     if not data:
-        print("no timings for %s in %s" % (host_id, os.path.relpath(OUT, ROOT)))
+        print("no timings for %s in %s" % (args.host or host.host_key(), os.path.relpath(OUT, ROOT)))
         return 1
+    machine = host.machine_of(next(iter(data.values()))["host"])
 
     def row(label, cell):
         cells = []
@@ -640,6 +651,8 @@ def table(args):
     for path in sorted(glob.glob(os.path.join(ROOT, "evaluation", "results", "*_%s_*.json" % host_id))):
         with open(path) as handle:
             record = json.load(handle)
+        if host.machine_of(record["host"]) != machine:
+            continue
         recorded.setdefault((record["emulator"]["variant"], record["workload"]["id"]), []).append(record)
     identity = lambda result: tuple(result.get(key) for key in IDENTITY)
 
@@ -737,7 +750,8 @@ def main():
     one.add_argument("--captures", metavar="DIRECTORY", help="save pictures of the display here as it goes")
     one.add_argument("--log", metavar="FILE", help="write what the simulator reports here, with the time of each line")
     shown = commands.add_parser("table", help="print the timings of a host as tables")
-    shown.add_argument("--host", help="host id, as in evaluation/matrix.json (default: this host)")
+    shown.add_argument("--host", help="host id, as in evaluation/matrix.json, or HOST@MACHINE where a host id has "
+                       "timings of more than one machine (default: this host on this machine)")
     args = parser.parse_args()
     return run(args) if args.command == "run" else table(args)
 

@@ -1,14 +1,11 @@
 {
-  "description": "What is known about the machines behind the host ids, stated by the person who ran the evaluation. The result records describe each host themselves; this file adds what records made before the launcher recorded GPUs do not contain. It is not a result record.",
-  "hosts": {
-    "linux-x86_64": {
-      "machine": "The same PC as windows-x86_64, dual boot"
-    },
-    "windows-x86_64": {
-      "machine": "The same PC as linux-x86_64, dual boot",
+  "description": "What is known about the machines behind the results, stated by the person who ran the evaluation. Keyed by machine id: the `machine` of a record's host, which the launcher makes from the CPU model unless EMU_MACHINE names the machine; records made before the id was recorded get the one their CPU model gives. The result records describe each host themselves; this file adds a name for the machine and what records made before the launcher recorded GPUs do not contain. It is not a result record.",
+  "machines": {
+    "intel-core-i7-10700k": {
+      "machine": "PC that starts Linux (Ubuntu 24.04) and Windows, dual boot",
       "gpus": [{"model": "NVIDIA GeForce RTX 4070"}]
     },
-    "macos-arm64": {
+    "apple-m6": {
       "machine": "Mac mini, Apple M6, 24 GB",
       "gpus": [{"model": "Apple M6 (integrated GPU)"}]
     }

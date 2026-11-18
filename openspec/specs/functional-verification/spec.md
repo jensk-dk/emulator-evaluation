@@ -56,12 +56,17 @@ The simulated ARM targets are not set up on a host by default, so nothing would 
 
 ### Requirement: Record the outcome of each check per host
 
-The verification command MUST keep a record, in the project's directory, of the last outcome of each check for each host operating system and host CPU architecture it was run on. The record MUST describe the host, and MUST state for each check its outcome, what the check found, when it ran, how long it took, the source revision and the target image definition it ran against, and the task of the delivery plan that it supports. Running some of the checks MUST replace the entries of those checks only. The record MUST NOT keep an outcome for a check that no longer exists.
+The verification command MUST keep a record, in the project's directory, of the last outcome of each check for each host operating system, host CPU architecture and machine it was run on: a run on one machine MUST NOT replace the record of another machine with the same host operating system. The record MUST describe the host, with the machine's id, and MUST state for each check its outcome, what the check found, when it ran, how long it took, the source revision and the target image definition it ran against, and the task of the delivery plan that it supports. Running some of the checks MUST replace the entries of those checks only. The record MUST NOT keep an outcome for a check that no longer exists.
 
 #### Scenario: Record a check
 
 - WHEN a check has ended
 - THEN the record of that host states its outcome, what it found, when it ran, and the source revision and image definition it ran against
+
+#### Scenario: Verify on a second machine with the same host OS
+
+- WHEN the checks are run on a machine whose host operating system and CPU architecture already have a record from another machine
+- THEN that machine gets a record of its own, and the other machine's record is unchanged
 
 #### Scenario: Run some of the checks
 

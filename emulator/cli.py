@@ -312,7 +312,7 @@ def cmd_verify(args):
         if name not in verify.CHECKS:
             raise EmuError("unknown check %r (see: emu verify --list)" % name)
     counts = verify.run_checks(names)
-    summary = "%d of %d checks passed on %s" % (counts["pass"], len(names), host.host_id())
+    summary = "%d of %d checks passed on %s" % (counts["pass"], len(names), host.host_key())
     if counts["unavailable"]:
         summary += "; %d could not be run on this host" % counts["unavailable"]
     if counts["fail"]:

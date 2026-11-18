@@ -58,6 +58,44 @@ def host_id():
     return "%s-%s" % (host_os(), host_arch())
 
 
+# The environment variable that names this machine, where its CPU model does
+# not tell it from another machine with the same host OS.
+MACHINE_VARIABLE = "EMU_MACHINE"
+
+
+def machine_slug(text):
+    """A CPU model, or a name someone gave, as a machine id: lower case
+    letters, digits and hyphens. The results page (evaluation/results/
+    index.html) derives the same id from the same text."""
+    text = re.sub(r"\((r|tm|c)\)", " ", (text or "").lower())
+    text = re.sub(r"@.*$", " ", text)
+    text = re.sub(r"\b(cpu|processor)\b", " ", text)
+    return re.sub(r"[^a-z0-9]+", "-", text).strip("-")
+
+
+def machine_id():
+    """The machine this host runs on: the name given in EMU_MACHINE, else one
+    made from the CPU model. One machine that starts several host operating
+    systems has the same id under each, and two machines with the same host OS
+    have different ones unless their CPU models are the same; then they are
+    told apart by giving each a name."""
+    return machine_slug(os.environ.get(MACHINE_VARIABLE) or "") or machine_slug(_cpu_model()) or "unknown"
+
+
+def machine_of(described):
+    """The machine id of a recorded host description. Records made before the
+    id was recorded get the one their CPU model gives."""
+    return described.get("machine") or machine_slug(described.get("cpu_model")) or "unknown"
+
+
+def host_key(described=None):
+    """Host id and machine id together: what results and verification records
+    are kept apart by."""
+    if described is None:
+        return "%s@%s" % (host_id(), machine_id())
+    return "%s@%s" % (described["id"], machine_of(described))
+
+
 def host_tool_dir():
     """Where the launcher keeps the programs it builds for this host."""
     return BUILD_DIR / "host"
@@ -255,6 +293,7 @@ def describe():
     """Host identity recorded with every result."""
     return {
         "id": host_id(),
+        "machine": machine_id(),
         "os": host_os(),
         "os_version": _os_version(),
         "arch": host_arch(),
