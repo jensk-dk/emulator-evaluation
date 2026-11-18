@@ -1,4 +1,4 @@
-# emulator-evaluation
+# TV Emulator (tv-emu)
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/emu-logo-dark.svg">
@@ -217,9 +217,9 @@ removes it. With `--check` (`-Check`) it only lists.
   name stays.
 - Apart from that, this repository is not touched, nor `build/` in it.
 
-The record is `~/.local/state/emulator-evaluation/setup-installed` (under
+The record is `~/.local/state/tv-emu/setup-installed` (under
 `$XDG_STATE_HOME` where that is set; on Windows
-`%LOCALAPPDATA%\emulator-evaluation\setup-installed`). It is a text file with
+`%LOCALAPPDATA%\tv-emu\setup-installed`). It is a text file with
 one line for each thing. A host that was set up before the scripts kept a
 record has none, and there `--uninstall` finds nothing to remove.
 

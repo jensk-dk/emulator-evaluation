@@ -323,7 +323,7 @@ def cmd_verify(args):
 
 def build_parser():
     parser = argparse.ArgumentParser(
-        prog="emu", description="Startup launcher for the emulator evaluation platform.", epilog=EPILOG,
+        prog="emu", description="Startup launcher for tv-emu, a TV and set-top box emulator.", epilog=EPILOG,
         formatter_class=argparse.RawDescriptionHelpFormatter)
     commands = parser.add_subparsers(dest="command", metavar="COMMAND")
 

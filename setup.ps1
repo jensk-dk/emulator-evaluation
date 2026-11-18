@@ -21,7 +21,7 @@
 
   The script keeps a record of what it installs: only of what was not there
   before. -Uninstall removes what the record lists and nothing else. The
-  record is %LOCALAPPDATA%\emulator-evaluation\setup-installed.
+  record is %LOCALAPPDATA%\tv-emu\setup-installed.
 
   setup.cmd runs this script where the PowerShell execution policy does not
   allow scripts, which is the default on Windows: setup.cmd -Check
@@ -186,7 +186,7 @@ function Get-NativeQemu {
 # What this script installed on this host: a line "KIND VALUE" for each thing
 # that was not there before the script put it there. -Uninstall goes by it.
 $script:Record = $env:EMU_SETUP_RECORD
-if (-not $script:Record) { $script:Record = Join-Path "$env:LOCALAPPDATA" 'emulator-evaluation\setup-installed' }
+if (-not $script:Record) { $script:Record = Join-Path "$env:LOCALAPPDATA" 'tv-emu\setup-installed' }
 
 # The entries of the record, in the order they were recorded.
 function Get-Recorded {

@@ -1,1 +1,1 @@
-"""Launcher and evaluation harness for the emulator evaluation platform."""
+"""Launcher and evaluation harness for tv-emu, a TV and set-top box emulator."""

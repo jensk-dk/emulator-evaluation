@@ -2501,9 +2501,9 @@ def _setup_record():
     if named:
         return named
     if host.host_os() == "windows":
-        return os.path.join(os.environ.get("LOCALAPPDATA", ""), "emulator-evaluation", "setup-installed")
+        return os.path.join(os.environ.get("LOCALAPPDATA", ""), "tv-emu", "setup-installed")
     state = os.environ.get("XDG_STATE_HOME") or os.path.join(os.path.expanduser("~"), ".local", "state")
-    return os.path.join(state, "emulator-evaluation", "setup-installed")
+    return os.path.join(state, "tv-emu", "setup-installed")
 
 
 # The setup script is only ever asked to check and to list here: never to

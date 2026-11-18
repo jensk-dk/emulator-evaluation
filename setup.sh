@@ -25,7 +25,7 @@
 #
 # The script keeps a record of what it installs: only of what was not there
 # before. --uninstall removes what the record lists and nothing else. The
-# record is ~/.local/state/emulator-evaluation/setup-installed (under
+# record is ~/.local/state/tv-emu/setup-installed (under
 # $XDG_STATE_HOME where that is set).
 #
 # Host dependencies:
@@ -136,7 +136,7 @@ is_optional() { case " $OPTIONAL " in *" $1 "*) return 0 ;; *) return 1 ;; esac;
 
 # What this script installed on this host: a line "KIND VALUE" for each thing
 # that was not there before the script put it there. --uninstall goes by it.
-RECORD="${EMU_SETUP_RECORD:-${XDG_STATE_HOME:-$HOME/.local/state}/emulator-evaluation/setup-installed}"
+RECORD="${EMU_SETUP_RECORD:-${XDG_STATE_HOME:-$HOME/.local/state}/tv-emu/setup-installed}"
 
 record() {
   local entry="$1 ${2:--}"
