@@ -867,8 +867,8 @@ the `audio` driver feature's strategy:
 
 | Strategy | VM mode | Container mode |
 |---|---|---|
-| `host` (the default) | QEMU's emulated sound card (virtio-sound) with the target kernel's driver; the card's backend hands the samples to the launcher's host-side audio process | a shim ALSA device ([target/src/emu_alsa.c](target/src/emu_alsa.c)) sends the samples to that process over TCP |
-| `emulated` | the same sound card with no backend: the kernel's driver plays to nowhere | a software model of a sound card: the same ALSA device, playing to nowhere at the sample rate |
+| `host` (the default) | QEMU's emulated sound card (virtio-sound) with the target kernel's driver; the card's backend hands the samples to the launcher's host-side audio process. If QEMU has no virtio-sound device, an ALSA shim sends them through QEMU's network instead. | a shim ALSA device ([target/src/emu_alsa.c](target/src/emu_alsa.c)) sends the samples to that process over TCP |
+| `emulated` | the same sound card with no backend: the kernel's driver plays to nowhere. If QEMU has no virtio-sound device, a software model plays to nowhere at the sample rate. | a software model of a sound card: the same ALSA device, playing to nowhere at the sample rate |
 | `mocked` | no sound card; a stub ALSA device discards the samples | the same stub |
 
 The host-side audio process plays the sound with a player program, so it

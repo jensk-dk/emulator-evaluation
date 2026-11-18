@@ -892,7 +892,11 @@ def _audio_strategies(mode):
     """The emulated and the mocked audio device take sound at its own pace,
     without the host."""
     lines = []
-    for strategy, expected in (("emulated", "kernel:" if mode == "vm" else "model:"), ("mocked", "mock:")):
+    emulated = ("model:",)
+    if mode == "vm":
+        binary = host.require_tool(vm.QEMU_BINARY[host.host_arch()], "VM mode with the host's guest architecture")
+        emulated = ("kernel:" if vm.has_device(binary, "virtio-sound-pci") else "model:",)
+    for strategy, expected in (("emulated", emulated), ("mocked", ("mock:",))):
         _, outcome = _run(mode=mode, workload="media-decode",
                           args=["--tests", "sound", "--streams", "audio-mp2-mp2ts", "--sound-seconds", "2"],
                           drivers=driver_features.parse(["audio=" + strategy]), timeout=3600)
@@ -901,7 +905,8 @@ def _audio_strategies(mode):
         result = outcome.results[0]
         _require(result.get("value") is not None, "the sound was not played: %s" % result.get("unavailable"))
         provider = result.get("device") or ""
-        _require(provider.startswith(expected), "unexpected audio device %r" % provider)
+        _require(provider.startswith(expected), "unexpected audio device %r (expected one of %s)" %
+                 (provider, ", ".join(expected)))
         _require(result["value"] >= 1.8, "2 s of sound were taken in %.2f s: the device does not keep time"
                  % result["value"])
         lines.append("%s: 2 s of sound played in %.1f s on %s; no host-side process ran" % (

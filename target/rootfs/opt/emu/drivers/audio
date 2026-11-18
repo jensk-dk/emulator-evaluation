@@ -14,7 +14,9 @@ that device available using one of the three driver-feature strategies:
   host      the sound is played through the host OS, and the emulator's mute
             switch acts on it.
             VM:        the kernel's driver on the emulated sound card, whose
-                       backend is the launcher's host-side audio process.
+                       backend is the launcher's host-side audio process; when
+                       QEMU has no virtio-sound device, an ALSA shim sends it
+                       over the emulator's network instead.
             container: a shim device that sends the samples to that process
                        over TCP ($EMU_DRIVER_AUDIO_HOST).
 
@@ -77,6 +79,14 @@ def main():
         if strategy == "mocked":
             use_emu_device(None)
             provider = "mock:discard"
+        elif mode == "vm" and strategy == "host" and os.environ.get("EMU_DRIVER_AUDIO_HOST"):
+            address = os.environ["EMU_DRIVER_AUDIO_HOST"]
+            use_emu_device(address)
+            provider = "host:%s" % address
+        elif mode == "vm" and strategy == "emulated" \
+                and os.environ.get("EMU_DRIVER_AUDIO_MODEL") == "software":
+            use_emu_device(None)
+            provider = "model:emu-sndcard-1 (48 kHz stereo, plays to nowhere)"
         elif mode == "vm":
             provider = "kernel:%s" % kernel_card()
         elif strategy == "emulated":

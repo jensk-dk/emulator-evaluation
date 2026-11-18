@@ -30,6 +30,21 @@ def qemu_version(binary):
         return "QEMU (unknown version)"
 
 
+def has_device(binary, name):
+    """Whether this QEMU build includes a device model."""
+    try:
+        done = subprocess.run([binary, "-device", "help"], env=host.tool_env(),
+                              capture_output=True, text=True, timeout=30)
+    except (OSError, subprocess.SubprocessError) as error:
+        raise EmuError("could not inspect the devices in %s: %s" % (binary, error))
+    if done.returncode:
+        detail = (done.stderr or done.stdout).strip()
+        raise EmuError("could not inspect the devices in %s%s" % (
+            binary, ": " + detail if detail else ""))
+    prefix = 'name "%s"' % name
+    return any(line.lstrip().startswith(prefix) for line in (done.stdout + done.stderr).splitlines())
+
+
 def _accelerator_available(accelerator):
     system = host.host_os()
     if accelerator == "kvm":

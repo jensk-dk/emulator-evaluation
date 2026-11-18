@@ -158,34 +158,40 @@ def _start_audio(plan, bind, run_dir, options, muted, extra=()):
     return info
 
 
-def plan_vm(drivers, run_dir, options=None, muted=False):
+def plan_vm(drivers, run_dir, options=None, muted=False, virtio_sound=True):
     plan = Plan()
     options = options or {}
     audio = drivers.get("audio")
     if audio in ("emulated", "host"):
-        # An emulated sound card; the target kernel's virtio-sound driver makes
-        # it an ALSA card. QEMU keeps the card's time whatever its backend is.
-        backend = "none,id=emu-audio"
-        if audio == "host" and (hasattr(os, "mkfifo") or os.name == "nt"):
-            # The card's backend is the host-side process: QEMU writes the
-            # samples, as a WAV stream, into a named pipe that process reads.
-            # Windows keeps its named pipes in a place of their own.
-            pipe = os.path.join(run_dir, "audio.pipe")
-            if os.name == "nt":
-                pipe = "\\\\.\\pipe\\emu-audio-%s-%d" % (os.path.basename(run_dir), os.getpid())
-            _start_audio(plan, "127.0.0.1", run_dir, options, muted, ["--pipe", pipe])
-            backend = "wav,id=emu-audio,path=%s,out.frequency=48000,out.channels=2,out.format=s16" \
-                      % str(pipe).replace(",", ",,")
-            plan.audio["path"] = "the emulated sound card's backend, through a named pipe"
-        elif audio == "host":
-            # No named pipes on this host: the target gets no sound card, and
-            # its shim device sends the samples through QEMU's network, which
-            # reaches the host's loopback address at 10.0.2.2.
-            info = _start_audio(plan, "127.0.0.1", run_dir, options, muted)
-            plan.kernel_settings["audiohost"] = "10.0.2.2:%d" % info["port"]
-            plan.audio["path"] = "the target's shim device, through the emulator's network"
-        if "audiohost" not in plan.kernel_settings:
-            plan.qemu_args += ["-audiodev", backend, "-device", "virtio-sound-pci,audiodev=emu-audio"]
+        if not virtio_sound:
+            if audio == "host":
+                info = _start_audio(plan, "127.0.0.1", run_dir, options, muted)
+                plan.kernel_settings["audiohost"] = "10.0.2.2:%d" % info["port"]
+                plan.audio["path"] = "the target's ALSA shim, through the emulator's network"
+            else:
+                plan.kernel_settings["audiomodel"] = "software"
+        else:
+            # An emulated sound card; the target kernel's virtio-sound driver
+            # makes it an ALSA card. QEMU keeps its time for either backend.
+            backend = "none,id=emu-audio"
+            if audio == "host" and (hasattr(os, "mkfifo") or os.name == "nt"):
+                # The card's backend is the host-side process: QEMU writes
+                # samples as a WAV stream into a named pipe that process reads.
+                pipe = os.path.join(run_dir, "audio.pipe")
+                if os.name == "nt":
+                    pipe = "\\\\.\\pipe\\emu-audio-%s-%d" % (os.path.basename(run_dir), os.getpid())
+                _start_audio(plan, "127.0.0.1", run_dir, options, muted, ["--pipe", pipe])
+                backend = "wav,id=emu-audio,path=%s,out.frequency=48000,out.channels=2,out.format=s16" \
+                          % str(pipe).replace(",", ",,")
+                plan.audio["path"] = "the emulated sound card's backend, through a named pipe"
+            elif audio == "host":
+                # No named pipes on this host: the ALSA shim sends samples
+                # to the host-side process over QEMU's network.
+                info = _start_audio(plan, "127.0.0.1", run_dir, options, muted)
+                plan.kernel_settings["audiohost"] = "10.0.2.2:%d" % info["port"]
+                plan.audio["path"] = "the target's ALSA shim, through the emulator's network"
+            if "audiohost" not in plan.kernel_settings:
+                plan.qemu_args += ["-audiodev", backend, "-device", "virtio-sound-pci,audiodev=emu-audio"]
     # mocked: no sound card; the stub device inside the target takes the samples.
     strategy = drivers.get("hwrng")
     if strategy == "emulated":

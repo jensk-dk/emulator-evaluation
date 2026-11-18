@@ -271,13 +271,21 @@ def launch(opts):
             data_disk = run_dir / "data.img"
             with open(data_disk, "wb") as handle:
                 handle.truncate(int(opts.options.get("data-disk-mb", DEFAULT_DATA_DISK_MB)) * 1024 * 1024)
-            plan = driver_features.plan_vm(opts.drivers, str(run_dir), opts.options, opts.muted)
+            qemu = host.require_tool(vm.QEMU_BINARY[guest], "VM mode with a %s guest" % guest)
+            virtio_sound = True
+            if opts.drivers.get("audio") in ("emulated", "host"):
+                virtio_sound = vm.has_device(qemu, "virtio-sound-pci")
+                if not virtio_sound:
+                    outcome.notes.append("this QEMU build has no virtio-sound-pci device; using the target's "
+                                         "software ALSA device%s" % (
+                                             " connected to the host audio process" if opts.drivers["audio"] == "host"
+                                             else ""))
+            plan = driver_features.plan_vm(opts.drivers, str(run_dir), opts.options, opts.muted, virtio_sound)
             terminal = None
             if attached:
                 size = shutil.get_terminal_size()
                 name = os.environ.get("TERM", "")
                 terminal = (name if name.replace("-", "").isalnum() else "vt100", size.columns, size.lines)
-            qemu = host.require_tool(vm.QEMU_BINARY[guest], "VM mode with a %s guest" % guest)
             # The launcher's own window, or QEMU's where only that one can
             # show a display rendered on the host GPU.
             kind = None
