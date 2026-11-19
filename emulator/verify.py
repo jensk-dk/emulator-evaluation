@@ -1994,6 +1994,10 @@ def _stb_session(mode, arch):
                         seen["error"] = "the user interface never appeared: no home screen was reported"
                         return
                     seen["started"] = time.time()
+                    _dbg = viewer.ask(do="state"); print("DBG at home: connected=%s display=%s updates=%s" % (_dbg["connected"], _dbg["display"], _dbg["updates"]), file=sys.stderr, flush=True)
+                    _t0 = time.time()
+                    while viewer.ask(do="state")["display"] is None: time.sleep(0.01)
+                    print("DBG display after %.3fs" % (time.time() - _t0), file=sys.stderr, flush=True)
                     for name, part in (("tour-host", lambda: stb.tour("host")), ("tour-click", lambda: stb.tour("click")),
                                        ("channels", stb.channels), ("vod", stb.vod), ("workloads", stb.workloads)):
                         try:

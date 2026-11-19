@@ -572,7 +572,8 @@ What the platform costs on a host, in disk space and in time, is kept in
 [footprint.md](footprint.md), which says what each value is. Those
 definitions are proposals until they are agreed; this is how the values of
 the macOS host were taken on 2026-11-16, those of the Windows host on
-2026-11-16 and 17 and those of the Linux host on 2026-11-17, and how another
+2026-11-16 and 17 and those of the Linux host on 2026-11-17 and again on
+2026-11-18 and 19, and how another
 host's can be. The
 rules for every measurement hold here too: a quiet host, and a value that was
 not measured on the host reads "not measured".
@@ -677,6 +678,8 @@ not measured on the host reads "not measured".
   followed by `podman machine rm --force`.
 - **Afterwards** run `./emu verify`: the installation that was measured has
   to be one that works. On the macOS host all 124 checks came out as they
-  had before the removal, and on the Linux host. On the Windows host 122 did; of the other two, one
+  had before the removal, and on the Linux host (on 2026-11-19, of 140
+  checks there, one more failed in the complete run and passed when run
+  again). On the Windows host 122 did; of the other two, one
   failed once and passed when run again, and one passed that had failed
   before ([footprint.md](footprint.md#windows-x86-64)).

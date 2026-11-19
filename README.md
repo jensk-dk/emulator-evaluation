@@ -281,6 +281,12 @@ How far this has been run:
   host before, stayed. `./setup.sh --yes` installed all of it again in
   1.4 min, the packages, their versions and their marks were as before, and
   all 124 checks came out as before. The record lists the 32 packages now.
+  Measured again on 2026-11-18 and 19, after the project was renamed, on
+  the host without an installation and without a record under the new
+  name: `./setup.sh --yes --arm-targets` installed the same 32 packages and
+  the Python environment in 1.2 min and recorded them; of the 140 checks
+  one more failed than before, `stb-start-container`, which passed five
+  times out of six when run again.
   Running it showed a fault, now corrected: with the emulators gone,
   `./setup.sh --check` still took the ARM build emulation for present,
   because Docker's builder went on listing ARM among its platforms. Where
@@ -1188,7 +1194,7 @@ a newly installed Chrome that had never been opened stopped at once with
 "Failed to get the path for 1001"; after it had been opened once, the command
 worked.
 
-The snapshot in the repository was made on the Windows host on 2026-11-17,
+The snapshot in the repository was made on the Linux host on 2026-11-19,
 with the CPU, graphics, media and browser results of all three hosts.
 Windows' MSE playback values in it
 are those measured again that day with version 1.1.0 of the workload; the

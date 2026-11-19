@@ -1,0 +1,199 @@
+{
+  "schema_version": 1,
+  "run_id": "20261118T233510Z-2f9ada",
+  "recorded_at": "2026-11-18T23:36:20Z",
+  "host": {
+    "id": "linux-x86_64",
+    "machine": "intel-core-i7-10700k",
+    "os": "linux",
+    "os_version": "Ubuntu 24.04.5 LTS (kernel 6.8.0-149-generic)",
+    "arch": "x86_64",
+    "cpu_model": "Intel(R) Core(TM) i7-10700K CPU @ 3.80GHz",
+    "cpus": 16,
+    "memory_bytes": 33543819264,
+    "gpus": [
+      {
+        "model": "NVIDIA GeForce RTX 4070",
+        "driver": "nvidia",
+        "driver_version": "595.99.02"
+      }
+    ],
+    "python": "3.12.3"
+  },
+  "emulator": {
+    "mode": "vm",
+    "variant": "vm-arm32",
+    "guest_arch": "arm32",
+    "accelerator": "tcg",
+    "cpu_model": "cortex-a15",
+    "machine": "virt",
+    "runtime": "QEMU emulator version 8.2.2 (Debian 1:8.2.2+ds-0ubuntu1.18)",
+    "cpus": 4,
+    "memory_mb": 2048,
+    "options": {},
+    "extra_args": []
+  },
+  "image": {
+    "name": "emu-target-debian",
+    "version": "0.6.0",
+    "kind": "vm",
+    "arch": "arm32",
+    "source": {
+      "distribution": "Debian 13 (trixie)",
+      "base_image": "docker.io/library/debian:trixie-slim",
+      "base_image_digest": "sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2",
+      "apt_snapshot": "20261104T212339Z",
+      "flutter": {
+        "version": "3.47.9",
+        "revision": "c197ca5199e9ee5661e865596c9c07294dfab51c",
+        "repository": "https://github.com/flutter/flutter.git",
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ]
+      },
+      "dash_js": {
+        "version": "5.3.0",
+        "package": "https://registry.npmjs.org/dashjs/-/dashjs-5.3.0.tgz",
+        "package_sha256": "3dbcd4dd957cf0bb885d4059e66b87f56a17c90f00c697d21fbdad1273d8005c",
+        "licence": "BSD-3-Clause"
+      }
+    },
+    "definition_sha256": "55f8b5f1d35b0b2fc918a52311eab8599e9b7aa38487380a2435702798aa7375",
+    "build_revision": "b9164db42f85c47159e9694c78797710441b75db",
+    "built_at": "2026-11-18T23:30:46Z",
+    "kernel_release": "6.12.115+deb13.1-armmp-lpae",
+    "rootfs_sha256": "9d9a96c5fee10cd52cd0ea1292119f98d84658abb0d461dcafd66932fbe4da51",
+    "reported_by_target": {
+      "name": "emu-target-debian",
+      "version": "0.6.0",
+      "definition_sha256": "55f8b5f1d35b0b2fc918a52311eab8599e9b7aa38487380a2435702798aa7375",
+      "base_image": "docker.io/library/debian:trixie-slim@sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2",
+      "apt_snapshot": "20261104T212339Z",
+      "debian_version": "13.7",
+      "architecture": "armhf",
+      "packages_sha256": "6026c4b328cb78c31472c76454da6effbe10ff2f6e3f00cb097a895dcbca1db7"
+    }
+  },
+  "target": {
+    "mode": "vm",
+    "machine": "armv7l",
+    "kernel": "6.12.115+deb13.1-armmp-lpae",
+    "cpus": 4
+  },
+  "workload": {
+    "id": "bench",
+    "version": "1.0.0",
+    "seconds_per_test": 2.0,
+    "threads": 4,
+    "arguments": []
+  },
+  "drivers": {
+    "hwrng": "emulated"
+  },
+  "launcher_revision": "b9164db42f85c47159e9694c78797710441b75db",
+  "boot_seconds": 39.687,
+  "duration_seconds": 69.508,
+  "exit_code": 0,
+  "results": [
+    {
+      "area": "cpu",
+      "test": "sha256_1t",
+      "value": 67.698,
+      "unit": "MiB/s",
+      "threads": 1
+    },
+    {
+      "area": "cpu",
+      "test": "sha256_mt",
+      "value": 232.168,
+      "unit": "MiB/s",
+      "threads": 4
+    },
+    {
+      "area": "cpu",
+      "test": "matmul_f64",
+      "value": 145.977,
+      "unit": "Mflop/s",
+      "threads": 1
+    },
+    {
+      "area": "memory_allocation",
+      "test": "malloc_churn",
+      "value": 0.648,
+      "unit": "Mops/s",
+      "sizes": "16B-128KiB"
+    },
+    {
+      "area": "memory_allocation",
+      "test": "page_fault",
+      "value": 47.862,
+      "unit": "MiB/s",
+      "page_bytes": 4096
+    },
+    {
+      "area": "memory_bandwidth",
+      "test": "memset",
+      "value": 2764.613,
+      "unit": "MiB/s",
+      "buffer_mib": 64,
+      "rounds": 24
+    },
+    {
+      "area": "memory_bandwidth",
+      "test": "memcpy",
+      "value": 3099.92,
+      "unit": "MiB/s",
+      "buffer_mib": 64,
+      "rounds": 24
+    },
+    {
+      "area": "memory_bandwidth",
+      "test": "stream_triad",
+      "value": 2269.714,
+      "unit": "MiB/s",
+      "buffer_mib": 64,
+      "rounds": 24
+    },
+    {
+      "area": "io",
+      "test": "seq_write",
+      "value": 44.523,
+      "unit": "MiB/s",
+      "file_mib": 256,
+      "block_bytes": 1048576
+    },
+    {
+      "area": "io",
+      "test": "seq_read",
+      "value": 1241.078,
+      "unit": "MiB/s",
+      "file_mib": 256,
+      "block_bytes": 1048576,
+      "direct": true
+    },
+    {
+      "area": "io",
+      "test": "rand_read_4k",
+      "value": 3186.549,
+      "unit": "IOPS",
+      "block_bytes": 4096,
+      "direct": true
+    },
+    {
+      "area": "io",
+      "test": "rand_write_4k",
+      "value": 3106.278,
+      "unit": "IOPS",
+      "block_bytes": 4096,
+      "direct": true
+    },
+    {
+      "area": "io",
+      "test": "sync_write_4k",
+      "value": 108.246,
+      "unit": "IOPS",
+      "block_bytes": 4096
+    }
+  ]
+}

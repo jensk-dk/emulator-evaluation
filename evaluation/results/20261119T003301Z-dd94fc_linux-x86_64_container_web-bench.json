@@ -1,0 +1,307 @@
+{
+  "schema_version": 1,
+  "run_id": "20261119T003301Z-dd94fc",
+  "recorded_at": "2026-11-19T00:33:30Z",
+  "host": {
+    "id": "linux-x86_64",
+    "machine": "intel-core-i7-10700k",
+    "os": "linux",
+    "os_version": "Ubuntu 24.04.5 LTS (kernel 6.8.0-149-generic)",
+    "arch": "x86_64",
+    "cpu_model": "Intel(R) Core(TM) i7-10700K CPU @ 3.80GHz",
+    "cpus": 16,
+    "memory_bytes": 33543819264,
+    "gpus": [
+      {
+        "model": "NVIDIA GeForce RTX 4070",
+        "driver": "nvidia",
+        "driver_version": "595.99.02"
+      }
+    ],
+    "python": "3.12.3"
+  },
+  "emulator": {
+    "mode": "container",
+    "variant": "container",
+    "guest_arch": "x86_64",
+    "runtime": "docker client 20.10.18, engine 20.10.18",
+    "engine": {
+      "cpus": 16,
+      "memory_bytes": 33543819264,
+      "kernel": "6.8.0-149-generic",
+      "os": "Ubuntu 24.04.5 LTS",
+      "storage_driver": "overlay2"
+    },
+    "display": {
+      "resolution": "1920x1080"
+    },
+    "graphics": {
+      "requested": "auto",
+      "provider": "emulated",
+      "reason": "no compatible host graphics acceleration: the container engine's GPU render node (/dev/dri/renderD128) belongs to the nvidia kernel driver, which the target's graphics stack (Mesa) cannot render with; it works only with that vendor's own libraries",
+      "device": "headless compositor output, rendering by the target CPU"
+    },
+    "cpus": 4,
+    "memory_mb": 2048,
+    "options": {},
+    "extra_args": [],
+    "audio": {
+      "strategy": "host",
+      "player": "pacat",
+      "plays": true,
+      "sink": null,
+      "path": "the target's shim device, over TCP"
+    }
+  },
+  "image": {
+    "name": "emu-target-debian",
+    "version": "0.6.0",
+    "kind": "container",
+    "arch": "x86_64",
+    "source": {
+      "distribution": "Debian 13 (trixie)",
+      "base_image": "docker.io/library/debian:trixie-slim",
+      "base_image_digest": "sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2",
+      "apt_snapshot": "20261104T212339Z",
+      "flutter": {
+        "version": "3.47.9",
+        "revision": "c197ca5199e9ee5661e865596c9c07294dfab51c",
+        "repository": "https://github.com/flutter/flutter.git",
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ]
+      },
+      "dash_js": {
+        "version": "5.3.0",
+        "package": "https://registry.npmjs.org/dashjs/-/dashjs-5.3.0.tgz",
+        "package_sha256": "3dbcd4dd957cf0bb885d4059e66b87f56a17c90f00c697d21fbdad1273d8005c",
+        "licence": "BSD-3-Clause"
+      }
+    },
+    "definition_sha256": "55f8b5f1d35b0b2fc918a52311eab8599e9b7aa38487380a2435702798aa7375",
+    "build_revision": "b9164db42f85c47159e9694c78797710441b75db",
+    "built_at": "2026-11-18T22:48:23Z",
+    "image_id": "sha256:8cb46fdd7c2fb1961d0e7b231ac92010674750b0fbe9463cdd0d322085a99c01",
+    "reported_by_target": {
+      "name": "emu-target-debian",
+      "version": "0.6.0",
+      "definition_sha256": "55f8b5f1d35b0b2fc918a52311eab8599e9b7aa38487380a2435702798aa7375",
+      "base_image": "docker.io/library/debian:trixie-slim@sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2",
+      "apt_snapshot": "20261104T212339Z",
+      "debian_version": "13.7",
+      "architecture": "amd64",
+      "packages_sha256": "4154db9113ca88c2ee839d2f5eaf5fa6204754757875d86a7843bd145ad9ae2e"
+    }
+  },
+  "target": {
+    "mode": "container",
+    "machine": "x86_64",
+    "kernel": "6.8.0-149-generic",
+    "cpus": 4
+  },
+  "workload": {
+    "id": "web-bench",
+    "version": "1.1.0",
+    "tests": [
+      "launch",
+      "render",
+      "mse"
+    ],
+    "seconds_per_test": 5.0,
+    "streams": {
+      "mpeg2-fragments": "d21d32ca2bef9a3dcd295bf73832f4ff5d509d6b39987c8ada7d89393546d606",
+      "avc-fragments": "ef3b2d492f45ed488b0b1fd68620f6c946187eef1590a740647badee8e8aa575",
+      "hevc-fragments": "4fba534fb9f96491ecedd9d8f5b460168a52aefe91492e865039874d14d1279b"
+    },
+    "resolution": "1920x1080",
+    "graphics": "emulated",
+    "display": {
+      "width": 1920,
+      "height": 1080,
+      "presentation_feedback": true,
+      "gles": {
+        "renderer": "llvmpipe (LLVM 19.1.7, 256 bits)",
+        "version": "OpenGL ES 3.2 Mesa 25.0.7-2+deb13u1",
+        "accelerated": false
+      },
+      "vulkan": [
+        {
+          "name": "llvmpipe (LLVM 19.1.7, 256 bits)",
+          "type": "CPU",
+          "accelerated": false
+        }
+      ]
+    },
+    "audio": {
+      "feature": "audio",
+      "strategy": "host",
+      "mode": "container",
+      "provider": "host:host.docker.internal:46507",
+      "device": "default"
+    },
+    "browser": "WPE WebKit 2.48.3 (Cog 0.18.4)",
+    "wpe_webkit": "2.48.3",
+    "cog": "0.18.4",
+    "arguments": []
+  },
+  "drivers": {
+    "hwrng": "emulated",
+    "audio": "host"
+  },
+  "launcher_revision": "b9164db42f85c47159e9694c78797710441b75db",
+  "boot_seconds": 0.183,
+  "duration_seconds": 28.488,
+  "exit_code": 0,
+  "results": [
+    {
+      "area": "web",
+      "test": "web_launch",
+      "unit": "seconds",
+      "value": 0.429,
+      "technology": "web",
+      "resolution": "1920x1080",
+      "browser": "WPE WebKit 2.48.3 (Cog 0.18.4)",
+      "renderer": "llvmpipe (LLVM 19.1.7, 256 bits)",
+      "accelerated": false,
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/60.5 Safari/605.1.15",
+      "viewport": "1920x1080",
+      "webgl_renderer": "Apple GPU",
+      "media_source": true,
+      "page_load_ms": 228
+    },
+    {
+      "area": "graphics",
+      "test": "web_render_fps",
+      "unit": "frames/s",
+      "value": 32.73,
+      "technology": "web",
+      "resolution": "1920x1080",
+      "browser": "WPE WebKit 2.48.3 (Cog 0.18.4)",
+      "renderer": "llvmpipe (LLVM 19.1.7, 256 bits)",
+      "accelerated": false,
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/60.5 Safari/605.1.15",
+      "viewport": "1920x1080",
+      "webgl_renderer": "Apple GPU",
+      "frames": 164,
+      "seconds": 5.011,
+      "frame_time_ms": {
+        "p50": 29,
+        "p90": 31,
+        "p99": 112,
+        "max": 143
+      },
+      "shapes": 64,
+      "labels": 24,
+      "displayed_fps": 32.73
+    },
+    {
+      "area": "audio_video_decoding",
+      "test": "mse_playback_dropped_frames",
+      "case": "mpeg2-fragments",
+      "unit": "frames",
+      "value": 0,
+      "technology": "web",
+      "resolution": "1920x1080",
+      "browser": "WPE WebKit 2.48.3 (Cog 0.18.4)",
+      "renderer": "llvmpipe (LLVM 19.1.7, 256 bits)",
+      "accelerated": false,
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/60.5 Safari/605.1.15",
+      "viewport": "1920x1080",
+      "webgl_renderer": "Apple GPU",
+      "stream": "mpeg2-fragments",
+      "container": "fragments",
+      "stream_sha256": "d21d32ca2bef9a3dcd295bf73832f4ff5d509d6b39987c8ada7d89393546d606",
+      "video_codec": "mpeg2",
+      "audio_codec": "mp2",
+      "frames": 125,
+      "media_seconds": 5.0,
+      "type": "video/mp4; codecs=\"mp4v.61, mp4a.6b\"",
+      "audio": "the target's audio device",
+      "total_video_frames": 125,
+      "dropped_video_frames": 0,
+      "corrupted_video_frames": 0,
+      "stalls": 0,
+      "seconds": 5.064,
+      "video_size": "1280x720",
+      "fragments_appended": 11,
+      "bytes_appended": 3255220,
+      "sound": "on",
+      "shown_frames": 125,
+      "display_repaints": 127,
+      "displayed_frames": 125
+    },
+    {
+      "area": "audio_video_decoding",
+      "test": "mse_playback_dropped_frames",
+      "case": "avc-fragments",
+      "unit": "frames",
+      "value": 0,
+      "technology": "web",
+      "resolution": "1920x1080",
+      "browser": "WPE WebKit 2.48.3 (Cog 0.18.4)",
+      "renderer": "llvmpipe (LLVM 19.1.7, 256 bits)",
+      "accelerated": false,
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/60.5 Safari/605.1.15",
+      "viewport": "1920x1080",
+      "webgl_renderer": "Apple GPU",
+      "stream": "avc-fragments",
+      "container": "fragments",
+      "stream_sha256": "ef3b2d492f45ed488b0b1fd68620f6c946187eef1590a740647badee8e8aa575",
+      "video_codec": "avc",
+      "audio_codec": "aac",
+      "frames": 125,
+      "media_seconds": 5.0,
+      "type": "video/mp4; codecs=\"avc1.64001f, mp4a.40.2\"",
+      "audio": "the target's audio device",
+      "total_video_frames": 125,
+      "dropped_video_frames": 0,
+      "corrupted_video_frames": 0,
+      "stalls": 0,
+      "seconds": 5.102,
+      "video_size": "1280x720",
+      "fragments_appended": 5,
+      "bytes_appended": 1656736,
+      "sound": "on",
+      "shown_frames": 125,
+      "display_repaints": 127,
+      "displayed_frames": 125
+    },
+    {
+      "area": "audio_video_decoding",
+      "test": "mse_playback_dropped_frames",
+      "case": "hevc-fragments",
+      "unit": "frames",
+      "value": 0,
+      "technology": "web",
+      "resolution": "1920x1080",
+      "browser": "WPE WebKit 2.48.3 (Cog 0.18.4)",
+      "renderer": "llvmpipe (LLVM 19.1.7, 256 bits)",
+      "accelerated": false,
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/60.5 Safari/605.1.15",
+      "viewport": "1920x1080",
+      "webgl_renderer": "Apple GPU",
+      "stream": "hevc-fragments",
+      "container": "fragments",
+      "stream_sha256": "4fba534fb9f96491ecedd9d8f5b460168a52aefe91492e865039874d14d1279b",
+      "video_codec": "hevc",
+      "audio_codec": "ac3",
+      "frames": 125,
+      "media_seconds": 5.0,
+      "type": "video/mp4; codecs=\"hvc1.1.6.L93.B0, ac-3\"",
+      "audio": "the target's audio device",
+      "total_video_frames": 125,
+      "dropped_video_frames": 0,
+      "corrupted_video_frames": 0,
+      "stalls": 0,
+      "seconds": 5.103,
+      "video_size": "1280x720",
+      "fragments_appended": 5,
+      "bytes_appended": 1148951,
+      "sound": "on",
+      "shown_frames": 125,
+      "display_repaints": 127,
+      "displayed_frames": 125
+    }
+  ]
+}

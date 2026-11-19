@@ -443,8 +443,15 @@ class Control(QObject):
                     "remote_buttons": sorted(window.remote_window.buttons) if window.remote_window else []})
             elif what == "save-display":
                 # What arrived from the target, pixel for pixel.
-                ok = window.display.image is not None and window.display.image.save(command["path"])
-                self.answer({"saved": bool(ok)})
+                image = window.display.image
+                ok = image is not None and image.save(command["path"])
+                answer = {"saved": bool(ok)}
+                if not ok:      # say why, for whoever asked
+                    answer["reason"] = ("no picture of the display has arrived yet" if image is None else
+                                        "the %dx%d picture could not be written to %s"
+                                        % (image.width(), image.height(), command["path"]))
+                    answer["connected"] = window.client.connected
+                self.answer(answer)
             elif what == "save-window":
                 # What the window draws: the display as it is scaled, and the toolbar.
                 self.answer({"saved": bool(window.grab().save(command["path"]))})
