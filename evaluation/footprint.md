@@ -189,9 +189,15 @@ What the values leave out, and what taking them showed:
   is new: the STB simulator's start in container mode
   (`stb-start-container`) failed because the launcher's window did not save
   the display's picture. Run alone six more times, it failed once and
-  passed five times, so the host's record has it as passed. Why the window
-  sometimes saves no picture was not looked into; the host was unattended
-  and its screen was locked when that was looked at afterwards.
+  passed five times, so the host's record has it as passed. The cause, found
+  and corrected the same day: in container mode keys reach the target
+  another way than through the window's connection to the display, so the
+  user interface could take its first key before the window had the
+  display's first picture, which came 0.4 s after the home screen in two
+  runs of four. The check asked for the picture once and failed; it now
+  waits for it. Six runs of the check and one of each other STB check in
+  container mode then passed. The failure was the check's, not the
+  simulator's.
 
 ### Windows x86-64
 

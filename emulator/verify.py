@@ -1739,9 +1739,14 @@ class _Stb:
     def picture(self):
         self.shots += 1
         path = os.path.join(self.directory, "stb-%d.ppm" % self.shots)
-        saved = self.viewer.ask(do="save-display", path=path)
-        if not saved.get("saved"):
-            raise CheckFailed("the window could not save the display's picture: %r" % saved)
+        # The window connects to the display on its own, and in container mode
+        # keys reach the target another way: the user interface can report a
+        # key before the window has the display's first picture. Wait for it.
+        saved = _wait(lambda: (lambda answer: answer if answer.get("saved") else None)(
+            self.viewer.ask(do="save-display", path=path)), 30 if self.patience < 1000 else 180, 0.1)
+        if not saved:
+            raise CheckFailed("the window could not save the display's picture: %r"
+                              % self.viewer.ask(do="save-display", path=path))
         return path
 
     def video_problems(self, marker):
@@ -1994,10 +1999,6 @@ def _stb_session(mode, arch):
                         seen["error"] = "the user interface never appeared: no home screen was reported"
                         return
                     seen["started"] = time.time()
-                    _dbg = viewer.ask(do="state"); print("DBG at home: connected=%s display=%s updates=%s" % (_dbg["connected"], _dbg["display"], _dbg["updates"]), file=sys.stderr, flush=True)
-                    _t0 = time.time()
-                    while viewer.ask(do="state")["display"] is None: time.sleep(0.01)
-                    print("DBG display after %.3fs" % (time.time() - _t0), file=sys.stderr, flush=True)
                     for name, part in (("tour-host", lambda: stb.tour("host")), ("tour-click", lambda: stb.tour("click")),
                                        ("channels", stb.channels), ("vod", stb.vod), ("workloads", stb.workloads)):
                         try:

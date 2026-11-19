@@ -1616,9 +1616,9 @@
         "not covered: RedRat IR input, which is not implemented",
         "graphics provider: emulated"
       ],
-      "checked_at": "2026-11-19T06:47:34Z",
-      "seconds": 59.6,
-      "revision": "b9164db42f85c47159e9694c78797710441b75db-dirty",
+      "checked_at": "2026-11-19T06:55:52Z",
+      "seconds": 59.0,
+      "revision": "04822d0641223831c879b3fcf1b24e15e96ab4ed-dirty",
       "image_definition_sha256": "55f8b5f1d35b0b2fc918a52311eab8599e9b7aa38487380a2435702798aa7375"
     },
     "stb-channels-container": {
@@ -1633,9 +1633,9 @@
         "at the host-side audio process: the tones of the channels in the order they were played (880 Hz for channel 2, 660 Hz for channel 3, 440 Hz for channel 1)",
         "at the host's sound server: the tones of the channels in the order they were played (880 Hz for channel 2, 660 Hz for channel 3, 440 Hz for channel 1)"
       ],
-      "checked_at": "2026-11-19T01:57:08Z",
-      "seconds": 0.0,
-      "revision": "b9164db42f85c47159e9694c78797710441b75db",
+      "checked_at": "2026-11-19T06:57:50Z",
+      "seconds": 58.9,
+      "revision": "04822d0641223831c879b3fcf1b24e15e96ab4ed-dirty",
       "image_definition_sha256": "55f8b5f1d35b0b2fc918a52311eab8599e9b7aa38487380a2435702798aa7375"
     },
     "stb-vod-container": {
@@ -1652,9 +1652,9 @@
         "BACK at the titles left the application: the simulator's apps screen was shown again",
         "not played here: Elephants Dream, Sintel and Tears of Steel, which are offered the same way"
       ],
-      "checked_at": "2026-11-19T01:57:08Z",
+      "checked_at": "2026-11-19T06:57:50Z",
       "seconds": 0.0,
-      "revision": "b9164db42f85c47159e9694c78797710441b75db",
+      "revision": "04822d0641223831c879b3fcf1b24e15e96ab4ed-dirty",
       "image_definition_sha256": "55f8b5f1d35b0b2fc918a52311eab8599e9b7aa38487380a2435702798aa7375"
     },
     "stb-workloads-container": {
@@ -1669,9 +1669,9 @@
         "web-bench: ran for 3 s and reported 1 results to the launcher, 1 of them measurements (web_render_fps); the user interface then showed its results",
         "these were short runs (--quick): they show that each workload runs and reports, and are not measurements to compare"
       ],
-      "checked_at": "2026-11-19T01:57:08Z",
+      "checked_at": "2026-11-19T06:57:50Z",
       "seconds": 0.0,
-      "revision": "b9164db42f85c47159e9694c78797710441b75db",
+      "revision": "04822d0641223831c879b3fcf1b24e15e96ab4ed-dirty",
       "image_definition_sha256": "55f8b5f1d35b0b2fc918a52311eab8599e9b7aa38487380a2435702798aa7375"
     },
     "stb-start-vm": {
@@ -1690,9 +1690,9 @@
         "not covered: RedRat IR input, which is not implemented",
         "graphics provider: host"
       ],
-      "checked_at": "2026-11-19T01:48:40Z",
-      "seconds": 59.3,
-      "revision": "b9164db42f85c47159e9694c78797710441b75db",
+      "checked_at": "2026-11-19T06:56:51Z",
+      "seconds": 59.5,
+      "revision": "04822d0641223831c879b3fcf1b24e15e96ab4ed-dirty",
       "image_definition_sha256": "55f8b5f1d35b0b2fc918a52311eab8599e9b7aa38487380a2435702798aa7375"
     },
     "stb-channels-vm": {
@@ -1764,9 +1764,9 @@
         "not covered: RedRat IR input, which is not implemented",
         "graphics provider: host"
       ],
-      "checked_at": "2026-11-19T01:52:20Z",
-      "seconds": 220.9,
-      "revision": "b9164db42f85c47159e9694c78797710441b75db",
+      "checked_at": "2026-11-19T07:01:32Z",
+      "seconds": 221.2,
+      "revision": "04822d0641223831c879b3fcf1b24e15e96ab4ed-dirty",
       "image_definition_sha256": "55f8b5f1d35b0b2fc918a52311eab8599e9b7aa38487380a2435702798aa7375"
     },
     "stb-channels-vm-arm64": {
@@ -1838,9 +1838,9 @@
         "not covered: RedRat IR input, which is not implemented",
         "graphics provider: host"
       ],
-      "checked_at": "2026-11-19T01:57:08Z",
-      "seconds": 287.5,
-      "revision": "b9164db42f85c47159e9694c78797710441b75db",
+      "checked_at": "2026-11-19T07:05:58Z",
+      "seconds": 266.3,
+      "revision": "04822d0641223831c879b3fcf1b24e15e96ab4ed-dirty",
       "image_definition_sha256": "55f8b5f1d35b0b2fc918a52311eab8599e9b7aa38487380a2435702798aa7375"
     },
     "stb-channels-vm-arm32": {
