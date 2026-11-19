@@ -82,7 +82,9 @@ window.addEventListener("load", () => {
                          p99: percentile(intervals, 0.99), max: intervals[intervals.length - 1] },
         shapes: SHAPES, labels: LABELS });
       // The last frame stays up while the launcher captures the display.
-      await capture({ marker: MARKER, width, height });
+      // It says when it began to draw, so that the capture can wait until the
+      // display has shown a frame of it: this callback can come before that.
+      await capture({ marker: MARKER, width, height, drawn_from: wallClock(started) });
       report(found);
       return;
     }

@@ -169,7 +169,7 @@ class RedRatGuiTests(unittest.TestCase):
                 profile_field.combo.hidePopup()
                 window.reject()
 
-    @patch.object(Receiver, "start")
+    @patch.object(Receiver, "start", autospec=True)
     def test_learning_requires_two_distinct_presses_per_key_and_saves_all_keys(self, start):
         with tempfile.TemporaryDirectory() as directory, patch.object(redrat, "PROFILE_DIR", Path(directory)):
             dialog = LearningDialog()
@@ -196,7 +196,7 @@ class RedRatGuiTests(unittest.TestCase):
             self.assertEqual(set(saved["buttons"]), set(remote.CODES))
             self.assertTrue(all(len(values) == 2 for values in saved["buttons"].values()))
 
-    @patch.object(Receiver, "start")
+    @patch.object(Receiver, "start", autospec=True)
     def test_learning_rejects_sdk_conflict_before_advancing_and_allows_retry(self, start):
         dialog = LearningDialog()
         dialog.received({"event": "ready"})
@@ -224,7 +224,7 @@ class RedRatGuiTests(unittest.TestCase):
         self.assertEqual(self.validate_signals.call_args.args[0], dialog.buttons)
         dialog.reject()
 
-    @patch.object(Receiver, "start")
+    @patch.object(Receiver, "start", autospec=True)
     def test_save_revalidates_with_sdk_and_keeps_conflicting_profile_unsaved(self, start):
         with tempfile.TemporaryDirectory() as directory, patch.object(redrat, "PROFILE_DIR", Path(directory)):
             dialog = LearningDialog()
@@ -242,7 +242,7 @@ class RedRatGuiTests(unittest.TestCase):
             self.assertTrue(dialog.again.isEnabled())
             dialog.reject()
 
-    @patch.object(Receiver, "start")
+    @patch.object(Receiver, "start", autospec=True)
     def test_learning_skips_missing_keys_discards_partial_capture_and_allows_relearning(self, start):
         with tempfile.TemporaryDirectory() as directory, patch.object(redrat, "PROFILE_DIR", Path(directory)):
             dialog = LearningDialog()
@@ -279,7 +279,7 @@ class RedRatGuiTests(unittest.TestCase):
             self.assertEqual(dialog.result(), QDialog.DialogCode.Accepted)
             self.assertEqual(redrat.load_profile("partial")["buttons"], {second: ["second-key", "second-key"]})
 
-    @patch.object(Receiver, "start")
+    @patch.object(Receiver, "start", autospec=True)
     def test_learning_can_skip_every_ir_key(self, start):
         with tempfile.TemporaryDirectory() as directory, patch.object(redrat, "PROFILE_DIR", Path(directory)):
             dialog = LearningDialog()
@@ -293,7 +293,7 @@ class RedRatGuiTests(unittest.TestCase):
             self.assertEqual(dialog.result(), QDialog.DialogCode.Accepted)
             self.assertEqual(redrat.load_profile("virtual-only")["buttons"], {})
 
-    @patch.object(Receiver, "start")
+    @patch.object(Receiver, "start", autospec=True)
     def test_cancel_does_not_save_profile_and_receiver_failure_disables_save(self, start):
         with tempfile.TemporaryDirectory() as directory, patch.object(redrat, "PROFILE_DIR", Path(directory)):
             dialog = LearningDialog()
@@ -306,7 +306,7 @@ class RedRatGuiTests(unittest.TestCase):
             dialog.reject()
             self.assertEqual(list(Path(directory).glob("*.json")), [])
 
-    @patch.object(Receiver, "start")
+    @patch.object(Receiver, "start", autospec=True)
     @patch("emulator.gui.viewer.rfb.Client.start")
     def test_viewer_routes_ir_only_when_display_focused_and_releases_on_deactivation(self, client_start, receiver_start):
         args = SimpleNamespace(audio_control=None, title="IR test", display=("localhost", 1),

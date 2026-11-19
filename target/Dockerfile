@@ -94,6 +94,12 @@ RUN python3 /src/media/fetch-dashjs.py "$DASHJS_PACKAGE" "$DASHJS_VERSION" "$DAS
 # Builds the Flutter workload with a pinned Flutter SDK. The SDK builds Linux
 # applications for x86-64 and ARM64 only; for any other architecture this
 # stage records why the image has no Flutter workload.
+#
+# TAR_OPTIONS: the Flutter tool unpacks its downloads with tar, which as root
+# gives each file the owner the archive names. One archive (the Gradle
+# wrapper) names a user id that a rootless container engine has not mapped
+# into the build, where setting it fails and the build with it. The files are
+# given to root instead, which is what a build as root leaves them usable by.
 FROM base AS flutter
 ARG FLUTTER_VERSION
 ARG FLUTTER_REVISION
@@ -112,13 +118,13 @@ RUN set -eu; \
     rm -rf /var/lib/apt/lists/*; \
     git clone --quiet --depth 1 --branch "$FLUTTER_VERSION" https://github.com/flutter/flutter.git /opt/flutter; \
     test "$(git -C /opt/flutter rev-parse HEAD)" = "$FLUTTER_REVISION"; \
-    export PATH=/opt/flutter/bin:$PATH; \
+    export PATH=/opt/flutter/bin:$PATH TAR_OPTIONS=--no-same-owner; \
     flutter --disable-analytics; \
     flutter config --no-cli-animations --enable-linux-desktop; \
     flutter precache --linux
 COPY src/flutter_demo/ /src/flutter_demo/
 COPY src/build-flutter-demo.sh /src/
-RUN [ -e /out/flutter/UNAVAILABLE ] || sh /src/build-flutter-demo.sh /src/flutter_demo /out/flutter
+RUN [ -e /out/flutter/UNAVAILABLE ] || TAR_OPTIONS=--no-same-owner sh /src/build-flutter-demo.sh /src/flutter_demo /out/flutter
 
 # ------------------------------------------------------------- rootfs ---
 # The target's own files. Their modes are set here, from their content, so the

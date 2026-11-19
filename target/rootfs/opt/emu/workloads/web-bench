@@ -147,6 +147,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if self.path == "/screen":
             # The page keeps its frame up until this is answered.
             if self.server.hold > 0 and self.server.screen is not None:
+                # A page says when it began to draw: its frame may not have
+                # reached the display yet, so the capture waits for it.
+                drawn_from = data.pop("drawn_from", None)
+                if drawn_from is not None:
+                    self.server.display_log.wait_shown(drawn_from)
                 emit("EMU-SCREEN", dict(self.server.screen, **data))
                 time.sleep(self.server.hold)
         elif self.path in ("/result", "/failure"):
@@ -228,6 +233,25 @@ class DisplayLog:
         if times and not any(self.opened - 1 <= moment <= now + 1 for moment in times):
             return None                 # not the clock this program reads: the times cannot be placed
         return times
+
+    def wait_shown(self, since_ms, limit=90.0, quiet=1.0):
+        """Wait until the display has shown new content since a moment that a
+        page gave as wall-clock milliseconds, and has then shown nothing newer
+        for a moment: what the page drew last is then on the display. A page's
+        frame callback can come before the display has shown its frame, and
+        under CPU emulation the display takes seconds over it. Gives up after
+        the limit, and at once where the compositor's record cannot be read."""
+        since = since_ms / 1000.0 - (time.time() - time.monotonic())
+        deadline = time.monotonic() + limit
+        while time.monotonic() < deadline:
+            times = self.times()
+            if times is None:
+                return False
+            shown = [moment for moment in times if moment >= since]
+            if shown and time.monotonic() - shown[-1] >= quiet:
+                return True
+            time.sleep(0.2)
+        return False
 
     def close(self):
         """Call when the compositor has been stopped."""
