@@ -4,8 +4,8 @@
     stb-simulator [--seconds N] [--quick]
 
 Simulates a device with a channel list, video playback and an app launcher,
-operated with remote control keys alone (emu run --remote-control, or
---window). The user interface is a web application (/opt/emu/stb) shown full
+operated with remote control keys alone when the launcher shows its display
+window. The user interface is a web application (/opt/emu/stb) shown full
 screen by the target's browser, WPE WebKit; this program starts the browser,
 serves the application and its media over the target's loopback interface,
 and does for it what a page cannot do: start a performance workload, and
@@ -436,8 +436,8 @@ def main():
         described["display"] = None
     emit("EMU-WORKLOAD", described)
     if not described["remote"]:
-        emit("EMU-STB", {"event": "note", "text": "remote control input is off, so the user interface gets no keys; "
-                                                 "start with --remote-control keys or --window"})
+        emit("EMU-STB", {"event": "note", "text": "the launcher display window is unavailable, so the user interface "
+                                                 "gets no host keyboard or on-screen remote input; start with --window"})
 
     Server(simulator)
     signal.signal(signal.SIGTERM, lambda *_: simulator.off.set())

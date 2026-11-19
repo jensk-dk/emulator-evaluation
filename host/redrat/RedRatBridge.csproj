@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <PublishDir>../../build/host/redrat/</PublishDir>
+    <UseAppHost>false</UseAppHost>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="RedRat" Version="6.0.3" GeneratePathProperty="true" />
+    <None Include="$(PkgRedRat)/License.txt" Link="RedRat.LICENSE.txt"
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Compile Remove="tests/**/*.cs" />
+    <InternalsVisibleTo Include="RedRatBridge.Tests" />
+  </ItemGroup>
+</Project>

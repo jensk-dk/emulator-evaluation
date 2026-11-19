@@ -8,11 +8,9 @@ Linux key code that names it; the target's compositor has a keyboard for
 that, the "remote control" (target/src/emu_remote.c), and a program on the
 target's display gets the key like any other.
 
-Three input modes (openspec/specs/remote-control-input):
-
-  keys      host keyboard keys, while the emulator's window has the focus
-  window    an on-screen remote control, and the host keys as well
-  redrat    infrared signals from a RedRat device: not implemented
+Host keyboard input is always available in the emulator's display window. The
+on-screen remote is toggled independently; RedRat IR input is added by
+selecting a learned profile.
 """
 import socket
 import subprocess
@@ -20,7 +18,6 @@ import threading
 
 from . import host
 
-MODES = ("keys", "window", "redrat")
 # Ends the remote-keys workload; no remote control key and no host key.
 END_KEY = 116
 

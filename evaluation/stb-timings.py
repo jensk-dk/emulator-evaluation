@@ -456,7 +456,7 @@ def run(args):
                 threading.Thread(target=work, daemon=True).start()
 
             opts = RunOptions(mode=args.mode, arch=args.arch, workload="stb-simulator", resolution=args.resolution,
-                              window=True, remote_control="keys", drivers=driver_features.parse(["audio=host"]),
+                              window=True, drivers=driver_features.parse(["audio=host"]),
                               options={"audio-output": "none"}, on_line=on_line, on_viewer=drive, timeout=8 * 3600,
                               echo=False, quiet_build=True)
             seen["launched"] = time.monotonic()
@@ -478,7 +478,7 @@ def run(args):
             for name in names:
                 outcome = launch(RunOptions(
                     mode=args.mode, arch=args.arch, workload=name, resolution=args.resolution, window=True,
-                    remote_control="keys", drivers=driver_features.parse(["audio=host"]),
+                    drivers=driver_features.parse(["audio=host"]),
                     options={"audio-output": "none"}, timeout=2 * 3600, echo=False, quiet_build=True))
                 found.append({"round": number + 1, "id": name, "status": outcome.exit_code,
                               "version": (outcome.workload or {}).get("version"), "boot_seconds": outcome.boot_seconds,

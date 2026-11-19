@@ -14,7 +14,7 @@ This repo contains a generic device emulator for Linux-based TVs and set-top box
 * Supports Wayland, OpenGL ES, Vulkan and Flutter graphics on target OS.
 * Supports A/V decoding in emulator with common broadcast and broadband A/V formats and codecs
 * Unified command line command regardless of the underlying emulator technology used.
-* A settings window when started without arguments, a display window with a toolbar, and remote control keys from the keyboard or an on-screen remote control.
+* A settings window when started without arguments, a display window with a toolbar, and remote control keys from the keyboard, an on-screen remote control, or a host RedRat IR receiver with selectable learned remote profiles.
 * Comprehensive performance analysis and reporting
 
 The requirements live in the [openspec](openspec) folder. Delivery is staged
@@ -31,7 +31,8 @@ workload's measurements are recorded for each host. Of stage 6, the
 launcher's own windows are implemented and verified on all three hosts: the
 display window (toolbar, scaling, full screen), remote control keys from the
 host keyboard and from an on-screen remote control, and the settings window.
-RedRat IR input is not implemented. The STB simulator is implemented and
+RedRat IR input has a host SDK bridge and guided remote learning; physical
+remote-key delivery still needs hardware verification. The STB simulator is implemented and
 verified on Linux and macOS and, except for video on demand in the ARM VMs,
 on Windows ([STB simulator](#stb-simulator)). macOS has no host
 graphics acceleration, which the Linux host has in VM mode. The task list and
@@ -47,8 +48,8 @@ graphics acceleration, which the Linux host has in VM mode. The task list and
     ./emu run --mode vm --workload graphics-demo --screenshot shots   # graphics, with display captures
     ./emu run --mode vm --workload graphics-demo --window             # graphics, with the display in a window
     ./emu run --mode vm --workload media-decode --window              # decoding and playing video and sound
-    ./emu run --workload remote-keys --remote-control window          # remote control keys, with the on-screen remote
-    ./emu run --workload stb-simulator --remote-control window        # a set-top box: channels, apps, video on demand
+    ./emu run --workload remote-keys                                   # keyboard input; toggle the on-screen remote
+    ./emu run --workload stb-simulator                                 # a set-top box: channels, apps, video on demand
     ./emu audio mute                                                  # from another terminal, while it plays
 
 On Windows use `setup.cmd` and `emu.cmd`, and `setup.cmd -ArmTargets`.
@@ -76,6 +77,7 @@ needed.
 | Hardware virtualization | host-native VM mode | Hypervisor.framework | KVM | Windows Hypervisor Platform |
 | Container runtime | container mode, image builds | Colima + Docker CLI (Homebrew) | Podman | Podman |
 | Qt for Python (`PySide6-Essentials`) | the launcher's windows: display window, on-screen remote control, settings window | pip, into a Python environment of the project's own (`build/host/gui`) | the same; the libraries Qt loads come as system packages | pip, into `build\host\gui` |
+| RedRat SDK bridge | receiving IR and learning remote profiles | .NET 10 SDK in `build/host/dotnet`, RedRat NuGet package, Homebrew `libusb` | the same private SDK and package, system libusb/runtime libraries, active-desktop-user USB permission rule | private SDK and package, official RedRat USB driver (elevated installation wizard) |
 | Audio player (optional) | playing the target's sound on the host | built by the launcher with the Command Line Tools' compiler | `pacat`, `pw-cat` or `aplay`; system package | the launcher's own, run by Python; nothing to install |
 | QEMU OpenGL modules (optional) | mapping VM graphics to the host GPU | not in Homebrew's QEMU; an experimental build has them, installed only with `./setup.sh --experimental-qemu` (see [Experimental: host graphics on macOS](#experimental-host-graphics-on-macos)) | system package | in winget's QEMU; used when the display is in a window (see [Display and graphics](#display-and-graphics)) |
 
@@ -85,6 +87,19 @@ environment variable `EMU_CONTAINER_RUNTIME` to `podman` or `docker`; the
 launcher and `setup.ps1` read it.
 
 The launcher starts a stopped container engine itself.
+
+Setup keeps Qt for Python below 6.12 and replaces an incompatible installation
+when rerun. PySide6 6.12.0 corrupts Python's `True` reference count during signal
+delivery on Python 3.10, crashing display playback and sometimes learning at
+shutdown. The same framebuffer regression passes with 6.11.3; the launcher
+rejects the incompatible series before opening a window. This restriction
+applies to the host GUI only, not the target images.
+
+RedRat support is always installed, even when no receiver is connected. Setup
+publishes the host helper into `build/host/redrat`; it builds no target image.
+Only the RedRat input choice is disabled when no receiver is detected.
+The SDK package's own license is supplied with its distribution; it is not
+copied into this repository. Ordinary target runs do not need a receiver.
 
 ### The simulated ARM targets
 
@@ -376,7 +391,8 @@ creates Podman's engine, which runs in WSL 2.
     ./emu
     ./emu run [--mode container|vm] [--arch native|arm32|arm64] [--workload NAME]
               [--cpus N] [--memory MIB] [--resolution 720p|1080p|4k] [--graphics auto|host|emulated]
-              [--window] [--fullscreen] [--remote-control keys|window]
+              [--window] [--fullscreen]
+              [--redrat-profile ID] [--redrat-device ID]
               [--driver FEATURE=STRATEGY] [--option KEY=VALUE] [--screenshot DIR]
               [--mute] [--record] [--repeat N] [-- WORKLOAD_ARGS]
 
@@ -411,9 +427,9 @@ benchmarks), `driver-check`, `graphics-demo`, `media-decode`, `web-bench`
 arrive) and `stb-simulator` (a set-top-box user interface with channels, an
 app launcher and video on demand; see [STB simulator](#stb-simulator)). `./emu workloads` lists them.
 
-Other commands: `./emu build`, `./emu doctor`, `./emu matrix`,
-`./emu workloads`, `./emu verify`, `./emu report`, `./emu audio`. Each has
-`--help`.
+Other commands: `./emu build`, `./emu config redrat`, `./emu doctor`,
+`./emu matrix`, `./emu workloads`, `./emu verify`, `./emu report`,
+`./emu audio`. Each has `--help`.
 
 ## Target OS image
 
@@ -485,7 +501,7 @@ involved.
 ## Display and graphics
 
 The emulator has a display when the workload uses one, or when `--resolution`,
-`--graphics`, `--window`, `--fullscreen` or `--remote-control` is given.
+`--graphics`, `--window` or `--fullscreen` is given.
 `--resolution` selects 720p, 1080p (the default) or 4K.
 
 | | VM mode | Container mode |
@@ -564,8 +580,9 @@ the emulator.
   window opens at 1:1, one pixel of the display on one pixel of the screen, or
   as large as the screen allows. The 1:1 button returns to that.
 - **Hotkeys.** Ctrl+Alt+F or F11 switches between the window and full screen;
-  Ctrl+Alt+M mutes, Ctrl+Alt+1 is 1:1, Ctrl+Alt+R shows or hides the remote
-  control. On a Mac the Control or the Command key, with Option.
+  Ctrl+Alt+M mutes, Ctrl+Alt+1 is 1:1, Ctrl+Alt+R shows or hides the remote.
+  On a Mac use Control or Command with Option. The on-screen remote starts
+  hidden; the toolbar button or Ctrl+Alt+R toggles it.
 - **How the display gets there.** In VM mode QEMU serves it (its VNC server,
   on a socket of the run, or on a loopback port on Windows). In container mode
   a program in the target captures the compositor's output and serves it the
@@ -577,10 +594,10 @@ the emulator.
   and QEMU on Windows), and host acceleration is asked for or preferred, the
   display is shown there, as before: without toolbar, scaling control or
   remote control keys. `--graphics emulated` gets the launcher's window, and
-  so does `--remote-control`, or a workload that is operated with remote
-  control keys (`stb-simulator`), while host acceleration is only preferred
-  (`--graphics auto`, the default): the keys come before the acceleration,
-  and the launcher says so. `--option window=qemu` gets QEMU's.
+  so does `--window`, `--fullscreen`, or a workload that is operated with
+  remote control keys (`stb-simulator`), while host acceleration is only
+  preferred (`--graphics auto`, the default): the keys come before the
+  acceleration, and the launcher says so. `--option window=qemu` gets QEMU's.
 
 Limits:
 
@@ -590,9 +607,8 @@ Limits:
   at 720p; there a VM's display is rendered on the host GPU and still shown
   in the launcher's window.
 - On Windows, QEMU shows a display rendered on the host GPU only in its own
-  window, so `--mode vm --window` alone gets that window there, without
-  toolbar or keys; add `--graphics emulated` or `--remote-control` for the
-  launcher's.
+  window, so `--mode vm --window --graphics host` gets that window there,
+  without toolbar or keys; use `--graphics emulated` for the launcher's.
 - In VM mode the launcher's window reads the display from QEMU's VNC server,
   which in QEMU 8.2 (the Linux host's) serves no more than 2560x2048 pixels.
   Of a 4K display the window then shows the top left part, with host and
@@ -762,18 +778,15 @@ programs from the prompt.
 
 ## Remote control input
 
-The emulator takes the keys of a remote control and gives them to the target
-as keys of a keyboard, each with the Linux key code that names it; a program
-on the target's display gets them like any other key. `--remote-control`
-selects how they are given:
+The emulator joins its remote-control inputs: mapped host keyboard keys work
+whenever the launcher's display window has focus; the on-screen remote is an
+optional window that starts hidden; and selecting a RedRat profile adds IR
+input. These sources all deliver the same target key codes. The on-screen
+remote is toggled by its toolbar icon or Ctrl+Alt+R (Command+Option+R on macOS).
+RedRat signals are delivered only while the launcher's display window is
+focused. A QEMU-owned display window has no launcher toolbar or keyboard input.
 
-| Mode | What it is |
-|---|---|
-| `keys` | Host keyboard keys, while the emulator's window has the input focus. The default with a window |
-| `window` | An on-screen remote control in a window of its own: a picture of a TV remote control whose buttons are clicked with the mouse and held as long as the mouse button is. The host keys work as well, in both windows |
-| `redrat` | Infrared signals of a real remote control, received by a RedRat device. Not implemented |
-
-Either mode shows the display in a window. The keys are HbbTV's list of
+The keys are HbbTV's list of
 buttons (ETSI TS 102 796 V1.7.1, Table 12):
 
 | Remote control key | HbbTV key event | Host key | Linux key code | Symbol in the target |
@@ -815,10 +828,78 @@ The last column is what the target's keymap calls the key, as a program in
 the target saw it. TEXT has a key code and no symbol. Play and play/pause have
 different key codes and the same symbol.
 
-    ./emu run --workload remote-keys --remote-control window
+    ./emu run --workload remote-keys
 
 The `remote-keys` workload shows a still picture on the display and prints
 every key that arrives, with its code and symbol.
+
+### Learning and selecting a RedRat remote
+
+    ./emu config redrat
+    ./emu config redrat --device pico-id
+    ./emu run --workload stb-simulator --redrat-profile living-room
+    ./emu run --workload remote-keys --redrat-profile living-room
+
+RedRat is off unless `--redrat-profile` is supplied. In the settings window,
+the **Create new profile...** button next to the profile selector opens guided
+learning. It saves and selects the profile without starting the emulator.
+The profile dropdown reloads saved profiles whenever it is opened, without
+requiring a restart of the settings window.
+`emu config redrat` runs the same profile-creation task on its own; use
+`--device ID` to override the automatic choice of the first detected receiver.
+The settings window shows that automatic receiver in the empty receiver field.
+Selecting a profile adds IR input alongside the keyboard and on-screen remote. The repository
+starts with no learned remotes. Guided learning asks for a display name and a
+unique lowercase, hyphen-separated id. Click **Start learning**, then press each
+requested button twice, releasing it between presses. This learns signal variants
+such as toggle bits. Each capture is checked with the same SDK timing and toggle
+rules used during playback, not just compared as raw JSON. Conflicting captures
+are rejected immediately, with the conflicting keys named; release the buttons
+and retry, relearn the previous key, or skip the key. Saving checks the complete
+learned mapping again. Decoder construction keeps distinct short/long pulse
+variants separate without changing playback's normal timing-jitter tolerance.
+Use **Skip key** when your remote has no physical button for a requested key.
+Skipping discards any partial capture for that key. Skipped keys remain
+available through the virtual remote and mapped keyboard keys. Save becomes
+available after all keys have been learned or skipped; **Relearn previous key**
+also lets you return to a skipped key. Cancel saves nothing; an existing profile
+is never overwritten.
+
+Profiles are portable JSON files in [`remotes/`](remotes), one per remote,
+and can be committed and shared. Each contains a version, id, name, and a
+`buttons` map from the key ids in [`emulator/remote.py`](emulator/remote.py)
+to learned SDK signals; skipped keys are omitted from this map. One profile
+is selected per run. Learning is local;
+the emulator does not transmit IR or change the receiver's firmware.
+
+`emu doctor` reports detected receivers. The first detected receiver is used
+unless overridden with `--redrat-device ID`. The settings window refreshes
+receiver detection while open. Selecting a RedRat profile without a receiver fails before building or
+starting a target. The SDK helper owns the host USB device: no
+USB passthrough to Docker or QEMU is needed, including for ARM guests.
+The launcher also checks a selected profile with the SDK before building or
+starting a target, so older ambiguous profiles fail before a VM is started.
+
+IR repeats keep a key down and the target compositor supplies key repetition.
+After 250 ms without a matching frame, on loss of window focus, or on receiver
+shutdown, a held key is released. Unrecognized signals are reported in the
+window's status bar. Receiver failures are reported and end the run instead
+of silently falling back to another remote profile.
+
+Linux USB access is granted to the active desktop user by
+`70-tv-emu-redrat.rules`. Setup reloads and applies this rule to connected
+receivers without a reboot; reconnect the device after setup if it is still
+inaccessible. An SSH-only user may need a host-administrator-managed USB
+permission policy. Windows uses the vendor's x86/x64 driver; it does not
+provide an ARM64 driver. RedRat's SDK provides the shared host implementation
+for Linux, macOS and Windows; testing on one host is not evidence that the
+others have been verified.
+
+`./emu verify redrat-support redrat-device` runs the software checks and an
+actual receiver open/close check. Neither claims that physical remote keys
+were received. To check those, learn a profile, run `remote-keys` in each
+target mode, and verify its press/release reports while pressing buttons,
+holding them, switching window focus and unplugging the receiver.
 
 How the keys travel: the target's compositor gets a keyboard of its own, the
 "remote control" ([target/src/emu_remote.c](target/src/emu_remote.c), a Weston
@@ -833,6 +914,9 @@ Limits:
 
 - Verified on the macOS and Windows hosts, in all four modes: each of the 32
   keys by its host key and by its button. Verified on the Linux host as well.
+- These keyboard/button results are not physical IR results. Real IR learning,
+  decoding, held buttons and focus transitions must also be checked with a
+  remote pointed at the attached receiver; no learned profiles are fabricated.
 - That host keys stay away from the target while another window has the focus
   follows from how windows get keys. The checks do not cover it; it was tried
   by hand on Windows, in container and host-native VM modes, with key presses
@@ -971,7 +1055,7 @@ the target's loopback interface:
 ## STB simulator
 
     ./emu run --workload stb-simulator                         # in a window, keys from the keyboard
-    ./emu run --mode vm --workload stb-simulator --remote-control window   # with the on-screen remote control
+    ./emu run --mode vm --workload stb-simulator                           # toggle the on-screen remote as needed
 
 The `stb-simulator` workload shows a set-top-box-like user interface on the
 target's display and is operated with remote control keys alone
@@ -1066,8 +1150,8 @@ Limits:
 - The browser does not tell a page about the P+, P-, TEXT and WEBTV keys
   (they arrive as keys without a name), so the channel is changed with Up
   and Down and with the digits, not with P+ and P-.
-- RedRat IR input is not implemented, so the simulator takes its keys from
-  the other two input modes.
+- Physical RedRat operation of the simulator still needs verification with a
+  learned remote; keyboard and on-screen remote results do not establish it.
 - With the CPU emulated (ARM64 and ARM32 targets) the browser draws far
   below real time: the user interface takes about a second to show what a
   key did, and a channel shows about one picture a second (the table above;

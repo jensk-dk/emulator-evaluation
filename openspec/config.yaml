@@ -47,16 +47,30 @@ context: |
   the emulator's display: a picture is saved each time a workload reports a
   finished frame, in container mode and in VM mode. Where a display cannot be
   captured, or a capture holds only a part of it, the emulator says so.
-  The emulator must accept the key input of a remote control in three
-  selectable modes: host keyboard keys mapped to remote control keys while the
-  emulator window has the input focus (the arrow keys for the D-pad, Enter for
-  select, and a host key for every other remote control key); a graphical
-  remote control in a window of its own, a picture of a TV remote control whose
-  buttons are clicked with the mouse, with the host key mapping still applying
-  when the emulator window is focused; and RedRat IR input. Every mode must
-  support all HbbTV input keys. The target OS image must provide a workload
-  that shows a picture and reports each remote control key that arrives, with
-  its key code, its symbol, and whether it was pressed or released.
+  The emulator must join host keyboard keys mapped to remote control keys
+  whenever its display window is focused, and an on-screen remote in its own
+  initially hidden, hotkey/toolbar-toggleable window. Selecting a learned
+  RedRat profile adds IR input without replacing the other sources. All input
+  sources together must support every HbbTV input key. Guided RedRat learning
+  offers Skip key for absent physical buttons, omits their IR mappings, and
+  keeps those keys available through the keyboard and on-screen remote.
+  Learning must validate captures and the final mapping with the same SDK
+  timing and toggle rules as playback, rejecting conflicts before saving.
+  A selected profile must pass this validation before a target is built or started.
+  The target OS image must provide
+  a workload that shows a picture and reports each remote control key that
+  arrives, with its key code, its symbol, and whether it was pressed or released.
+  RedRat input uses one selected remote profile per run, chosen from learned
+  profiles kept in the repository. Profiles are created through guided
+  learning as a configuration action, independently of starting the emulator:
+  the settings window has a create button beside the selector, and `emu config
+  redrat` runs the task on its own. Learning and playback automatically use the
+  first detected receiver unless an explicit receiver id overrides it; the
+  settings window shows the automatic receiver. Initially there are no profiles. IR input
+  is accepted only while the emulator window is focused. Setup always installs
+  RedRat support, even without a receiver; profile selection and creation are
+  enabled only while a receiver is detected, without disabling keyboard or
+  on-screen input.
   The target OS image must provide an STB simulator workload: it starts a
   set-top-box-like user interface that simulates a device with a channel list,
   video playback, and an app launcher. The app launcher includes a simulated
@@ -64,8 +78,9 @@ context: |
   bitrate (ABR) content: MPEG-DASH streams, played with the dash.js player
   library. Its titles are openly licensed films that are freely available as
   DASH streams on the internet: Big Buck Bunny, Elephants Dream, and similar
-  open-source content. The user interface takes its keys from the remote control input
-  modes, and the performance workloads can be launched from it as well.
+  open-source content. The user interface takes its keys from the joined
+  remote control input sources, and the performance workloads can be launched
+  from it as well.
   A channel can also be selected by its number, and the channels stepped
   through with Up and Down while one plays. Beside the films the VOD
   application offers a test title that is kept in the image, in three sizes,

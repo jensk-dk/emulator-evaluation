@@ -1,0 +1,7 @@
+<Project>
+  <PropertyGroup>
+    <BaseOutputPath>$(MSBuildThisFileDirectory)../../build/host/redrat-bin/$(MSBuildProjectName)/</BaseOutputPath>
+    <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)../../build/host/redrat-obj/$(MSBuildProjectName)/</BaseIntermediateOutputPath>
+    <DefaultItemExcludes>$(DefaultItemExcludes);bin/**;obj/**</DefaultItemExcludes>
+  </PropertyGroup>
+</Project>

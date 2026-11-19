@@ -14,9 +14,10 @@
 # It ends when the power key (Linux key code 116, which no remote control
 # input mode maps a key to) is released, or after N seconds (default 600).
 #
-# Remote control input is the launcher's to turn on (emu run --remote-control,
-# or --window); without it the display has no keyboard and the workload says
-# so.
+# Remote control keys are available whenever the launcher shows the display
+# in its own window, including this workload's automatic display window.
+# Without that host-side window the display has no keyboard and this workload
+# says so.
 
 VERSION="1.0.0"
 END_KEY=116

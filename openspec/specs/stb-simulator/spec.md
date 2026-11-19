@@ -32,7 +32,7 @@ The target OS image MUST provide a workload, the STB simulator, that the startup
 
 ### Requirement: Operate the user interface with remote control keys
 
-The STB simulator MUST take its key input from the remote control input modes: host keyboard mapping, the on-screen remote control, and RedRat IR input. Every function of its user interface MUST be reachable with remote control keys alone.
+The STB simulator MUST take its key input from the joined remote control sources: host keyboard mapping and the on-screen remote control, with RedRat IR added when a profile is selected. Every function of its user interface MUST be reachable with remote control keys alone.
 
 #### Scenario: Move with the arrow keys
 
@@ -51,7 +51,7 @@ The STB simulator MUST take its key input from the remote control input modes: h
 
 #### Scenario: Take keys from every input mode
 
-- WHEN a remote control key is pressed through any of the three remote control input modes
+- WHEN a remote control key is pressed through any enabled remote control input source
 - THEN the user interface acts on it in the same way
 
 ### Requirement: Present a channel list

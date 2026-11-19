@@ -35,6 +35,9 @@
                               on-screen remote control and the settings window.
                               Installed with pip into a Python environment of
                               this project's own, build\host\gui
+    RedRat SDK bridge        .NET 10 SDK and RedRat NuGet package, in build\host,
+                              and the vendor's USB driver, even with no receiver
+                              attached. Driver installation asks for elevation.
 
   Only with -ArmTargets, for the simulated ARM64 and ARM32 targets:
     QEMU ARM system emulators VM mode with an ARM64 or ARM32 guest. QEMU for
@@ -77,7 +80,10 @@ $script:RestartNeeded = $false
 # environment of this project's own: the host's Python stays as it is.
 $script:GuiEnv = Join-Path $PSScriptRoot 'build\host\gui'
 $script:GuiPython = Join-Path $script:GuiEnv 'Scripts\python.exe'
-$script:GuiPackage = 'PySide6-Essentials'
+$script:GuiPackage = 'PySide6-Essentials<6.12'
+$script:DotnetDir = Join-Path $PSScriptRoot 'build\host\dotnet'
+$script:RedRatDir = Join-Path $PSScriptRoot 'build\host\redrat'
+$script:RedRatPackages = Join-Path $PSScriptRoot 'build\host\redrat-packages'
 
 function Write-Ok($text)      { Write-Host "  [ ok ]  $text" }
 function Write-Missing($key, $text) { Write-Host "  [MISS]  $text"; $script:Missing += $key }
@@ -245,12 +251,37 @@ function Test-PythonDep {
 }
 
 function Test-GuiDep {
-  if ((Test-Path $script:GuiPython) -and (Test-Run $script:GuiPython @('-c', 'import PySide6.QtWidgets'))) {
+  # Keep the version check aligned with setup.sh and emulator/window.py.
+  if ((Test-Path $script:GuiPython) -and (Test-Run $script:GuiPython @('-c', 'import PySide6.QtWidgets; assert PySide6.__version_info__ < (6, 12)'))) {
     $version = Get-Output $script:GuiPython @('-c', 'import PySide6; print(PySide6.__version__)')
     Write-Ok "Qt for Python $version ($($script:GuiPython))"
   } else {
-    Write-Missing 'gui' "Qt for Python (PySide6), for the launcher's windows"
+    Write-Missing 'gui' "compatible Qt for Python ($($script:GuiPackage)), for the launcher's windows"
   }
+}
+
+function Get-RedRatDriverPackages {
+  @(Get-ChildItem -Path "$env:SystemRoot\INF" -Filter 'oem*.inf' |
+    Where-Object { Select-String -LiteralPath $_.FullName -Pattern 'ECFB0CFD-74C4-4f52-BBF7-343461CD72AC' -Quiet } |
+    ForEach-Object { $_.Name })
+}
+
+function Test-RedRatDep {
+  if (@(Get-RedRatDriverPackages).Count -eq 0 -or -not (Test-Path "$env:SystemRoot\System32\libusbK.dll")) {
+    Write-Missing 'redrat-driver' 'RedRat USB driver (also installed without an attached receiver)'
+  }
+  $python = Find-Python
+  if ($python) {
+    $command = @($python.Command -split ' ')
+    Push-Location $PSScriptRoot
+    try {
+      if (Test-Run $command[0] (@($command | Select-Object -Skip 1) + @('-m', 'emulator.redrat', 'check'))) {
+        Write-Ok 'RedRat SDK bridge'
+        return
+      }
+    } finally { Pop-Location }
+  }
+  Write-Missing 'redrat' 'RedRat SDK bridge (.NET 10 and the RedRat SDK)'
 }
 
 function Test-QemuDep {
@@ -420,6 +451,7 @@ function Invoke-Checks {
   Test-ContainerDep
   Test-ArmTargetsDep
   Test-GuiDep
+  Test-RedRatDep
 }
 
 # ---------------------------------------------------------------- install ---
@@ -452,6 +484,63 @@ function Install-Gui {
     Add-Record 'python-env' $script:GuiEnv
   }
   Invoke-Step $script:GuiPython @('-m', 'pip', 'install', '--disable-pip-version-check', $script:GuiPackage)
+}
+
+function Install-RedRat {
+  if (Test-Missing 'redrat-driver') {
+    if ((Get-HostArch) -ne 'x86_64') { throw 'The vendor RedRat USB driver supports x86/x64 Windows, not Windows ARM64.' }
+    $directory = Join-Path $PSScriptRoot 'build\host\redrat-driver'
+    if (-not (Test-Path $directory)) {
+      Add-Record 'redrat-tree' $directory
+      $null = New-Item -ItemType Directory -Path $directory -Force
+    }
+    $archive = Join-Path $directory 'driver.zip'
+    Invoke-WebRequest -UseBasicParsing -Uri 'https://www.redrat.co.uk/downloads/RedRatUSBDriver-V3.0.7.zip' -OutFile $archive
+    Expand-Archive -LiteralPath $archive -DestinationPath $directory -Force
+    $before = @(Get-RedRatDriverPackages)
+    Write-Host 'Installing the official RedRat USB driver. Complete its elevated installation wizard.'
+    try {
+      $process = Start-Process -FilePath (Join-Path $directory 'RedRatUSBDriver-V3.0.7.exe') -Verb RunAs -Wait -PassThru
+      if ($process.ExitCode -ne 0) { throw "RedRat USB driver installer exited with code $($process.ExitCode)" }
+    } finally {
+      foreach ($package in @(Get-RedRatDriverPackages | Where-Object { $before -notcontains $_ })) {
+        Add-Record 'redrat-driver' $package
+      }
+    }
+  }
+  if (-not (Test-Missing 'redrat')) { return }
+  $sdk = Join-Path $script:DotnetDir 'dotnet.exe'
+  if (-not (Test-Path $sdk)) {
+    if (Test-Command dotnet) { $sdk = (Get-Command dotnet).Source }
+  }
+  $versions = if (Test-Path $sdk) { Get-Output $sdk @('--list-sdks') } else { '' }
+  if ($versions -notmatch '(?m)^10\.') {
+    $installer = Join-Path $PSScriptRoot 'build\host\dotnet-install.ps1'
+    $null = New-Item -ItemType Directory -Path (Split-Path $installer) -Force
+    if (-not (Test-Path $script:DotnetDir)) { Add-Record 'redrat-tree' $script:DotnetDir }
+    Invoke-WebRequest -UseBasicParsing -Uri 'https://dot.net/v1/dotnet-install.ps1' -OutFile $installer
+    & $installer -Channel '10.0' -InstallDir $script:DotnetDir -NoPath
+    $sdk = Join-Path $script:DotnetDir 'dotnet.exe'
+    if (-not (Test-Path $sdk)) { throw 'The .NET SDK installation did not produce dotnet.exe' }
+    Remove-Item -LiteralPath $installer
+  }
+  foreach ($directory in @($script:RedRatDir, $script:RedRatPackages,
+                           (Join-Path $PSScriptRoot 'build\host\redrat-bin'),
+                           (Join-Path $PSScriptRoot 'build\host\redrat-obj'))) {
+    if (-not (Test-Path $directory)) { Add-Record 'redrat-tree' $directory }
+  }
+  $previous = $env:NUGET_PACKAGES
+  $env:NUGET_PACKAGES = $script:RedRatPackages
+  try {
+    Invoke-Step $sdk @('publish', (Join-Path $PSScriptRoot 'host\redrat\RedRatBridge.csproj'),
+                      '-c', 'Release', '-o', $script:RedRatDir)
+  } finally { $env:NUGET_PACKAGES = $previous }
+  $python = Find-Python
+  if (-not $python) { throw 'RedRat setup needs Python, which is still missing' }
+  $command = @($python.Command -split ' ')
+  Push-Location $PSScriptRoot
+  try { Invoke-Step $command[0] (@($command | Select-Object -Skip 1) + @('-m', 'emulator.redrat', 'stamp')) }
+  finally { Pop-Location }
 }
 
 function Install-Missing {
@@ -553,7 +642,7 @@ function Install-Missing {
 
 # The kinds of entry in the record that this script removes, in the order to
 # remove them: what uses a thing goes before the thing.
-$script:RemoveOrder = @('binfmt', 'engine-image', 'podman-machine', 'python-env', 'winget')
+$script:RemoveOrder = @('binfmt', 'engine-image', 'podman-machine', 'python-env', 'redrat-driver', 'redrat-tree', 'winget')
 # The kinds it lists and leaves: removing them takes an elevated PowerShell and
 # a restart, and other software may have come to use them.
 $script:LeaveOrder = @('feature', 'wsl')
@@ -592,6 +681,8 @@ function Test-EntryPresent($entry) {
   switch ($entry.Kind) {
     'winget'         { return (Test-Command winget) -and (Test-WingetPackage $value) }
     'python-env'     { return Test-Path (Join-Path $value 'pyvenv.cfg') }
+    'redrat-tree'    { return Test-Path $value }
+    'redrat-driver'  { return @(Get-RedRatDriverPackages) -contains $value }
     'podman-machine' { return (Test-Command podman) -and (@(Get-PodmanMachines) -contains $value) }
     'feature'        { return Test-Feature $value }
     'wsl'            { return (Test-Command wsl) -and (Test-Run wsl @('--status')) }
@@ -615,6 +706,8 @@ function Get-EntryText($entry) {
   switch ($entry.Kind) {
     'winget'         { return "the winget package $value" }
     'python-env'     { return "the Python environment $value, with Qt for Python (the launcher's windows)" }
+    'redrat-tree'    { return "the RedRat support directory $value" }
+    'redrat-driver'  { return "the RedRat USB driver package $value" }
     'podman-machine' { return "the Podman machine `"$value`", with every container, image and volume in it" }
     'binfmt'         { return "the emulation of other CPU architectures registered in the container engine ($value)" }
     'engine-image'   { return "the container image $(($value -split ' ', 2)[1])" }
@@ -652,6 +745,16 @@ function Remove-Entry($entry) {
         if ((Split-Path $value -Leaf) -ne 'gui') { throw "$value is not where this script makes its Python environment; it stays" }
         Write-Host "  + remove $value"
         Remove-Item -LiteralPath $value -Recurse -Force
+      }
+      'redrat-tree' {
+        if ($value -notmatch '\\build\\host\\(dotnet|redrat|redrat-packages|redrat-driver|redrat-bin|redrat-obj)$') {
+          throw "$value is not a RedRat support directory; it stays"
+        }
+        Remove-Item -LiteralPath $value -Recurse -Force
+      }
+      'redrat-driver' {
+        if (-not (Test-Admin)) { throw 'Removing the RedRat USB driver needs an elevated PowerShell.' }
+        Invoke-Step pnputil @('/delete-driver', $value, '/uninstall')
       }
       'winget'         { Invoke-Step winget @('uninstall', '--exact', '--id', $value, '--accept-source-agreements', '--disable-interactivity') }
     }
@@ -764,6 +867,7 @@ Write-Host ''
 $installError = $null
 try { Install-Missing } catch { $installError = $_ }
 try { Install-Gui } catch { if (-not $installError) { $installError = $_ } }
+try { Install-RedRat } catch { if (-not $installError) { $installError = $_ } }
 
 Write-Host "`nRe-checking host dependencies"
 Invoke-Checks

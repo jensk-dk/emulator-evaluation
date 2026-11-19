@@ -1,7 +1,7 @@
 """The emulator's display window.
 
     python -m emulator.gui.viewer --display ADDRESS [--title TEXT] [--fullscreen]
-        [--remote-control keys|window] [--keys-exec JSON | --keys-listen PORT]
+        [--keys-exec JSON | --keys-listen PORT]
         [--audio-control PORT] [--control]
 
 It shows the target's display, which it follows with the remote framebuffer
@@ -23,14 +23,18 @@ lines on standard input, one answer line each on standard output.
 """
 import argparse
 import json
+import signal
 import sys
 import threading
+import time
 
-from PySide6.QtCore import QObject, QPoint, QPointF, QRect, QRectF, QSize, Qt, QTimer, Signal
+from PySide6.QtCore import QEvent, QObject, QPoint, QPointF, QRect, QRectF, QSize, Qt, QTimer, Signal
 from PySide6.QtGui import QAction, QColor, QIcon, QImage, QPainter, QPalette, QPen, QPixmap, QPolygonF
 from PySide6.QtWidgets import QApplication, QMainWindow, QToolBar, QWidget
 
-from .. import hostaudio, remote, rfb
+from .. import hostaudio, redrat, remote, rfb
+from ..errors import EmuError
+from .redrat import Receiver
 from .remote_window import RemoteControlWindow
 
 QT_KEY_NAMES = {
@@ -200,7 +204,10 @@ class Window(QMainWindow):
         self.args = args
         self.cut_noted = False
         self.audio_port = args.audio_control
-        self.keys_on = args.remote_control in ("keys", "window")
+        self.keys_on = sender is not None
+        self.redrat_receiver = None
+        self.redrat_key = None
+        self.failed = False
         self.muted = None
         self.pressed = {}               # host key -> remote control key code, while it is down
         self.setWindowTitle(args.title)
@@ -248,8 +255,44 @@ class Window(QMainWindow):
         self.client.start()
         if args.fullscreen:
             self.toggle_full_screen()
-        if args.remote_control == "window":
-            QTimer.singleShot(0, lambda: self.show_remote(True))
+        if args.redrat_profile:
+            self.redrat_key = redrat.HeldKey(sender)
+            self.redrat_receiver = Receiver(self)
+            self.redrat_receiver.received.connect(self.ir_event)
+            self.redrat_receiver.failed.connect(self.ir_failed)
+            self.ir_timer = QTimer(self)
+            self.ir_timer.timeout.connect(lambda: self.redrat_key.expire(time.monotonic()))
+            self.ir_timer.start(25)
+            QTimer.singleShot(0, self.start_ir)
+
+    def start_ir(self):
+        try:
+            redrat.load_profile(self.args.redrat_profile)
+            self.redrat_receiver.start(self.args.redrat_device, self.args.redrat_profile)
+        except EmuError as error:
+            self.ir_failed(str(error))
+
+    def ir_event(self, event):
+        self.redrat_key.focus(self.isActiveWindow())
+        if event["event"] == "key":
+            try:
+                self.redrat_key.receive(event.get("key"), time.monotonic())
+            except EmuError as error:
+                self.ir_failed(str(error))
+        elif event["event"] == "unmapped":
+            self.statusBar().showMessage("IR signal is not mapped in the selected remote profile", 3000)
+        elif event["event"] == "ready":
+            self.statusBar().showMessage("RedRat ready: " + self.args.redrat_profile, 3000)
+
+    def ir_failed(self, text):
+        print("emu: RedRat: " + text, file=sys.stderr, flush=True)
+        self.failed = True
+        self.close()
+
+    def changeEvent(self, event):
+        if event.type() == QEvent.Type.ActivationChange and getattr(self, "redrat_key", None) is not None:
+            self.redrat_key.focus(self.isActiveWindow())
+        super().changeEvent(event)
 
     # ----------------------------------------------------------- display
 
@@ -385,6 +428,10 @@ class Window(QMainWindow):
             super().keyReleaseEvent(event)
 
     def closeEvent(self, event):
+        if self.redrat_key is not None:
+            self.ir_timer.stop()
+            self.redrat_key.release()
+            self.redrat_receiver.close()
         for code in self.pressed.values():
             self.sender.release(code)
         self.client.close()
@@ -551,7 +598,8 @@ def main(argv=None):
     parser.add_argument("--display", required=True, type=_address, metavar="ADDRESS")
     parser.add_argument("--title", default="Emulator")
     parser.add_argument("--fullscreen", action="store_true")
-    parser.add_argument("--remote-control", choices=("keys", "window"))
+    parser.add_argument("--redrat-profile")
+    parser.add_argument("--redrat-device")
     parser.add_argument("--keys-exec", type=json.loads, metavar="JSON")
     parser.add_argument("--keys-listen", type=int, metavar="PORT")
     parser.add_argument("--audio-control", type=int, metavar="PORT")
@@ -565,12 +613,13 @@ def main(argv=None):
         sender = remote.ExecSender(args.keys_exec)
     elif args.keys_listen:
         sender = remote.ListenSender(args.keys_listen)
-    if sender is None:
-        args.remote_control = None
     application = QApplication(sys.argv[:1])
     application.setApplicationName("Emulator")
     awake = _stay_awake()
     window = Window(args, sender)
+    if args.redrat_profile:
+        signal.signal(signal.SIGTERM, lambda *_: window.close())
+        signal.signal(signal.SIGINT, lambda *_: window.close())
     window.show()
     window.raise_()
     window.activateWindow()
@@ -579,7 +628,7 @@ def main(argv=None):
     if sender is not None:
         sender.close()
     del control, awake
-    return status
+    return 1 if window.failed else status
 
 
 if __name__ == "__main__":

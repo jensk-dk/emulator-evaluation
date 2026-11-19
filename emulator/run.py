@@ -8,7 +8,7 @@ import sys
 import threading
 import time
 
-from . import armtargets, catalog, container, drivers as driver_features, graphics, host, image, remote, vm, window
+from . import armtargets, catalog, container, drivers as driver_features, graphics, host, image, redrat, vm, window
 from .errors import EmuError
 from .paths import BUILD_DIR
 
@@ -35,7 +35,8 @@ class RunOptions:
                  memory_mb=DEFAULT_MEMORY_MB, drivers=None, options=None, extra_args=(), timeout=None,
                  echo=True, stdin_script=None, quiet_build=False, rebuild=False, resolution=None, graphics=None,
                  screenshot_dir=None, screenshot_format="png", window=False, muted=False, on_audio=None,
-                 fullscreen=False, remote_control=None, on_line=None, on_viewer=None):
+                 fullscreen=False, on_line=None, on_viewer=None,
+                 redrat_profile=None, redrat_device=None):
         self.mode = mode
         self.workload = workload
         self.args = list(args)
@@ -56,7 +57,8 @@ class RunOptions:
         self.screenshot_format = screenshot_format
         self.window = window                    # show the display in a window
         self.fullscreen = fullscreen            # ... that starts full screen
-        self.remote_control = remote_control    # remote control input mode: keys, window or redrat
+        self.redrat_profile = redrat_profile
+        self.redrat_device = redrat_device
         self.muted = muted                      # start with the emulator's audio muted
         self.on_audio = on_audio                # called with the audio host process's details once it runs
         self.on_line = on_line                  # called with each line of the target's console
@@ -155,19 +157,20 @@ def launch(opts):
             raise EmuError("unknown --option %r (known: %s)" % (name, ", ".join(sorted(KNOWN_OPTIONS))))
     if opts.workload != "prompt" and opts.stdin_script is not None:
         raise EmuError("only the prompt workload reads input")
-    if opts.remote_control not in (None,) + remote.MODES:
-        raise EmuError("unknown remote control input mode %r (one of: %s)"
-                       % (opts.remote_control, ", ".join(remote.MODES)))
-    if opts.remote_control == "redrat":
-        raise EmuError("RedRat IR input is not implemented yet",
-                       hint="use --remote-control keys (host keyboard) or window (on-screen remote control)")
+    if opts.redrat_device and not opts.redrat_profile:
+        raise EmuError("--redrat-device requires --redrat-profile")
+    if opts.redrat_profile:
+        receiver = redrat.select_device(opts.redrat_device)
+        opts.redrat_device = receiver["id"]
+        profile = redrat.load_profile(opts.redrat_profile)
+        redrat.validate_signals(profile["buttons"])
     # Full screen is a state of the window, and remote control keys are typed
     # into it or clicked beside it.
-    shown = bool(opts.window or opts.fullscreen or opts.remote_control)
+    shown = bool(opts.window or opts.fullscreen or opts.redrat_profile)
     notes = []
-    # Whether the run needs remote control keys: they were asked for, or the
-    # workload is operated with them.
-    keyed = bool(opts.remote_control or (catalog.workload(opts.workload) or {}).get("window"))
+    # A launcher display window provides the joined keyboard and on-screen
+    # remote inputs; workloads used through their display get one automatically.
+    keyed = bool(shown or (catalog.workload(opts.workload) or {}).get("window"))
     if not shown and (catalog.workload(opts.workload) or {}).get("window"):
         # A workload that is used through its display, with remote control
         # keys: it gets the window without being asked, where there is one.
@@ -294,16 +297,14 @@ def launch(opts):
                     graphics.window_kind(qemu, opts.graphics)
                 if kind != graphics.LAUNCHER_WINDOW and keyed and opts.options.get("window") != "qemu" \
                         and (opts.graphics or "auto") == "auto":
-                    # Remote control input was asked for, or the workload
-                    # is operated with it, and host graphics only preferred:
-                    # the launcher's window, which takes the keys, with the
-                    # graphics it can show.
+                    # The launcher window takes remote input, so prefer it
+                    # when host graphics acceleration is not required.
                     kind = graphics.LAUNCHER_WINDOW
                     keys_first = True
             own = kind == graphics.LAUNCHER_WINDOW
-            if kind and not own and opts.remote_control:
+            if kind and not own and opts.redrat_profile:
                 asked = opts.options.get("window") == "qemu"
-                raise EmuError("remote control input needs the launcher's own window, and this run shows the "
+                raise EmuError("RedRat input needs the launcher's own window, and this run shows the "
                                "display in QEMU's (%s): %s" % (kind, "--option window=qemu asks for that" if asked
                                                                else "with host graphics acceleration this QEMU "
                                                                     "can show the display nowhere else"),
@@ -371,12 +372,15 @@ def launch(opts):
                 emulator["display"]["resolution"], where, emulator["graphics"]["provider"],
                 emulator["graphics"]["reason"]))
         if viewer_plan:
-            emulator["display"]["remote_control"] = opts.remote_control or "keys"
+            emulator["display"]["input_sources"] = ["keyboard", "on-screen"]
+            if opts.redrat_profile:
+                emulator["display"]["input_sources"].append("redrat")
+                emulator["display"].update(redrat_profile=opts.redrat_profile, redrat_device=opts.redrat_device)
             if keys_first:
                 outcome.notes.append("%s, so the display is in the launcher's window; QEMU's own window would "
                                      "show it rendered on the host GPU and take no remote control keys (--graphics "
                                      "host asks for that)" % (
-                                         "remote control input was asked for" if opts.remote_control else
+                                         "remote control input was requested" if opts.redrat_profile else
                                          "the %s workload is operated with remote control keys" % opts.workload))
         if opts.echo:
             for note in outcome.notes:
@@ -385,8 +389,9 @@ def launch(opts):
         if viewer_plan:
             viewer = window.start_viewer(
                 viewer_plan["display"], "Emulator: %s, %s" % (opts.workload, emulator["variant"]),
-                fullscreen=opts.fullscreen, remote_control=opts.remote_control or "keys",
+                fullscreen=opts.fullscreen,
                 keys_exec=viewer_plan.get("keys_exec"), keys_listen=viewer_plan.get("keys_listen"),
+                redrat_profile=opts.redrat_profile, redrat_device=opts.redrat_device,
                 audio_port=plan.audio["control_port"] if plan.audio else None, control=bool(opts.on_viewer),
                 # A VM's display server can serve less than the display (QEMU 8.2: 2560x2048).
                 expect=(display["width"], display["height"]) if opts.mode == "vm" and display else None)
@@ -428,6 +433,10 @@ def launch(opts):
             outcome.duration_seconds = time.time() - outcome.started_at
         else:
             _capture(command, opts, outcome, interactive, None if attached else screens, console, started)
+        if viewer and viewer.process.poll() not in (None, 0):
+            errors = viewer.errors()
+            raise EmuError("the display window failed (exit %s)%s" %
+                           (viewer.process.returncode, ": " + errors if errors else ""))
         if screens:
             outcome.screens = screens.captures
         for process in plan.host_processes:

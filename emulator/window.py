@@ -13,19 +13,21 @@ import subprocess
 import sys
 import threading
 
-from . import host
+from . import host, redrat
 from .errors import EmuError
 from .paths import BUILD_DIR, ROOT
 
 GUI_DIR = BUILD_DIR / "host" / "gui"
-PACKAGE = "PySide6-Essentials"
+PACKAGE = "PySide6-Essentials<6.12"
 # Says which Python runs the windows, in place of the two below.
 PYTHON_VARIABLE = "EMU_GUI_PYTHON"
 
 
 def _has_qt(python):
     try:
-        done = subprocess.run([str(python), "-c", "import PySide6.QtWidgets"], capture_output=True, timeout=120)
+        done = subprocess.run(
+            [str(python), "-c", "import PySide6.QtWidgets; assert PySide6.__version_info__ < (6, 12)"],
+            capture_output=True, timeout=120)
         return done.returncode == 0
     except (OSError, subprocess.SubprocessError):
         return False
@@ -48,7 +50,7 @@ def gui_python():
 def require_python(purpose):
     found = gui_python()
     if not found:
-        raise EmuError("%s needs Qt for Python (%s), which is not installed" % (purpose, PACKAGE),
+        raise EmuError("%s needs compatible Qt for Python (%s), which is not installed" % (purpose, PACKAGE),
                        hint=host.SETUP_HINT)
     return found
 
@@ -105,8 +107,8 @@ class Viewer:
                 self.process.wait()
 
 
-def start_viewer(display, title, fullscreen=False, remote_control=None, keys_exec=None, keys_listen=None,
-                 audio_port=None, control=False, expect=None):
+def start_viewer(display, title, fullscreen=False, keys_exec=None, keys_listen=None,
+                 audio_port=None, control=False, expect=None, redrat_profile=None, redrat_device=None):
     """Start the display window. `display` is where the target's display is
     served: a socket path or a (host, port) pair."""
     python = require_python("the emulator's display window")
@@ -114,12 +116,14 @@ def start_viewer(display, title, fullscreen=False, remote_control=None, keys_exe
     command = [python, "-m", "emulator.gui.viewer", "--display", address, "--title", title]
     if fullscreen:
         command.append("--fullscreen")
-    if remote_control:
-        command += ["--remote-control", remote_control]
     if keys_exec:
         command += ["--keys-exec", json.dumps(list(keys_exec))]
     if keys_listen:
         command += ["--keys-listen", str(keys_listen)]
+    if redrat_profile:
+        command += ["--redrat-profile", redrat_profile]
+    if redrat_device:
+        command += ["--redrat-device", redrat_device]
     if audio_port:
         command += ["--audio-control", str(audio_port)]
     if control:
@@ -133,6 +137,27 @@ def start_viewer(display, title, fullscreen=False, remote_control=None, keys_exe
     except OSError as error:
         raise EmuError("the display window could not be started: %s" % error)
     return Viewer(process, control)
+
+
+def create_redrat_profile(device=None):
+    selected = redrat.select_device(device)
+    python = require_python("RedRat profile creation")
+    command = [python, "-m", "emulator.gui.redrat"]
+    command += ["--device", selected["id"]]
+    try:
+        done = subprocess.run(command, env=_environment(), capture_output=True, text=True)
+    except OSError as error:
+        raise EmuError("RedRat profile creation could not start: %s" % error) from error
+    if done.returncode:
+        raise EmuError("RedRat profile creation failed: %s" % done.stderr.strip())
+    try:
+        answer = json.loads(done.stdout)
+        profile = answer["profile"]
+        if profile is not None and not isinstance(profile, str):
+            raise TypeError("profile id is not a string")
+        return profile
+    except (ValueError, KeyError, TypeError) as error:
+        raise EmuError("invalid answer from RedRat profile creation: %s" % error) from error
 
 
 def choose_settings(arguments=None, script=None):

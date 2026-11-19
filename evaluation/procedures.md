@@ -311,7 +311,7 @@ a still picture with the marker blocks of the graphics workloads, and prints
 a line for every key that window gets, with the key's Linux code and the
 symbol the target's keymap gives it.
 
-    ./emu run --mode container --workload remote-keys --remote-control window
+    ./emu run --mode container --workload remote-keys
     ./emu verify window-display-vm window-scaling-vm window-toolbar-vm window-fullscreen-vm
     ./emu verify remote-keys-vm remote-window-vm settings-window settings-launch
 
@@ -373,7 +373,7 @@ interface does:
     EMU-STB: {"event": "channel", "state": "playing", "number": 2, "stream": "avc-fragments", ...}
     EMU-STB: {"event": "vod", "state": "representation", "title": "test-pattern", "representation": {...}}
 
-    ./emu run --mode container --workload stb-simulator --remote-control window
+    ./emu run --mode container --workload stb-simulator
     ./emu verify stb-start-vm stb-channels-vm stb-vod-vm stb-workloads-vm
 
 `./emu verify` runs the workload once per mode, with the display window and

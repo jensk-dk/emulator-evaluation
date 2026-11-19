@@ -26,12 +26,15 @@ import sys
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QFileDialog, QFormLayout, QGroupBox,
-                               QHBoxLayout, QLabel, QLineEdit, QPlainTextEdit, QPushButton, QSpinBox, QVBoxLayout,
-                               QWidget)
+                               QHBoxLayout, QLabel, QLineEdit, QMessageBox, QPlainTextEdit, QPushButton, QSpinBox,
+                               QVBoxLayout, QWidget)
 
-from .. import catalog, drivers, remote
+from .. import catalog, drivers, redrat
 from ..cli import run_parser
+from ..errors import EmuError
 from ..run import KNOWN_OPTIONS
+from ..window import create_redrat_profile
+from .redrat import Discovery
 
 DEFAULT = "(default)"
 # Where a field is shown, and what it is called. An argument that is not
@@ -39,7 +42,8 @@ DEFAULT = "(default)"
 GROUPS = (
     ("Target", (("mode", "Mode"), ("arch", "VM guest CPU"), ("workload", "Workload"),
                 ("workload_args", "Workload arguments"), ("cpus", "CPUs"), ("memory", "Memory (MiB)"))),
-    ("Display", (("window_mode", "Window mode"), ("remote_control", "Remote control"),
+    ("Display", (("window_mode", "Window mode"), ("redrat_profile", "RedRat profile (optional)"),
+                 ("redrat_device", "RedRat receiver"),
                  ("resolution", "Resolution"), ("graphics", "Graphics"), ("screenshot", "Save captures to"))),
     ("Sound", (("mute", "Start muted"),)),
     ("Options", (("option", "Emulator options"), ("driver", "Driver features"),
@@ -126,6 +130,60 @@ class FlagField(Field):
         self.widget.setChecked(bool(value))
 
 
+class ProfileComboBox(QComboBox):
+    def __init__(self, refresh):
+        super().__init__()
+        self.refresh_profiles = refresh
+
+    def showPopup(self):
+        try:
+            self.refresh_profiles()
+        except EmuError as error:
+            QMessageBox.warning(self, "Cannot load remote profiles", str(error))
+            return
+        super().showPopup()
+
+
+class ProfileField(Field):
+    def __init__(self, name, action):
+        super().__init__(name, action)
+        self.combo = ProfileComboBox(self.refresh)
+        self.widget = QWidget()
+        row = QHBoxLayout(self.widget)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.addWidget(self.combo)
+        self.create_button = QPushButton("Create new profile...")
+        self.create_button.setToolTip("Learn and save a RedRat profile without starting the emulator")
+        row.addWidget(self.create_button)
+        self.refresh()
+
+    def value(self):
+        return self.combo.currentData()
+
+    def arguments(self):
+        value = self.value()
+        return [] if value is None else [self.action.option_strings[0], str(value)]
+
+    def refresh(self):
+        selected = self.value()
+        profiles = redrat.profiles()
+        self.combo.blockSignals(True)
+        try:
+            self.combo.clear()
+            self.combo.addItem("(select a remote)", None)
+            for profile in profiles:
+                self.combo.addItem(profile["name"], profile["id"])
+            self.combo.setCurrentIndex(max(0, self.combo.findData(selected)))
+        finally:
+            self.combo.blockSignals(False)
+
+    def set(self, value):
+        index = self.combo.findData(value)
+        if index < 0:
+            raise ValueError("%s has no choice %r" % (self.name, value))
+        self.combo.setCurrentIndex(index)
+
+
 class NumberField(Field):
     def __init__(self, name, action):
         super().__init__(name, action)
@@ -210,6 +268,8 @@ def make_fields(parser):
         if name == "workload":
             choices = [item["id"] for item in catalog.workloads()["workloads"] if item["status"] == "implemented"]
             field = ChoiceField(name, action, choices, action.default)
+        elif name == "redrat_profile":
+            field = ProfileField(name, action)
         elif action.choices:
             field = ChoiceField(name, action, list(action.choices), action.default)
         elif isinstance(action, argparse._StoreTrueAction):
@@ -281,6 +341,9 @@ class SettingsWindow(QDialog):
         self.problem.setStyleSheet("color: #c0392b;")
         self.problem.setWordWrap(True)
         layout.addWidget(self.problem)
+        self.redrat_status = QLabel("Checking for a RedRat receiver...")
+        self.redrat_status.setWordWrap(True)
+        layout.addWidget(self.redrat_status)
         buttons = QHBoxLayout()
         buttons.addStretch(1)
         self.close_button = QPushButton("Close")
@@ -297,6 +360,46 @@ class SettingsWindow(QDialog):
                 for signal in ("currentIndexChanged", "toggled", "valueChanged", "textChanged"):
                     if hasattr(widget, signal):
                         getattr(widget, signal).connect(self.changed)
+        self.redrat_devices = []
+        self.fields["redrat_profile"].widget.setEnabled(False)
+        self.fields["redrat_device"].widget.setEnabled(False)
+        self.discovery = Discovery(self)
+        self.discovery.changed.connect(self.receivers_changed)
+        self.fields["redrat_profile"].create_button.clicked.connect(self.create_redrat_profile)
+        self.finished.connect(lambda _: self.discovery.close())
+        self.changed()
+
+    def receivers_changed(self, devices, error):
+        self.redrat_devices = devices
+        self.fields["redrat_device"].widget.setPlaceholderText(
+            "Automatic: %s (%s)" % (devices[0]["name"], devices[0]["id"]) if devices else
+            "Automatic: first detected receiver")
+        self.redrat_status.setText(
+            "RedRat: " + (error if error else
+                          ", ".join("%s (%s)" % (item["name"], item["id"]) for item in devices) +
+                          "; select a profile to add IR input" if devices else
+                          "no receiver detected; keyboard and on-screen input remain available"))
+        self.changed()
+
+    def create_redrat_profile(self):
+        if not self.redrat_devices:
+            self.problem.setText("No RedRat receiver detected; connect a receiver to create a profile.")
+            return
+        device = self.fields["redrat_device"].widget.text().strip() or None
+        self.discovery.close()
+        try:
+            identifier = create_redrat_profile(device)
+        except EmuError as error:
+            self.problem.setText(str(error))
+            return
+        finally:
+            self.discovery.timer.start()
+            QTimer.singleShot(0, self.discovery.refresh)
+        if identifier is None:
+            return
+        profile_field = self.fields["redrat_profile"]
+        profile_field.refresh()
+        profile_field.set(identifier)
         self.changed()
 
     def arguments(self):
@@ -305,6 +408,8 @@ class SettingsWindow(QDialog):
         for name, field in self.fields.items():
             if name == "arch" and self.fields["mode"].value() != "vm":
                 continue                    # the guest CPU is a VM's
+            if name == "redrat_device" and self.fields["redrat_profile"].value() is None:
+                continue
             given = field.arguments()
             if given[:1] == ["--"]:
                 tail = given                # the workload's own arguments come last
@@ -314,19 +419,32 @@ class SettingsWindow(QDialog):
 
     def changed(self, *ignored):
         self.fields["arch"].widget.setEnabled(self.fields["mode"].value() == "vm")
-        window = bool(self.fields["window_mode"].arguments())
-        remote_field = self.fields.get("remote_control")
-        if remote_field is not None:
-            remote_field.widget.setToolTip(
-                "Remote control input. With a window the host keyboard is the remote control (the arrow keys, Enter "
-                "and a key for every other one); \"window\" adds an on-screen remote control. Choosing a mode here "
-                "shows the display in a window." if not window else
-                "Remote control input: keys, the host keyboard while the emulator's window has the focus; window, "
-                "an on-screen remote control as well; redrat, a RedRat infrared receiver (not implemented).")
+        profile = self.fields["redrat_profile"].value()
+        self.fields["redrat_profile"].widget.setEnabled(bool(self.redrat_devices))
+        self.fields["redrat_profile"].create_button.setEnabled(bool(self.redrat_devices))
+        self.fields["redrat_device"].widget.setEnabled(
+            bool(self.redrat_devices) and (profile is not None or len(self.redrat_devices) > 1))
+        profile_help = (
+            "The host keyboard is always mapped while the emulator's display window is focused. The on-screen remote "
+            "starts hidden and is toggled with Ctrl+Alt+R or the toolbar button. Select a learned profile to add "
+            "RedRat IR input.")
+        self.fields["redrat_profile"].widget.setToolTip(profile_help)
+        self.fields["redrat_profile"].combo.setToolTip(profile_help)
         self.command.setPlainText("emu " + " ".join(shlex.quote(part) for part in self.arguments()))
         self.problem.setText("")
 
     def start(self):
+        profile_field = self.fields["redrat_profile"]
+        if profile_field.value() is not None:
+            if not self.redrat_devices:
+                self.problem.setText("No RedRat receiver detected; choose a profile only when one is connected.")
+                return
+            try:
+                redrat.select_device(self.fields["redrat_device"].widget.text().strip() or None)
+                redrat.load_profile(profile_field.value())
+            except EmuError as error:
+                self.problem.setText(str(error))
+                return
         arguments = self.arguments()
         # The launcher's own parser has the last word on what is valid; it
         # says what is wrong on its error stream and ends.
@@ -349,6 +467,9 @@ def run_script(window, script, answer):
     for name, value in (script.get("set") or {}).items():
         window.fields[name].set(value)
     answer["fields"] = sorted(window.fields)
+    profile = window.fields["redrat_profile"]
+    answer["redrat_profile_ids"] = [profile.combo.itemData(i) for i in range(profile.combo.count())]
+    answer["redrat_create_button"] = profile.create_button.text()
     answer["enabled"] = {name: field.widget.isEnabled() for name, field in window.fields.items()}
     answer["command"] = window.command.toPlainText()
     answer["visible"] = window.isVisible()

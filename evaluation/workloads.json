@@ -114,7 +114,7 @@
       "stage": 6,
       "display": true,
       "remote": true,
-      "launch": "./emu run --mode MODE --workload remote-keys --remote-control keys|window",
+      "launch": "./emu run --mode MODE --workload remote-keys",
       "source": "target/rootfs/opt/emu/workloads/remote-keys, target/src/emukeys.c, target/src/emu_remote.c",
       "version_source": {
         "file": "target/rootfs/opt/emu/workloads/remote-keys",

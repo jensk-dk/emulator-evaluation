@@ -5,7 +5,7 @@ import os
 import statistics
 import sys
 
-from . import armtargets, catalog, container, drivers as driver_features, graphics, host, hostaudio, image, remote, \
+from . import armtargets, catalog, container, drivers as driver_features, graphics, host, hostaudio, image, redrat, \
     report, results, verify, vm, window
 from .errors import EmuError
 from .paths import BUILD_DIR
@@ -24,7 +24,8 @@ examples:
   emu run --mode vm --option accel=tcg --option cpu=max
   emu run --mode vm --workload graphics-demo --resolution 4k --record
   emu run --workload graphics-demo --graphics emulated --screenshot shots -- --tests gles,vulkan
-  emu run --mode vm --workload graphics-demo --window --remote-control window
+  emu run --mode vm --workload graphics-demo --window
+  emu config redrat                          create a RedRat profile without starting the emulator
   emu verify                                   run every verification check on this host
 
 Started without any arguments, emu shows a window with these settings.
@@ -83,7 +84,8 @@ def cmd_run(args):
             memory_mb=args.memory, drivers=driver_features.parse(args.driver), options=_options(args.option),
             extra_args=args.emulator_arg or [], timeout=args.timeout, rebuild=args.rebuild and index == 0,
             resolution=args.resolution, graphics=args.graphics, screenshot_dir=args.screenshot,
-            window=args.window, muted=args.mute, fullscreen=args.fullscreen, remote_control=args.remote_control)
+            window=args.window, muted=args.mute, fullscreen=args.fullscreen,
+            redrat_profile=args.redrat_profile, redrat_device=args.redrat_device)
         outcome = launch(opts)
         outcomes.append(outcome)
         if outcome.window_closed:
@@ -126,6 +128,15 @@ def cmd_run(args):
             return outcome.exit_code
     if args.workload != "prompt":
         _print_summary(outcomes)
+    return 0
+
+
+def cmd_config_redrat(args):
+    profile = window.create_redrat_profile(args.device)
+    if profile is None:
+        print("emu: RedRat profile creation cancelled", file=sys.stderr)
+        return 0
+    print("emu: saved RedRat profile %s" % profile)
     return 0
 
 
@@ -263,6 +274,15 @@ def cmd_doctor(args):
                               % window.PACKAGE))
     if not python:
         problems += 1
+    try:
+        if not redrat.installed():
+            raise EmuError("SDK bridge missing or out of date")
+        receivers = redrat.devices()
+        print("redrat      SDK ready; %s" % (", ".join("%s (%s)" % (item["name"], item["id"]) for item in receivers) if receivers
+                                             else "no receiver detected (IR input disabled)"))
+    except EmuError as error:
+        print("redrat      MISSING: %s" % error)
+        problems += 1
     for kind, archs in (("container", (native,)), ("vm", sorted({native, "arm32", "arm64"}))):
         for arch in archs:
             manifest = image.load_manifest(kind, arch)
@@ -357,10 +377,11 @@ def build_parser():
                           "the emulator")
     run.add_argument("--fullscreen", action="store_true",
                      help="show the emulator's display full screen (the same keys switch to a window)")
-    run.add_argument("--remote-control", choices=remote.MODES, metavar="MODE",
-                     help="remote control input: keys maps host keyboard keys to remote control keys while the "
-                          "emulator's window has the focus (the default with a window), window adds an on-screen "
-                          "remote control, redrat takes infrared signals from a RedRat device (not implemented)")
+    run.add_argument("--redrat-profile", metavar="ID",
+                     help="also accept infrared input using this learned profile from remotes/; requires a connected "
+                          "RedRat receiver")
+    run.add_argument("--redrat-device", metavar="ID",
+                     help="RedRat receiver id from emu doctor (default: first detected receiver)")
     run.add_argument("--mute", action="store_true",
                      help="start with the emulator's audio muted (\"emu audio unmute\" turns it on while it runs)")
     run.add_argument("--screenshot", metavar="DIR",
@@ -377,6 +398,13 @@ def build_parser():
     run.add_argument("workload_args", nargs=argparse.REMAINDER, metavar="-- WORKLOAD_ARGS",
                      help="arguments for the workload, after --")
     run.set_defaults(function=cmd_run)
+
+    config = commands.add_parser("config", help="configure host-side emulator settings")
+    config_items = config.add_subparsers(dest="config_item", required=True)
+    redrat_config = config_items.add_parser("redrat", help="learn a RedRat remote profile")
+    redrat_config.add_argument("--device", metavar="ID",
+                               help="RedRat receiver id from emu doctor (default: first detected receiver)")
+    redrat_config.set_defaults(function=cmd_config_redrat)
 
     build = commands.add_parser("build", help="build the target OS image")
     build.add_argument("--mode", choices=("container", "vm", "all"), default="all")

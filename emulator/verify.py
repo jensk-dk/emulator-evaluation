@@ -11,6 +11,7 @@ import http.client
 import io
 import json
 import os
+import queue
 import re
 import shlex
 import shutil
@@ -22,7 +23,7 @@ import threading
 import time
 
 from . import armtargets, catalog, container, drivers as driver_features, graphics, host, hostaudio, image, \
-    imagefile, remote, report, results, vm, window
+    imagefile, redrat, remote, report, results, vm, window
 from .errors import EmuError
 from .paths import EVALUATION_DIR, RESULTS_DIR, ROOT, VERIFICATION_DIR
 from .run import RunOptions, launch
@@ -1094,6 +1095,7 @@ def _drive_window(viewer, seen, width, height, directory):
     if not state:
         seen["error"] = "the window did not get the target's %dx%d display: %r" % (width, height, ask(do="state"))
         return
+    seen["initial_remote_window"] = state["remote_window"]
     ratio = state["pixel_ratio"]
 
     def shown_picture(name):
@@ -1229,6 +1231,8 @@ def _drive_window(viewer, seen, width, height, directory):
         controls["keys"] = [(key["code"], key["state"]) for key in seen["keys"]]
     seen["controls"] = controls
 
+    ask(do="toolbar", action="remote")
+    _wait(lambda: ask(do="state")["remote_window"], 5)
     seen["remote"] = ask(do="state")
     seen["host_keys"] = {}
     seen["buttons"] = {}
@@ -1294,7 +1298,7 @@ def _window_session(mode, arch):
         # The sound is taken in and not played: the window's mute button
         # needs the run's audio process, not its sound.
         _, outcome = _run(mode=mode, arch=arch, workload="remote-keys", resolution=WINDOW_RESOLUTION, window=True,
-                          remote_control="window", drivers=driver_features.parse(["audio=host"]),
+                          drivers=driver_features.parse(["audio=host"]),
                           options={"audio-output": "none"}, on_line=on_line, on_audio=on_audio, on_viewer=drive,
                           timeout=3600)
     seen["emulator"] = outcome.environment["emulator"]
@@ -1399,8 +1403,8 @@ def _window_buttons(mode, arch="native"):
     """The toolbar's buttons for full screen and for the on-screen remote control."""
     seen = _window(mode, arch)
     found = seen["controls"]
-    _require(found["remote_button"] == [True, False, True],
-             "the remote control button did not hide the on-screen remote control and show it again: it was shown "
+    _require(found["remote_button"] == [False, True, False],
+             "the remote control button did not show and hide the initially hidden on-screen remote control: it was shown "
              "%r" % (found["remote_button"],))
     lines = ["the remote control button hid the on-screen remote control and showed it again"]
     step = found["full_button"]
@@ -1422,8 +1426,8 @@ def _window_hotkeys(mode, arch="native"):
     no hotkey reaches the target."""
     seen = _window(mode, arch)
     found = seen["controls"]
-    _require(found["remote_hotkey"] == [True, False, True],
-             "Ctrl+Alt+R did not hide the on-screen remote control and show it again: it was shown %r"
+    _require(found["remote_hotkey"] == [False, True, False],
+             "Ctrl+Alt+R did not show and hide the initially hidden on-screen remote control: it was shown %r"
              % (found["remote_hotkey"],))
     _require(seen.get("audio"), "the run had no audio process for the mute hotkey to switch")
     _require(found["mute_hotkey"] == [{"window": True, "switch": True}, {"window": False, "switch": False}],
@@ -1444,7 +1448,7 @@ def _window_hotkeys(mode, arch="native"):
              % (found["first_key"],))
     _require([tuple(key) for key in found["keys"]] == [(code, "pressed"), (code, "released")],
              "a hotkey reached the target as a remote control key: before OK the target got %r" % (found["keys"],))
-    return ["Ctrl+Alt+R hid the on-screen remote control and showed it again",
+    return ["Ctrl+Alt+R showed and hid the initially hidden on-screen remote control",
             "Ctrl+Alt+M muted the run's audio process and then unmuted it (asked of the process itself each time)",
             "Ctrl+Alt+1: from a %dx%d window the %dx%d display went back to %dx%d screen pixels"
             % (one["resized"][0], one["resized"][1], width, height, width, height),
@@ -1483,12 +1487,13 @@ def _remote_window(mode, arch="native"):
     """The on-screen remote control."""
     seen = _window(mode, arch)
     state = seen["remote"]
-    _require(state["remote_window"], "the on-screen remote control's window is not shown")
+    _require(not seen["initial_remote_window"], "the on-screen remote control was not hidden when the display opened")
+    _require(state["remote_window"], "the on-screen remote control did not open when toggled")
     lines = _key_lines(seen["buttons"], "clicked on the on-screen remote control")
     _require(seen["remote_picture"], "the on-screen remote control did not draw itself")
     _require(seen["key_in_remote"]["ok"], "a host key typed into the remote control's window did not reach the "
              "target: %r" % (seen["key_in_remote"],))
-    return ["the remote control has a window of its own (%dx%d), with a button for each of the %d keys"
+    return ["the remote control starts hidden, opens on demand in its own window (%dx%d), with a button for each of the %d keys"
             % (seen["remote_picture"][0], seen["remote_picture"][1], len(state["remote_buttons"]))] + lines + [
         "with the remote control shown, the host keys still worked in the emulator's window (%d keys) and in the "
         "remote control's own" % len(seen["host_keys"])]
@@ -1509,17 +1514,20 @@ def check_settings_window():
     if not window.gui_python():
         raise CheckUnavailable("Qt for Python (%s) is not installed on this host; %s" % (window.PACKAGE, host.SETUP_HINT))
     chosen = {"mode": "vm", "arch": "arm64", "workload": "graphics-demo", "window_mode": "full screen",
-              "remote_control": "window", "resolution": "4k", "graphics": "emulated", "cpus": 2, "memory": 1024,
+              "resolution": "4k", "graphics": "emulated", "cpus": 2, "memory": 1024,
               "mute": True, "option": "accel=tcg verbose-boot=yes", "driver": "hwrng=mocked", "repeat": 2,
               "timeout": "120", "record": True, "workload_args": "--tests wayland --seconds 1"}
     answer = window.choose_settings(script={"set": chosen, "press": "start"})
     _require(answer.get("visible"), "the settings window was not shown")
     _require(answer["fields"] == _settings_fields(), "the window's fields are not the launcher's arguments: it has %r, "
              "the launcher takes %r" % (answer["fields"], _settings_fields()))
+    _require(answer["redrat_profile_ids"] == [None] + [item["id"] for item in redrat.profiles()] and
+             answer["redrat_create_button"] == "Create new profile...",
+             "profile creation is not a separate action beside the RedRat profile selector")
     _require(answer["arguments"] and answer["arguments"][0] == "run", "Start produced %r" % (answer["arguments"],))
     parsed = run_parser().parse_args(answer["arguments"][1:])
     expected = {"mode": "vm", "arch": "arm64", "workload": "graphics-demo", "fullscreen": True, "window": False,
-                "remote_control": "window", "resolution": "4k", "graphics": "emulated", "cpus": 2, "memory": 1024,
+                "resolution": "4k", "graphics": "emulated", "cpus": 2, "memory": 1024,
                 "mute": True, "option": ["accel=tcg", "verbose-boot=yes"], "driver": ["hwrng=mocked"], "repeat": 2,
                 "timeout": 120.0, "record": True, "workload_args": ["--", "--tests", "wayland", "--seconds", "1"]}
     wrong = {name: getattr(parsed, name) for name, value in expected.items() if getattr(parsed, name) != value}
@@ -1543,6 +1551,66 @@ def check_settings_window():
             "shows is the one of those arguments; with nothing set it shows \"emu run\"",
             "unchanged, Start gives \"emu run\"; a timeout of \"soon\" is refused with the launcher's reason (%s); "
             "closing the window starts nothing" % refused["problem"]]
+
+
+def check_redrat_support():
+    python = window.gui_python()
+    if not python:
+        raise CheckUnavailable("RedRat GUI checks need Qt for Python; " + host.SETUP_HINT)
+    if not redrat.installed():
+        raise CheckUnavailable("RedRat SDK bridge missing or out of date; " + host.SETUP_HINT)
+    done = subprocess.run([python, "-m", "unittest", "discover", "-s", str(ROOT / "tests"), "-p", "test_redrat*.py"],
+                          capture_output=True, text=True, timeout=120,
+                          env=host.tool_env({"QT_QPA_PLATFORM": "offscreen"}), cwd=ROOT)
+    _require(done.returncode == 0, "RedRat automated checks failed:\n" + done.stdout + done.stderr)
+    sdk = subprocess.run(redrat.command("self-test"), capture_output=True, text=True, timeout=30,
+                         env=redrat.environment())
+    _require(sdk.returncode == 0, "RedRat SDK matching checks failed:\n" + sdk.stdout + sdk.stderr)
+    return [done.stderr.strip(), sdk.stdout.strip(),
+            "software checks only: SDK signal matching, profiles, guided learning, detection gating, all 32 key codes, "
+            "IR holds and focus release; not a physical infrared result"]
+
+
+def check_redrat_device():
+    if not redrat.installed():
+        raise CheckUnavailable("RedRat SDK bridge missing or out of date; " + host.SETUP_HINT)
+    found = redrat.devices()
+    if not found:
+        raise CheckUnavailable("no RedRat receiver detected")
+    if len(found) != 1:
+        raise CheckUnavailable("this automatic check needs exactly one attached RedRat receiver")
+    try:
+        process = subprocess.Popen(redrat.command("listen", "--device", found[0]["id"]), stdin=subprocess.PIPE,
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=redrat.environment())
+    except OSError as error:
+        raise CheckFailed("cannot start RedRat receiver: %s" % error) from error
+    lines = queue.Queue()
+    threading.Thread(target=lambda: lines.put(process.stdout.readline()), daemon=True).start()
+    try:
+        try:
+            line = lines.get(timeout=20)
+        except queue.Empty:
+            raise CheckFailed("RedRat receiver did not report ready within 20 seconds")
+        try:
+            ready = json.loads(line)
+        except ValueError:
+            raise CheckFailed("RedRat receiver did not return a ready event: %r" % line)
+        _require(ready.get("event") == "ready", "RedRat receiver's first event was not ready: %r" % ready)
+        process.stdin.write('{"do":"quit"}\n')
+        process.stdin.flush()
+        try:
+            _, errors = process.communicate(timeout=10)
+        except subprocess.TimeoutExpired:
+            raise CheckFailed("RedRat receiver did not close within 10 seconds")
+        _require(process.returncode == 0, "RedRat receiver failed to shut down: %s" % errors)
+        return ["the SDK detected and opened %s; the receiver reported ready and shut down cleanly" % found[0]["name"],
+                "IR key delivery remains unverified until a real remote is learned and its buttons are pressed"]
+    finally:
+        if process.poll() is None:
+            process.kill()
+            process.wait(timeout=10)
+        for stream in (process.stdin, process.stdout, process.stderr):
+            stream.close()
 
 
 def check_settings_launch():
@@ -2018,7 +2086,7 @@ def _stb_session(mode, arch):
 
         try:
             _, outcome = _run(mode=mode, arch=arch, workload="stb-simulator", args=["--quick"],
-                              resolution=WINDOW_RESOLUTION, window=True, remote_control="window",
+                              resolution=WINDOW_RESOLUTION, window=True,
                               drivers=driver_features.parse(["audio=host"]), options=sink.options(),
                               on_line=on_line, on_audio=sink.watch, on_viewer=drive, timeout=4 * 3600)
         finally:
@@ -2053,7 +2121,7 @@ def _stb_start(mode, arch="native"):
                                ", ".join(described.get("workloads") or []))]
     lines += ["%s: %s" % (STB_HOW["host"], step) for step in by_keyboard]
     lines.append("%s: the same tour, with the same screens (%d steps)" % (STB_HOW["click"], len(by_clicks)))
-    lines.append("not covered: RedRat IR input, which is not implemented")
+    lines.append("not covered: physical RedRat IR input; use redrat-device for receiver readiness and learn a real remote")
     return lines + ["graphics provider: %s" % seen["emulator"]["graphics"]["provider"]]
 
 
@@ -2618,6 +2686,8 @@ CHECKS = {
     "results": (check_results, "2.5", "recorded results carry their environment identity"),
     "vm-arm32": (check_vm_arm32, "3.1", "ARM32 VM guest mode starts the target OS workload"),
     "vm-arm64": (check_vm_arm64, "3.1", "ARM64 VM guest mode starts the target OS workload"),
+    "redrat-support": (check_redrat_support, "7.6", "learned profiles and focus-gated IR input pass software checks"),
+    "redrat-device": (check_redrat_device, "7.6", "the host SDK detects, opens and closes an attached RedRat receiver"),
     "drivers-container": (check_drivers_container, "3.2", "emulated, mocked and host-routed drivers in container mode"),
     "drivers-vm": (check_drivers_vm, "3.2", "emulated, mocked and host-routed drivers in host-native VM mode"),
     "drivers-vm-arm32": (check_drivers_vm_arm32, "3.2", "the three driver strategies in an ARM32 VM"),

@@ -37,6 +37,9 @@
 #                             on-screen remote control and the settings window.
 #                             Installed with pip into a Python environment of
 #                             this project's own, build/host/gui
+#   RedRat SDK bridge        .NET 10 SDK and RedRat NuGet package, in build/host;
+#                             libusb and a USB permission rule on Linux.
+#                             Installed even without a receiver attached.
 #
 # Only with --arm-targets, for the simulated ARM64 and ARM32 targets:
 #   QEMU ARM system emulators VM mode with an ARM64 or ARM32 guest. Homebrew's
@@ -116,7 +119,13 @@ export PATH
 # The launcher's windows are built with Qt, which pip installs into a Python
 # environment of this project's own: the host's Python stays as it is.
 GUI_ENV="$(cd "$(dirname "$0")" && pwd)/build/host/gui"
-GUI_PACKAGE=PySide6-Essentials
+GUI_PACKAGE='PySide6-Essentials<6.12'
+PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd)"
+DOTNET_DIR="$PROJECT_ROOT/build/host/dotnet"
+REDRAT_DIR="$PROJECT_ROOT/build/host/redrat"
+REDRAT_PACKAGES="$PROJECT_ROOT/build/host/redrat-packages"
+REDRAT_RULE=/etc/udev/rules.d/70-tv-emu-redrat.rules
+REDRAT_RULE_SOURCE="$PROJECT_ROOT/host/70-tv-emu-redrat.rules"
 
 MISSING=""          # space-separated dependency keys still missing
 OPTIONAL=""         # optional extras this script could install
@@ -273,7 +282,10 @@ check_python() {
   fi
 }
 
-has_qt() { [ -x "$1" ] && "$1" -c 'import PySide6.QtWidgets' >/dev/null 2>&1; }
+# PySide 6.12.0 decrements True's reference count on signal delivery on Python 3.10.
+has_qt() {
+  [ -x "$1" ] && "$1" -c 'import PySide6.QtWidgets; assert PySide6.__version_info__ < (6, 12)' >/dev/null 2>&1
+}
 
 # System packages the Python environment and Qt need on Linux and an
 # installation may lack: the module that creates Python environments, where
@@ -316,7 +328,7 @@ check_gui() {
       return 0
     fi
   done
-  missing gui "Qt for Python (PySide6), for the launcher's windows"
+  missing gui "compatible Qt for Python ($GUI_PACKAGE), for the launcher's windows"
 }
 
 # Installs Qt into the project's own Python environment, which it creates.
@@ -339,6 +351,78 @@ install_gui() {
     info "    Python only: this one is $(python3 -c 'import platform; print(platform.python_version())')."
     return 1
   fi
+}
+
+linux_redrat_package_names() {
+  case "$(package_manager)" in
+    apt) echo "curl ca-certificates libusb-1.0-0-dev libicu-dev libssl-dev libkrb5-3 zlib1g" ;;
+    dnf) echo "curl ca-certificates libusb1-devel libicu openssl-libs krb5-libs zlib libstdc++" ;;
+    pacman) echo "curl ca-certificates libusb icu openssl krb5 zlib gcc-libs" ;;
+    zypper) echo "curl ca-certificates libusb-1_0-devel libicu libopenssl3 krb5 libz1 libstdc++6" ;;
+  esac
+}
+
+linux_redrat_packages() {
+  local p
+  for p in $(linux_redrat_package_names); do
+    package_installed "$p" || printf '%s ' "$p"
+  done
+}
+
+check_redrat() {
+  local reason=""
+  if [ "$OS" = Linux ]; then
+    [ -z "$(linux_redrat_packages)" ] || missing redrat-libs "RedRat libusb/.NET runtime prerequisites"
+    cmp -s "$REDRAT_RULE_SOURCE" "$REDRAT_RULE" ||
+      missing redrat-rule "RedRat USB permission rule ($REDRAT_RULE)"
+  elif ! have brew || ! brew_installed libusb; then
+    missing redrat-libs "RedRat libusb"
+  fi
+  if have python3; then
+    reason=$(cd "$PROJECT_ROOT" && python3 -m emulator.redrat check 2>&1) &&
+      { ok "RedRat SDK bridge (ready even without an attached receiver)"; return 0; }
+  fi
+  missing redrat "RedRat SDK bridge${reason:+: $reason}"
+}
+
+redrat_dotnet() {
+  if [ -x "$DOTNET_DIR/dotnet" ]; then printf '%s' "$DOTNET_DIR/dotnet"
+  elif have dotnet; then command -v dotnet
+  fi
+}
+
+install_redrat() {
+  local sdk="" directory installer="$PROJECT_ROOT/build/host/dotnet-install.sh"
+  if [ "$OS" = Linux ] && is_missing redrat-rule; then
+    if [ -e "$REDRAT_RULE" ]; then
+      info "  ! $REDRAT_RULE already exists with different contents; it is not overwritten."
+      return 1
+    fi
+    as_root install -m 644 "$REDRAT_RULE_SOURCE" "$REDRAT_RULE" || return 1
+    record redrat-rule "$REDRAT_RULE"
+    as_root udevadm control --reload-rules || return 1
+    as_root udevadm trigger --action=add --subsystem-match=usb --attr-match=idVendor=112a || return 1
+    as_root udevadm settle || return 1
+    info "  RedRat USB access is granted to the active desktop user; reconnect the receiver if needed."
+  fi
+  is_missing redrat || return 0
+  sdk=$(redrat_dotnet)
+  if [ -z "$sdk" ] || ! "$sdk" --list-sdks 2>/dev/null | grep -q '^10\.'; then
+    mkdir -p "$(dirname "$installer")" || return 1
+    [ -d "$DOTNET_DIR" ] || record redrat-tree "$DOTNET_DIR"
+    run curl -fsSL https://dot.net/v1/dotnet-install.sh -o "$installer" || return 1
+    local sdk_arch=x64
+    [ "$ARCH" != arm64 ] || sdk_arch=arm64
+    run bash "$installer" --channel 10.0 --architecture "$sdk_arch" --install-dir "$DOTNET_DIR" --no-path || return 1
+    rm -f "$installer"
+    sdk="$DOTNET_DIR/dotnet"
+  fi
+  for directory in "$REDRAT_DIR" "$REDRAT_PACKAGES" "$PROJECT_ROOT/build/host/redrat-bin" "$PROJECT_ROOT/build/host/redrat-obj"; do
+    [ -d "$directory" ] || record redrat-tree "$directory"
+  done
+  DOTNET_CLI_TELEMETRY_OPTOUT=1 NUGET_PACKAGES="$REDRAT_PACKAGES" \
+    run "$sdk" publish "$PROJECT_ROOT/host/redrat/RedRatBridge.csproj" -c Release -o "$REDRAT_DIR" || return 1
+  (cd "$PROJECT_ROOT" && run python3 -m emulator.redrat stamp) || return 1
 }
 
 check_qemu() {
@@ -567,6 +651,7 @@ run_checks() {
   check_container
   check_arm_targets
   check_gui
+  check_redrat
 }
 
 # ---------------------------------------------------------------- install ---
@@ -630,6 +715,7 @@ install_macos() {
   fi
 
   local pkgs=""
+  is_missing redrat-libs && pkgs="$pkgs libusb"
   is_missing python && pkgs="$pkgs python"
   # Homebrew's QEMU is one package with every system emulator in it.
   if is_missing qemu || is_missing qemu-arm; then pkgs="$pkgs qemu"; fi
@@ -863,6 +949,7 @@ install_linux() {
     is_missing container && pkgs="$pkgs podman"
     is_missing binfmt && pkgs="$pkgs qemu-user-static binfmt-support"
     is_missing gui && pkgs="$pkgs $(linux_gui_packages)"
+    is_missing redrat-libs && pkgs="$pkgs $(linux_redrat_packages)"
     pkgs=$(echo $pkgs)      # nothing but spaces is nothing to install
     if [ -n "$pkgs" ]; then
       as_root apt-get update || return 1
@@ -877,6 +964,7 @@ install_linux() {
     is_missing container && pkgs="$pkgs podman"
     is_missing binfmt && pkgs="$pkgs qemu-user-static"
     is_missing gui && pkgs="$pkgs $(linux_gui_packages)"
+    is_missing redrat-libs && pkgs="$pkgs $(linux_redrat_packages)"
     pkgs=$(echo $pkgs)      # nothing but spaces is nothing to install
     before=$(installed_packages)
     # shellcheck disable=SC2086
@@ -888,6 +976,7 @@ install_linux() {
     is_missing container && pkgs="$pkgs podman"
     is_missing binfmt && pkgs="$pkgs qemu-user-static qemu-user-static-binfmt"
     is_missing gui && pkgs="$pkgs $(linux_gui_packages)"
+    is_missing redrat-libs && pkgs="$pkgs $(linux_redrat_packages)"
     pkgs=$(echo $pkgs)      # nothing but spaces is nothing to install
     before=$(installed_packages)
     # shellcheck disable=SC2086
@@ -899,6 +988,7 @@ install_linux() {
     is_missing container && pkgs="$pkgs podman"
     is_missing binfmt && pkgs="$pkgs qemu-linux-user"
     is_missing gui && pkgs="$pkgs $(linux_gui_packages)"
+    is_missing redrat-libs && pkgs="$pkgs $(linux_redrat_packages)"
     pkgs=$(echo $pkgs)      # nothing but spaces is nothing to install
     before=$(installed_packages)
     # shellcheck disable=SC2086
@@ -976,7 +1066,7 @@ install_linux() {
 # the record where this script installed it; it goes with all that is
 # installed with it, before the entries of that. Its trust in a tap is not
 # installed with it, and is taken back as Homebrew goes (remove_entry).
-REMOVE_ORDER="service group binfmt engine-image colima-vm python-env link dir homebrew brew brew-tap brew-trust apt dnf pacman zypper"
+REMOVE_ORDER="service group binfmt engine-image colima-vm python-env redrat-tree redrat-rule link dir homebrew brew brew-tap brew-trust apt dnf pacman zypper"
 # The kinds it lists and leaves: other software on the host can have come to
 # use them, and removing them takes root rights.
 LEAVE_ORDER="xcode-select xcode-clt"
@@ -1030,6 +1120,8 @@ entry_present() {
     link) [ -L "$2" ] ;;
     dir) [ -d "$2" ] ;;
     python-env) [ -f "$2/pyvenv.cfg" ] ;;
+    redrat-tree) [ -d "$2" ] ;;
+    redrat-rule) [ -e "$2" ] ;;
     brew) have brew && brew_installed "$2" ;;
     brew-tap) have brew && [ -d "$(brew --repository "$2" 2>/dev/null)" ] ;;
     brew-trust) have brew && brew trust --json=v1 2>/dev/null | grep -q "\"$2\"" ;;
@@ -1051,6 +1143,8 @@ entry_text() {
     link) echo "the link $2" ;;
     dir) echo "the directory $2, if it is empty" ;;
     python-env) echo "the Python environment $2, with Qt for Python (the launcher's windows)" ;;
+    redrat-tree) echo "the RedRat support directory $2" ;;
+    redrat-rule) echo "the RedRat USB permission rule $2" ;;
     homebrew) echo "Homebrew itself, which this script installed, with every package installed with it: $(brew_packages | grep -c .) now" ;;
     brew) echo "the Homebrew package $2" ;;
     brew-tap) echo "the Homebrew tap $2" ;;
@@ -1155,6 +1249,20 @@ remove_entry() {
         /*/gui) [ -f "$value/pyvenv.cfg" ] && run rm -rf "$value" || status=1 ;;
         *) info "  ! $value is not where this script makes its Python environment; it stays."; status=1 ;;
       esac ;;
+    redrat-tree)
+      case "$value" in
+        /*/build/host/dotnet|/*/build/host/redrat|/*/build/host/redrat-packages|/*/build/host/redrat-bin|/*/build/host/redrat-obj)
+          run rm -rf "$value" || status=1 ;;
+        *) info "  ! $value is not a RedRat support directory; it stays."; status=1 ;;
+      esac ;;
+    redrat-rule)
+      if [ "$value" = "$REDRAT_RULE" ] && cmp -s "$REDRAT_RULE_SOURCE" "$value"; then
+        as_root rm "$value" && as_root udevadm control --reload-rules &&
+          as_root udevadm trigger --action=add --subsystem-match=usb --attr-match=idVendor=112a &&
+          as_root udevadm settle || status=1
+      else
+        info "  ! The USB rule has been changed or is not the project's rule; it stays."; status=1
+      fi ;;
     brew)
       brew unpin "$value" >/dev/null 2>&1    # Homebrew does not uninstall a pinned package
       # This formula only: HOMEBREW_NO_AUTOREMOVE is set, and what came with it
@@ -1561,6 +1669,7 @@ else
   install_status=$?
 fi
 install_gui || install_status=1
+install_redrat || install_status=1
 
 info ""
 info "Re-checking host dependencies"
