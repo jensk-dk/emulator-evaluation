@@ -176,6 +176,26 @@ class Console:
                 item.close()
 
 
+# The port of the VM's virtio serial device that takes remote control keys to
+# a target with a root file system of its own (rdke/meta-tvemu-rdke,
+# tvemu-remote).
+REMOTE_PORT_NAME = "tvemu.remote"
+
+
+def remote_port_arguments(binary, port):
+    """QEMU arguments for a virtio serial port that QEMU connects to the
+    launcher's window, which listens on `port` of this host and sends the
+    remote control keys down the connection."""
+    version = [int(part) for part in (qemu_version(binary).split("version ")[-1].split()[0:1] or ["0"])[0]
+               .split(".")[:2] if part.isdigit()]
+    # The window may start listening after QEMU: QEMU tries again each second.
+    # The option was renamed in QEMU 9.2.
+    again = "reconnect-ms=1000" if tuple(version) >= (9, 2) else "reconnect=1"
+    return ["-device", "virtio-serial-pci",
+            "-chardev", "socket,id=emu-remote,host=127.0.0.1,port=%d,%s" % (port, again),
+            "-device", "virtserialport,chardev=emu-remote,name=%s" % REMOTE_PORT_NAME]
+
+
 def plain_command_line(guest, verbose=True):
     """The kernel command line for a root file system that is not the
     launcher's own (emulator/rootfs.py): it starts its own init, and takes

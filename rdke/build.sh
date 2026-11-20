@@ -32,6 +32,10 @@ SSTATE_DIR = "/build/sstate-cache"
 INHERIT += "rm_work"
 BB_NUMBER_THREADS = "4"
 PARALLEL_MAKE = "-j 6"
+# LLVM (for Mesa's software renderer) links several large programs at once
+# and was ended for want of memory in an engine with 8 GB.
+PARALLEL_MAKE:pn-llvm = "-j 3"
+EXTRA_OECMAKE:append:pn-llvm = " -DLLVM_PARALLEL_LINK_JOBS=1"
 EOC
 [ -f /work/rdk/local-extra.conf ] && cat /work/rdk/local-extra.conf >> conf/local.conf
 bitbake "$@" || exit 1

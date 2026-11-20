@@ -80,9 +80,9 @@
       "details": [
         "booted on hvf (aarch64, cpu host) in 0.4s; the prompt answered a typed command"
       ],
-      "checked_at": "2026-11-20T15:00:42Z",
+      "checked_at": "2026-11-20T17:49:04Z",
       "seconds": 1.0,
-      "revision": "0d380a40c991131aaf325b79873491f6a0513dfa-dirty",
+      "revision": "9bbc3d19e3f653a9fbac4be319750f76f0f5d5b4-dirty",
       "image_definition_sha256": "7f22e737c9570eb58ee6145755a42dae19214a6c46c1093d7082a0eb30b9b0ee"
     },
     "bench-container": {
@@ -1405,10 +1405,10 @@
         "host keys: Up for Up, Down for Down, Left for Left, Right for Right, Return for OK, Backspace for BACK, 0 for 0, 1 for 1, 2 for 2, 3 for 3, 4 for 4, 5 for 5, 6 for 6, 7 for 7, 8 for 8, 9 for 9, R for Red, G for Green, Y for Yellow, B for Blue, P for Play, U for Pause, Space for Play/pause, S for Stop, F for Fast forward, W for Rewind, C for Record, T for TEXT, PageUp for P+, PageDown for P-, H for WEBTV, Escape for EXIT",
         "not checked: that the keys stay away from the target while another window has the focus"
       ],
-      "checked_at": "2026-11-19T19:14:00Z",
-      "seconds": 0.0,
-      "revision": "6b653126afd33240b11fc6a11c752d4e9597bc63-dirty",
-      "image_definition_sha256": "89bc6b0173f669e524954e6e843a4225c0b0519197cd3910f3df5b710c8a88b2"
+      "checked_at": "2026-11-20T17:49:19Z",
+      "seconds": 14.9,
+      "revision": "9bbc3d19e3f653a9fbac4be319750f76f0f5d5b4-dirty",
+      "image_definition_sha256": "7f22e737c9570eb58ee6145755a42dae19214a6c46c1093d7082a0eb30b9b0ee"
     },
     "remote-window-vm": {
       "status": "pass",
@@ -1421,10 +1421,10 @@
         "with a key code but no symbol in the target's keymap: text",
         "with the remote control shown, the host keys still worked in the emulator's window (32 keys) and in the remote control's own"
       ],
-      "checked_at": "2026-11-19T19:14:01Z",
+      "checked_at": "2026-11-20T17:49:19Z",
       "seconds": 0.0,
-      "revision": "6b653126afd33240b11fc6a11c752d4e9597bc63-dirty",
-      "image_definition_sha256": "89bc6b0173f669e524954e6e843a4225c0b0519197cd3910f3df5b710c8a88b2"
+      "revision": "9bbc3d19e3f653a9fbac4be319750f76f0f5d5b4-dirty",
+      "image_definition_sha256": "7f22e737c9570eb58ee6145755a42dae19214a6c46c1093d7082a0eb30b9b0ee"
     },
     "window-display-vm-arm64": {
       "status": "pass",
@@ -2166,9 +2166,9 @@
         "a stand-in (the ARM64 Debian VM image, started with --rootfs rdke as an RDK-E image would be) booted its kernel and its own init in 1s, in a host-native guest",
         "the image built for the machine tvemu-arm64-rdke (Image and rootfs.ext4 in build/rdke/arm64) booted its kernel and its own init in 2s, in a host-native guest: a minimal image on RDK-E's base layers, without its middleware"
       ],
-      "checked_at": "2026-11-20T15:00:37Z",
-      "seconds": 2.5,
-      "revision": "0d380a40c991131aaf325b79873491f6a0513dfa-dirty",
+      "checked_at": "2026-11-20T17:49:03Z",
+      "seconds": 2.4,
+      "revision": "9bbc3d19e3f653a9fbac4be319750f76f0f5d5b4-dirty",
       "image_definition_sha256": "7f22e737c9570eb58ee6145755a42dae19214a6c46c1093d7082a0eb30b9b0ee"
     }
   }

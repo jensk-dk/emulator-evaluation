@@ -1,0 +1,27 @@
+[Unit]
+Description=Westeros, RDK's Wayland compositor, on the VM's display
+After=systemd-udev-settle.service
+Wants=systemd-udev-settle.service
+# The text console's login on the same display would draw over it.
+Conflicts=getty@tty1.service
+After=getty@tty1.service
+
+[Service]
+Environment=XDG_RUNTIME_DIR=/run/tvemu-wayland
+# The VM's one DRM device, virtio-gpu. It has a single plane: Westeros
+# composes everything with OpenGL ES and uses no overlay plane for video.
+Environment=WESTEROS_DRM_CARD=/dev/dri/card0
+Environment=WESTEROS_GL_NO_PLANES=1
+Environment=WESTEROS_GL_USE_PREFERRED_MODE=1
+Environment=WESTEROS_DEBUG=3
+# The device backend takes the place of the EGL native display, as its README says.
+Environment=LD_PRELOAD=/usr/lib/libwesteros_gl.so.0
+ExecStartPre=/bin/mkdir -p -m 0700 /run/tvemu-wayland
+# Westeros' window is 1280x720 unless told, and the backend registers it as a
+# frame buffer of the display mode's size: the two have to agree. The mode is
+# the one the emulator gave the display (--resolution).
+ExecStart=/bin/sh -c 'exec /usr/bin/westeros --renderer /usr/lib/libwesteros_render_gl.so.0 --framerate 60 --display wayland-0 --window-size "$(head -n 1 /sys/class/drm/card0-Virtual-1/modes)"'
+Restart=no
+
+[Install]
+WantedBy=multi-user.target

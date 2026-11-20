@@ -1,0 +1,17 @@
+[Unit]
+Description=Weston, the Wayland compositor, on the VM's display
+After=systemd-udev-settle.service
+Wants=systemd-udev-settle.service
+# The text console's login on the same display would draw over it.
+Conflicts=getty@tty1.service
+After=getty@tty1.service
+
+[Service]
+Environment=XDG_RUNTIME_DIR=/run/tvemu-wayland
+ExecStartPre=/bin/mkdir -p -m 0700 /run/tvemu-wayland
+# As root and straight on the DRM device: no seat or login manager is asked.
+ExecStart=/usr/bin/weston --backend=drm-backend.so --tty=1 --log=/run/tvemu-wayland/weston.log
+Restart=no
+
+[Install]
+WantedBy=multi-user.target

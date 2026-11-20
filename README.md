@@ -435,8 +435,9 @@ terminal:
 It is VM mode only, with an ARM64 guest: `--arch native` on an ARM64 host,
 `--arch arm64` (a simulated CPU) elsewhere. Workloads, driver features,
 captures, RedRat input, `--record` and `--repeat` belong to the Debian root
-file system and are refused with a reason; remote control keys do not reach
-an RDK-E target yet. `./emu doctor` and `./emu build --rootfs rdke` say
+file system and are refused with a reason. Remote control keys from the
+keyboard and the on-screen remote control reach an RDK-E target whose image
+has the layer's `tvemu-remote`, over a virtio serial port. `./emu doctor` and `./emu build --rootfs rdke` say
 whether an image is there. `rdke/build.sh` builds a minimal image, which
 boots to a root shell; it has RDK-E's base system and none of its middleware.
 The option is verified with a stand-in, the ARM64 Debian VM image started

@@ -172,8 +172,8 @@ def _require_rdke(opts):
         refused = ("captures are taken when a workload of the Debian root file system reports a finished frame",
                    "leave out --screenshot")
     elif opts.redrat_profile:
-        refused = ("remote control keys do not reach a target started from the RDK-E root file system yet",
-                   "leave out --redrat-profile")
+        refused = ("RedRat input has not been tried with the RDK-E root file system; the keyboard and the "
+                   "on-screen remote control reach it", "leave out --redrat-profile")
     elif opts.rebuild:
         refused = ("the launcher does not build the RDK-E root file system", "%s says how it is built"
                    % rootfs.RDKE_README)
@@ -374,13 +374,15 @@ def launch(opts):
                     vnc_args, vnc, vnc_directory = graphics.vnc_endpoint()
                     display_args += vnc_args
                     viewer_plan = {"display": vnc, "directory": vnc_directory}
+                    port = window.free_port()
+                    viewer_plan["keys_listen"] = port
                     if rdke:
-                        outcome.notes.append("remote control keys do not reach a target started from the RDK-E root "
-                                             "file system yet: nothing in it fetches them from the window")
+                        # No program of the launcher's in this target fetches
+                        # the keys: QEMU carries them in, on a port of a
+                        # virtio serial device (rdke/README.md).
+                        display_args += vm.remote_port_arguments(qemu, port)
                     else:
-                        port = window.free_port()
                         plan.kernel_settings["remote"] = "10.0.2.2:%d" % port
-                        viewer_plan["keys_listen"] = port
                 elif kind and opts.fullscreen:
                     display_args.append("-full-screen")
                 if display["screen_hold"]:

@@ -1,0 +1,46 @@
+Register the graphics frame buffer without an alpha channel where asked to
+
+virtio-gpu has a single plane, which takes opaque buffers only (XRGB8888):
+drmModeSetCrtc fails with EINVAL for a frame buffer registered with depth 32.
+The depth becomes a compile-time setting, 32 as before unless given.
+
+Upstream-Status: Inappropriate [tv-emu virtual machine; not offered upstream]
+
+diff --git a/westeros-gl/westeros-gl.c b/westeros-gl/westeros-gl.c
+index 896178a..90082f2 100644
+--- a/westeros-gl/westeros-gl.c
++++ b/westeros-gl/westeros-gl.c
+@@ -79,6 +79,15 @@
+ #define FRAME(...)                  INT_FRAME(__VA_ARGS__, "")
+ 
+ #define DEFAULT_CARD "/dev/dri/card0"
++
++/* The depth a frame buffer of the graphics plane is registered with. 32 says
++   that it has an alpha channel, which a device needs to show video on a plane
++   behind the graphics. A device whose one plane takes opaque buffers only,
++   such as virtio-gpu, refuses that: there it is 24, and the alpha channel of
++   the buffer is not looked at. */
++#ifndef WST_FB_DEPTH
++#define WST_FB_DEPTH 32
++#endif
+ #ifdef WESTEROS_PLATFORM_QEMUX86
+ #define DEFAULT_MODE_WIDTH (1280)
+ #define DEFAULT_MODE_HEIGHT (1024)
+@@ -6604,7 +6613,7 @@ static void wstSwapDRMBuffersAtomic( WstGLCtx *ctx )
+                      rc= drmModeAddFB( ctx->drmFd,
+                                        nw->width,
+                                        nw->height,
+-                                       32,
++                                       WST_FB_DEPTH,
+                                        32,
+                                        stride,
+                                        handle,
+@@ -7050,7 +7059,7 @@ static void wstSwapDRMBuffers( WstGLCtx *ctx )
+                rc= drmModeAddFB( ctx->drmFd,
+                                  ctx->modeInfo->hdisplay,
+                                  ctx->modeInfo->vdisplay,
+-                                 32,
++                                 WST_FB_DEPTH,
+                                  32,
+                                  stride,
+                                  handle,

@@ -1,0 +1,12 @@
+[Unit]
+Description=The emulator's remote control keys, as an input device
+# Before a compositor looks for its input devices.
+Before=tvemu-westeros.service tvemu-weston.service
+
+[Service]
+ExecStartPre=-/sbin/modprobe uinput
+ExecStart=/usr/bin/tvemu-remote
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

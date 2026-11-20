@@ -6,9 +6,12 @@ an agreed requirement: nothing in `openspec/specs/` asks for it, the launcher
 does not know it, and it is not part of the target image (`target/`), whose
 definition it must not change.
 
-**What there is: a machine definition, and a minimal image built from it
-that boots host-native to a root shell on a Mac. The image has RDK-E's base
-system and none of its middleware: no RDK service runs in it.**
+**What there is: a machine definition, and three images built from it that
+boot host-native on a Mac: a minimal one, to a root shell; one with Weston;
+and one with Westeros, RDK's own Wayland compositor, which draws on the VM's
+display with a device backend of this layer. All have RDK-E's base system.
+Of RDK-E's middleware only Westeros runs: no Thunder, no RDK service, no
+browser.**
 
 ## The machine: `tvemu-arm64-rdke`
 
@@ -68,6 +71,9 @@ fuse `qemux86-64` with the same RDK-E parts; RDK-E has no public x86 build.
 
     rdke/build.sh            # 64-bit programs, for a host-native VM
     rdke/build.sh 32         # RDK-E's own arrangement; not built yet
+    rdke/build.sh 64 TARGET  # another image, such as tvemu-wayland-image
+
+The image built last is the one in `build/rdke/arm64`.
 
 builds openembedded-core's `core-image-minimal` for the machine, on RDK-E's
 common layers, in an Ubuntu 22.04 container, and copies the kernel and the
@@ -109,6 +115,137 @@ CPU):
 - There is no sound device and no network address: the launcher gives an
   RDK-E target no sound card yet, and the minimal image configures no
   network.
+
+## Wayland on the VM's display
+
+    rdke/build.sh 64 tvemu-wayland-image
+    ./emu run --mode vm --rootfs rdke --window
+
+`tvemu-wayland-image` is the minimal image with Mesa, Weston 10 and Weston's
+example clients, and two systemd units of this layer
+(`recipes-graphics/tvemu-wayland-demo`) that start Weston on the DRM device
+at boot, as root, and then `weston-simple-egl`. Built and started on the
+macOS host on 2026-11-20:
+
+![Weston with weston-simple-egl on the VM's display](wayland-weston.png)
+
+- The picture above is the VM's display at 1920x1080, taken from QEMU
+  (`screendump`): Weston's desktop shell and the client's triangle, which
+  turns. The launcher's window shows that display; a run with `--window`
+  started and ended without an error, and the window's own picture was not
+  looked at.
+- Weston renders with OpenGL ES 3.2 on Mesa's `llvmpipe`, that is, on the
+  target's CPU: this Mac's QEMU has no host GPU for the guest. The client
+  takes about 40 % of one CPU.
+- The root file system is 248 MB, most of it LLVM, which `llvmpipe` needs.
+  The build volume holds 38 GB after this build, 21 GB of it downloads.
+
+What had to be done beyond naming the packages:
+
+- **The Wayland EGL library.** RDK-E's layers take `libwayland-egl` out of
+  Wayland, because a SoC vendor's graphics libraries bring their own, and
+  have the plain one as a package, `wayland-default-egl`. Weston's build did
+  not find it; `recipes-graphics/wayland/weston_%.bbappend` names it.
+- **LLVM and memory.** With 8 GB in the container engine, LLVM's linker was
+  ended for want of memory. `rdke/build.sh` has LLVM link one program at a
+  time and compile with three jobs.
+- **The engine's disk** was enlarged from 60 GB to 200 GB on the Mac
+  (`colima start --disk 200`). `setup.sh` still creates 60 GB.
+
+Weston is a stand-in: RDK-E's compositor is Westeros, which is below.
+
+## Westeros on the VM's display
+
+    rdke/build.sh 64 tvemu-westeros-image
+    ./emu run --mode vm --rootfs rdke --window
+
+`tvemu-westeros-image` is the minimal image with Mesa, Westeros 2.1.4 and
+its device backend for DRM/KMS, and two units of this layer
+(`recipes-graphics/tvemu-westeros-demo`) that start Westeros on the DRM
+device at boot and then Westeros' own test client, `westeros_test`. Built and
+started on the macOS host on 2026-11-20:
+
+![Westeros with westeros_test on the VM's display](wayland-westeros.png)
+
+- The picture is the VM's display at 1920x1080, taken from QEMU: the test
+  client's triangle, full screen, composed by Westeros. Both units stayed
+  active for the 25 s they were watched, and a run with `--window` started
+  and ended without an error; the window's own picture was not looked at.
+- Rendering is on the target's CPU (`llvmpipe`), as with Weston. Westeros
+  takes about 40 % of one CPU for composing 1920x1080 at 60 frames a second,
+  and the client about as much.
+- The root file system is 226 MB.
+
+The first part of a vendor layer is what made it work
+(`recipes-graphics/westeros-soc`, `recipes-graphics/westeros`):
+
+- **The device backend, `westeros-soc-drm`.** The recipe is the Pi's
+  (meta-vendor-raspberrypi-dev) without its limit to the Pi's GPU and its
+  Pi-specific patch and switches, at the release the Pi's layer names.
+- **No planes.** virtio-gpu has one plane. The backend is told so
+  (`WESTEROS_GL_NO_PLANES`), and Westeros composes everything with OpenGL
+  ES. Video on a plane of its own behind the graphics, as on a set-top box,
+  is therefore not there.
+- **An opaque frame buffer** (`0001-graphics-frame-buffer-depth.patch`). The
+  backend registers its frame buffer with an alpha channel, for that video
+  plane; virtio-gpu's plane takes opaque buffers only, and setting the mode
+  failed (`drmModeSetCrtc`, EINVAL). The patch makes the depth a build
+  setting, and this machine sets 24.
+- **The window's size.** Westeros starts with a window of 1280x720, and the
+  backend registers it as a frame buffer of the display mode's size, which
+  the kernel refuses when the two differ (`drmModeAddFB`, EINVAL; Westeros
+  then ended with a segmentation fault). The unit starts Westeros with
+  `--window-size` set to the display's mode, which is the one the emulator's
+  `--resolution` gives.
+- **Westeros for Mesa** (`westeros.bbappend`): the switches the Pi's layer
+  sets for its Mesa driver, and `wayland-default-egl`.
+
+Not looked at: other resolutions than 1080p, Essos, the video sink, and
+graphics on the host's GPU.
+
+## Remote control keys
+
+The keys of the emulator's remote control reach Westeros and its clients:
+those typed on the host's keyboard in the display window, and those clicked
+on the on-screen remote control (Ctrl+Alt+R, or the toolbar).
+
+How a key travels:
+
+1. The display window sends it as it does for the Debian root file system:
+   a line, `press CODE` or `release CODE`, with the Linux key code of
+   `emulator/remote.py`, down a connection to a port it listens on.
+2. For an RDK-E target the launcher gives the VM a virtio serial port named
+   `tvemu.remote`, which QEMU connects to that port. Nothing of the target's
+   network is used.
+3. In the target, `tvemu-remote` (`recipes-support/tvemu-remote`, started by
+   a systemd unit) reads the lines and gives the keys to the kernel as key
+   events of a keyboard it makes with uinput, "tvemu remote control".
+4. Westeros reads the kernel's input devices itself and passes the keys to
+   the client that has the keyboard focus, as it does with a real remote
+   control's.
+
+Run on the macOS host on 2026-11-20, with `westeros_test --verbose` as the
+client: OK, Red, Green, Blue, 5, BACK, Play, P+ and EXIT each arrived as a
+press and a release with a key symbol of their own (Return, XF86Red,
+XF86Green, XF86Blue, 5, XF86Back, XF86AudioPlay, XF86Close and one for P+),
+sent straight from the window's key channel, as a key of the host's keyboard
+(G) and as a click on the on-screen remote control (Blue).
+
+- Found, and avoided: `westeros_test` ended with a segmentation fault when it
+  got an arrow key. The tool moves its surface on those keys, through
+  Westeros' shell interface (`wl_simple_shell`), which it takes a handle on
+  only when started with `--shell`; without the option the handle is null,
+  and the next frame after an arrow key uses it all the same
+  (`westeros-test.cpp`, `drawFrame`, `wl_simple_shell_set_geometry`). It is
+  a fault of the tool, in Westeros 2.1.4, and has nothing to do with the
+  VM or with how the keys arrive. The unit now starts it with `--shell`:
+  run by hand without the option it ended with status 139 on Up, and with
+  it it was still running after Up, Up, Left, Down and Right.
+- Not tried: the other keys of the 32, a key held down, RedRat input (the
+  launcher still refuses a RedRat profile with `--rootfs rdke`), and what
+  RDK-E's own key handling makes of these codes, which is in middleware this
+  image does not have.
+- No verification check covers this; it was run by hand.
 
 ## Starting an image
 
@@ -156,10 +293,11 @@ That it builds and boots is shown by the minimal image above, with the
 
 ## What is open
 
-1. **A vendor layer.** The machine names recipes that do not exist: the
+1. **The rest of a vendor layer.** Westeros' device backend is there. The
+   machine names other recipes that do not exist: the
    hardware abstraction for device settings, power, deep sleep, HDMI-CEC,
-   manufacturer data and others (`...-hal-tvemu`), and Westeros' DRM backend,
-   which the Pi's layer limits to its own GPU. A build of the vendor layer
+   manufacturer data and others (`...-hal-tvemu`), and Westeros' video
+   sink. A build of the vendor layer
    stops at the first of them. The Pi's `vendor_pkg_versions.inc`, which pins
    the versions of what a vendor layer delivers, is not taken over either.
 2. **Building more than the minimal image.** That one fits the container
@@ -173,10 +311,9 @@ That it builds and boots is shown by the minimal image above, with the
    key on `rpi` or `raspberrypi4`; without those overrides such settings do
    not apply here. The middleware layers have not been read for this.
 5. **The launcher's side, in part.** `./emu run --mode vm --rootfs rdke`
-   boots an image from `build/rdke/arm64` (see below), and that path is
-   verified with a stand-in only. How the remote control's keys reach an
-   RDK-E target is not done: nothing in RDK-E fetches them from the
-   launcher's window. Sound is not connected either.
+   boots an image from `build/rdke/arm64`, and the remote control's keys
+   reach it. Sound is not connected, captures (`--screenshot`) are refused,
+   and no check sends keys to an RDK-E target.
 6. **RDK's own virtual device.** RDK's build scripts mention a "vdevice"
    product layer (build-scripts, pull request 30, June 2026). No public
    repository of it was found on 2026-11-20. If one is published, it may be

@@ -1,0 +1,15 @@
+[Unit]
+Description=A Wayland client that draws with OpenGL ES (weston-simple-egl)
+After=tvemu-weston.service
+Requires=tvemu-weston.service
+
+[Service]
+Environment=XDG_RUNTIME_DIR=/run/tvemu-wayland
+Environment=WAYLAND_DISPLAY=wayland-1
+# The compositor's socket is there a moment after it starts.
+ExecStartPre=/bin/sh -c 'for i in $(seq 1 100); do [ -S /run/tvemu-wayland/wayland-1 ] && exit 0; sleep 0.1; done; exit 1'
+ExecStart=/usr/bin/weston-simple-egl
+Restart=no
+
+[Install]
+WantedBy=multi-user.target
