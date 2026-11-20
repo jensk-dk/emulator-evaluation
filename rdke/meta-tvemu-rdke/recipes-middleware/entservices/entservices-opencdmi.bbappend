@@ -7,3 +7,5 @@ CXXFLAGS:append:tvemu = " -Wno-error=format"
 # A plug-in that cannot start must not take Thunder down with it (see the patch).
 FILESEXTRAPATHS:prepend:tvemu := "${THISDIR}/files:"
 SRC_URI:append:tvemu = " file://0001-ocdm-deinitialize-once.patch"
+
+require recipes-middleware/include/tvemu-64bit-formats.inc

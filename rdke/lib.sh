@@ -65,10 +65,11 @@ fetch_middleware() {
 
 cat > "$work/Dockerfile" <<'EOT'
 FROM ubuntu:22.04
+# python-is-python3: a script of RDK's voice SDK is started as "python".
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     gawk wget git diffstat unzip texinfo gcc g++ make build-essential chrpath socat cpio python3 python3-pip \
     python3-pexpect xz-utils debianutils iputils-ping python3-git python3-jinja2 python3-subunit zstd lz4 file \
-    locales ca-certificates && locale-gen en_US.UTF-8 && useradd -m builder
+    locales ca-certificates python-is-python3 && locale-gen en_US.UTF-8 && useradd -m builder
 USER builder
 WORKDIR /home/builder
 EOT

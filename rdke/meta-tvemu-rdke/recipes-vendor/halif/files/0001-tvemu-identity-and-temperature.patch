@@ -1,0 +1,47 @@
+Manufacturer data of tv-emu's virtual device
+
+Serial number and hardware revision are read from /etc/tvemu/cpuinfo, which
+has them in the form of /proc/cpuinfo, and the temperature from
+/run/tvemu/temperature: the VM has no such lines and no thermal zone.
+
+Upstream-Status: Inappropriate [tv-emu virtual machine]
+
+diff --git a/mfrlibs_rpi.c b/mfrlibs_rpi.c
+index 5f0fff4..6f2cef8 100644
+--- a/mfrlibs_rpi.c
++++ b/mfrlibs_rpi.c
+@@ -52,7 +52,7 @@
+ #define FIRST_USE_DATE_FILE "/boot/first_use_date.txt"
+ #define SOCID_DEVICETREE_FILE "/proc/device-tree/compatible"
+ 
+-const char defaultDescription[] = "RaspberryPi RDKV Reference Device";
++const char defaultDescription[] = "tv-emu RDK-E virtual device";
+ const char defaultProductClass[] = "RDKV";
+ const char defaultSoftwareVersion[] = "2.0";
+ static int isInitialized = 0;
+@@ -499,8 +499,10 @@ static int getValueMatchingKeyFromCPUINFO(const char *keyIn, char *valueOut, siz
+         return ret;
+     }
+ 
+-    if (access("/proc/cpuinfo", F_OK) != -1) {
+-        fp = fopen("/proc/cpuinfo", "r");
++    /* tv-emu: the Pi has its serial number and revision in /proc/cpuinfo. The
++       VM has neither there; the virtual device has them in a file of the same form. */
++    if (access("/etc/tvemu/cpuinfo", F_OK) != -1) {
++        fp = fopen("/etc/tvemu/cpuinfo", "r");
+         if (NULL == fp) {
+             mfrlib_log("getValueMatchingKeyFromCPUINFO fopen() error.\n");
+             return ret;
+diff --git a/mfrtherm_mon.c b/mfrtherm_mon.c
+index dd6db97..3dcd140 100644
+--- a/mfrtherm_mon.c
++++ b/mfrtherm_mon.c
+@@ -41,7 +41,7 @@ mfrError_t mfrGetTemperature(mfrTemperatureState_t *curState, int *temperatureVa
+     int value = 0;
+     mfrTemperatureState_t state = mfrTEMPERATURE_NORMAL;
+ 
+-    FILE* fp = fopen("/sys/class/thermal/thermal_zone0/temp", "r");
++    FILE* fp = fopen("/run/tvemu/temperature", "r");
+     if( fp != NULL )
+     {
+         fscanf (fp, "%d", &value);

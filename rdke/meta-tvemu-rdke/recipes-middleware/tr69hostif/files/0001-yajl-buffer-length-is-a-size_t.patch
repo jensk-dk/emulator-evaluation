@@ -1,0 +1,22 @@
+The length yajl gives is a size_t
+
+yajl_gen_get_buf() writes the length of its buffer through a size_t pointer.
+The handler gives it the address of an unsigned int: the same on 32-bit ARM,
+and on a 64-bit machine neither accepted by the compiler nor right, since
+eight bytes would be written into four.
+
+Upstream-Status: Pending [not yet offered to rdkcentral/tr69hostif]
+
+diff --git a/src/hostif/handlers/src/hostIf_jsonReqHandlerThread.cpp b/src/hostif/handlers/src/hostIf_jsonReqHandlerThread.cpp
+index 66eb2a4..a21bbe8 100644
+--- a/src/hostif/handlers/src/hostIf_jsonReqHandlerThread.cpp
++++ b/src/hostif/handlers/src/hostIf_jsonReqHandlerThread.cpp
+@@ -318,7 +318,7 @@ void hostIf_HTTPJsonMsgHandler(
+ 
+     // Get the string
+     const unsigned char     *buf;
+-    unsigned int             len;
++    size_t                   len;
+     yajl_gen_get_buf(json, &buf, &len);
+ 
+     // TODO: What is the correct MIME type?

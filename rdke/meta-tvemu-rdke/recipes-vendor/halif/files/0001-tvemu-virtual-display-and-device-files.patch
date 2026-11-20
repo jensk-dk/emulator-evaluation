@@ -1,0 +1,1239 @@
+Device settings on tv-emu's virtual machine
+
+The display is virtio-gpu: card0, with a connector of the type Virtual named
+Virtual-1, where the Pi has card1 and HDMI-A-1. The CPU temperature, the
+serial number and the front panel's LED are files of the virtual device,
+since the VM has no thermal zone, no serial number in its device tree and no
+LED.
+
+Handles are widened again where they come in. RDK's device settings plug-in
+keeps them in 32 bits, which loses half of a 64-bit address; see
+dsHalWidenHandle() in dshalUtils.h.
+
+Upstream-Status: Inappropriate [tv-emu virtual machine]
+
+diff --git a/dsAudio.c b/dsAudio.c
+index be30a92..2ab0798 100644
+--- a/dsAudio.c
++++ b/dsAudio.c
+@@ -587,6 +587,7 @@ dsError_t dsGetAudioPort(dsAudioPortType_t type, int index, intptr_t *handle)
+ 
+ dsError_t dsGetAudioEncoding(intptr_t handle, dsAudioEncoding_t *encoding)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -649,6 +650,7 @@ dsError_t dsGetAudioEncoding(intptr_t handle, dsAudioEncoding_t *encoding)
+  */
+ dsError_t dsGetAudioCompression(intptr_t handle, int *compression)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized)
+     {
+@@ -701,6 +703,7 @@ dsError_t dsGetAudioCompression(intptr_t handle, int *compression)
+  */
+ dsError_t dsGetStereoMode(intptr_t handle, dsAudioStereoMode_t *stereoMode)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized)
+     {
+@@ -763,6 +766,7 @@ dsError_t dsGetStereoMode(intptr_t handle, dsAudioStereoMode_t *stereoMode)
+ 
+ dsError_t dsGetPersistedStereoMode(intptr_t handle, dsAudioStereoMode_t *stereoMode)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (NULL == stereoMode || !dsAudioIsValidHandle(handle)) {
+         hal_err("Invalid parameters; stereoMode(%p) or handle(%p).\n", stereoMode, handle);
+@@ -795,6 +799,7 @@ dsError_t dsGetPersistedStereoMode(intptr_t handle, dsAudioStereoMode_t *stereoM
+  */
+ dsError_t dsGetStereoAuto(intptr_t handle, int *autoMode)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized)
+     {
+@@ -833,6 +838,7 @@ dsError_t dsGetStereoAuto(intptr_t handle, int *autoMode)
+  */
+ dsError_t dsIsAudioMute(intptr_t handle, bool *muted)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -904,6 +910,7 @@ dsError_t dsIsAudioMute(intptr_t handle, bool *muted)
+  */
+ dsError_t dsSetAudioMute(intptr_t handle, bool mute)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized)
+     {
+@@ -1004,6 +1011,7 @@ dsError_t dsSetAudioMute(intptr_t handle, bool mute)
+  */
+ dsError_t dsIsAudioPortEnabled(intptr_t handle, bool *enabled)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     dsError_t ret = dsERR_NONE;
+     bool audioEnabled = true;
+@@ -1052,6 +1060,7 @@ dsError_t dsIsAudioPortEnabled(intptr_t handle, bool *enabled)
+  */
+ dsError_t dsEnableAudioPort(intptr_t handle, bool enabled)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     dsError_t ret = dsERR_NONE;
+     if (false == _bIsAudioInitialized)
+@@ -1099,6 +1108,7 @@ dsError_t dsEnableAudioPort(intptr_t handle, bool enabled)
+  */
+ dsError_t dsGetAudioGain(intptr_t handle, float *gain)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized)
+     {
+@@ -1170,6 +1180,7 @@ dsError_t dsGetAudioGain(intptr_t handle, float *gain)
+ 
+ dsError_t dsGetAudioDB(intptr_t handle, float *db)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized)
+     {
+@@ -1240,6 +1251,7 @@ dsError_t dsGetAudioDB(intptr_t handle, float *db)
+  */
+ dsError_t dsGetAudioLevel(intptr_t handle, float *level)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized)
+     {
+@@ -1282,6 +1294,7 @@ dsError_t dsGetAudioLevel(intptr_t handle, float *level)
+ 
+ dsError_t dsGetAudioMaxDB(intptr_t handle, float *maxDb)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized)
+     {
+@@ -1297,6 +1310,7 @@ dsError_t dsGetAudioMaxDB(intptr_t handle, float *maxDb)
+ 
+ dsError_t dsGetAudioMinDB(intptr_t handle, float *minDb)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized)
+     {
+@@ -1312,6 +1326,7 @@ dsError_t dsGetAudioMinDB(intptr_t handle, float *minDb)
+ 
+ dsError_t dsGetAudioOptimalLevel(intptr_t handle, float *optimalLevel)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized)
+     {
+@@ -1326,6 +1341,7 @@ dsError_t dsGetAudioOptimalLevel(intptr_t handle, float *optimalLevel)
+ 
+ dsError_t  dsIsAudioLoopThru(intptr_t handle, bool *loopThru)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized)
+     {
+@@ -1340,6 +1356,7 @@ dsError_t  dsIsAudioLoopThru(intptr_t handle, bool *loopThru)
+ 
+ dsError_t dsSetAudioEncoding(intptr_t handle, dsAudioEncoding_t encoding)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     dsError_t ret = dsERR_NONE;
+     dsAudioFormat_t oldFormat = dsFormatFromEncoding(_encoding);
+@@ -1415,6 +1432,7 @@ dsError_t dsSetAudioEncoding(intptr_t handle, dsAudioEncoding_t encoding)
+  */
+ dsError_t dsSetAudioCompression(intptr_t handle, int compression)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -1452,6 +1470,7 @@ dsError_t dsSetAudioCompression(intptr_t handle, int compression)
+  */
+ dsError_t dsIsAudioMSDecode(intptr_t handle, bool *ms11Enabled)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     dsError_t ret = dsERR_NONE;
+     if (false == _bIsAudioInitialized)
+@@ -1492,6 +1511,7 @@ dsError_t dsIsAudioMSDecode(intptr_t handle, bool *ms11Enabled)
+  */
+ dsError_t dsSetStereoMode(intptr_t handle, dsAudioStereoMode_t mode)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized)
+     {
+@@ -1570,6 +1590,7 @@ dsError_t dsSetStereoMode(intptr_t handle, dsAudioStereoMode_t mode)
+  */
+ dsError_t dsSetStereoAuto(intptr_t handle, int autoMode)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized)
+     {
+@@ -1609,6 +1630,7 @@ dsError_t dsSetStereoAuto(intptr_t handle, int autoMode)
+  */
+ dsError_t dsSetAudioGain(intptr_t handle, float gain)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (!_bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -1694,6 +1716,7 @@ dsError_t dsSetAudioGain(intptr_t handle, float gain)
+ 
+ dsError_t dsSetAudioDB(intptr_t handle, float db)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (!_bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -1765,6 +1788,7 @@ dsError_t dsSetAudioDB(intptr_t handle, float db)
+  */
+ dsError_t dsSetAudioLevel(intptr_t handle, float level)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (!_bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -1812,6 +1836,7 @@ dsError_t dsSetAudioLevel(intptr_t handle, float level)
+ 
+ dsError_t dsEnableLoopThru(intptr_t handle, bool loopThru)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked with loopThru %d.\n", loopThru);
+     if (false == _bIsAudioInitialized)
+     {
+@@ -1887,6 +1912,7 @@ bool dsCheckSurroundSupport()
+  */
+ dsError_t dsGetAudioFormat(intptr_t handle, dsAudioFormat_t *audioFormat)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized)
+     {
+@@ -1955,6 +1981,7 @@ dsError_t dsGetAudioFormat(intptr_t handle, dsAudioFormat_t *audioFormat)
+  */
+ dsError_t dsGetDialogEnhancement(intptr_t handle, int *level)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized)
+     {
+@@ -1992,6 +2019,7 @@ dsError_t dsGetDialogEnhancement(intptr_t handle, int *level)
+  */
+ dsError_t dsSetDialogEnhancement(intptr_t handle, int level)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized)
+     {
+@@ -2030,6 +2058,7 @@ dsError_t dsSetDialogEnhancement(intptr_t handle, int level)
+  */
+ dsError_t dsGetDolbyVolumeMode(intptr_t handle, bool *mode)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized)
+     {
+@@ -2068,6 +2097,7 @@ dsError_t dsGetDolbyVolumeMode(intptr_t handle, bool *mode)
+  */
+ dsError_t dsSetDolbyVolumeMode(intptr_t handle, bool mode)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked with mode %d.\n", mode);
+     if (false == _bIsAudioInitialized)
+     {
+@@ -2107,6 +2137,7 @@ dsError_t dsSetDolbyVolumeMode(intptr_t handle, bool mode)
+  */
+ dsError_t dsGetIntelligentEqualizerMode(intptr_t handle, int *mode)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized)
+     {
+@@ -2146,6 +2177,7 @@ dsError_t dsGetIntelligentEqualizerMode(intptr_t handle, int *mode)
+  */
+ dsError_t dsSetIntelligentEqualizerMode(intptr_t handle, int mode)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized)
+     {
+@@ -2183,6 +2215,7 @@ dsError_t dsSetIntelligentEqualizerMode(intptr_t handle, int mode)
+  */
+ dsError_t dsGetVolumeLeveller(intptr_t handle, dsVolumeLeveller_t* volLeveller)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized)
+     {
+@@ -2220,6 +2253,7 @@ dsError_t dsGetVolumeLeveller(intptr_t handle, dsVolumeLeveller_t* volLeveller)
+  */
+ dsError_t dsSetVolumeLeveller(intptr_t handle, dsVolumeLeveller_t volLeveller)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized)
+     {
+@@ -2262,6 +2296,7 @@ dsError_t dsSetVolumeLeveller(intptr_t handle, dsVolumeLeveller_t volLeveller)
+  */
+ dsError_t dsGetBassEnhancer(intptr_t handle, int *boost)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized)
+     {
+@@ -2300,6 +2335,7 @@ dsError_t dsGetBassEnhancer(intptr_t handle, int *boost)
+  */
+ dsError_t dsSetBassEnhancer(intptr_t handle, int boost)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized)
+     {
+@@ -2338,6 +2374,7 @@ dsError_t dsSetBassEnhancer(intptr_t handle, int boost)
+  */
+ dsError_t dsIsSurroundDecoderEnabled(intptr_t handle, bool *enabled)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -2374,6 +2411,7 @@ dsError_t dsIsSurroundDecoderEnabled(intptr_t handle, bool *enabled)
+  */
+ dsError_t dsEnableSurroundDecoder(intptr_t handle, bool enabled)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked with enabled %d.\n", enabled);
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -2409,6 +2447,7 @@ dsError_t dsEnableSurroundDecoder(intptr_t handle, bool enabled)
+  */
+ dsError_t dsGetDRCMode(intptr_t handle, int *mode)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -2444,6 +2483,7 @@ dsError_t dsGetDRCMode(intptr_t handle, int *mode)
+  */
+ dsError_t dsSetDRCMode(intptr_t handle, int mode)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -2480,6 +2520,7 @@ dsError_t dsSetDRCMode(intptr_t handle, int mode)
+  */
+ dsError_t dsGetSurroundVirtualizer(intptr_t handle, dsSurroundVirtualizer_t *virtualizer)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -2516,6 +2557,7 @@ dsError_t dsGetSurroundVirtualizer(intptr_t handle, dsSurroundVirtualizer_t *vir
+  */
+ dsError_t dsSetSurroundVirtualizer(intptr_t handle, dsSurroundVirtualizer_t virtualizer)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -2560,6 +2602,7 @@ dsError_t dsSetSurroundVirtualizer(intptr_t handle, dsSurroundVirtualizer_t virt
+  */
+ dsError_t dsGetMISteering(intptr_t handle, bool *enabled)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -2596,6 +2639,7 @@ dsError_t dsGetMISteering(intptr_t handle, bool *enabled)
+  */
+ dsError_t dsSetMISteering(intptr_t handle, bool enabled)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked with enabled %d.\n", enabled);
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -2633,6 +2677,7 @@ dsError_t dsSetMISteering(intptr_t handle, bool enabled)
+  */
+ dsError_t dsGetGraphicEqualizerMode(intptr_t handle, int *mode)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -2669,6 +2714,7 @@ dsError_t dsGetGraphicEqualizerMode(intptr_t handle, int *mode)
+  */
+ dsError_t dsSetGraphicEqualizerMode(intptr_t handle, int mode)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -2705,6 +2751,7 @@ dsError_t dsSetGraphicEqualizerMode(intptr_t handle, int mode)
+  */
+ dsError_t dsGetMS12AudioProfileList(intptr_t handle, dsMS12AudioProfileList_t *profiles)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -2741,6 +2788,7 @@ dsError_t dsGetMS12AudioProfileList(intptr_t handle, dsMS12AudioProfileList_t *p
+  */
+ dsError_t dsGetMS12AudioProfile(intptr_t handle, char *profile)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -2776,6 +2824,7 @@ dsError_t dsGetMS12AudioProfile(intptr_t handle, char *profile)
+  */
+ dsError_t dsGetSupportedARCTypes(intptr_t handle, int *types)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -2812,6 +2861,7 @@ dsError_t dsGetSupportedARCTypes(intptr_t handle, int *types)
+  */
+ dsError_t dsAudioSetSAD(intptr_t handle, dsAudioSADList_t sad_list)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized)
+     {
+@@ -2848,6 +2898,7 @@ dsError_t dsAudioSetSAD(intptr_t handle, dsAudioSADList_t sad_list)
+  */
+ dsError_t dsAudioEnableARC(intptr_t handle, dsAudioARCStatus_t arcStatus)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -2884,6 +2935,7 @@ dsError_t dsAudioEnableARC(intptr_t handle, dsAudioARCStatus_t arcStatus)
+  */
+ dsError_t dsGetAudioDelay(intptr_t handle, uint32_t *audioDelayMs)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -2921,6 +2973,7 @@ dsError_t dsGetAudioDelay(intptr_t handle, uint32_t *audioDelayMs)
+  */
+ dsError_t dsSetAudioDelay(intptr_t handle, const uint32_t audioDelayMs)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -2934,6 +2987,7 @@ dsError_t dsSetAudioDelay(intptr_t handle, const uint32_t audioDelayMs)
+ 
+ dsError_t dsGetAudioDelayOffset(intptr_t handle, uint32_t *audioDelayOffsetMs)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -2948,6 +3002,7 @@ dsError_t dsGetAudioDelayOffset(intptr_t handle, uint32_t *audioDelayOffsetMs)
+ 
+ dsError_t dsSetAudioDelayOffset(intptr_t handle, const uint32_t audioDelayOffsetMs)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -2980,6 +3035,7 @@ dsError_t dsSetAudioDelayOffset(intptr_t handle, const uint32_t audioDelayOffset
+  */
+ dsError_t dsSetAudioAtmosOutputMode(intptr_t handle, bool enable)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked with enable %d.\n", enable);
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -3013,6 +3069,7 @@ dsError_t dsSetAudioAtmosOutputMode(intptr_t handle, bool enable)
+  */
+ dsError_t dsGetSinkDeviceAtmosCapability(intptr_t handle, dsATMOSCapability_t *capability)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -3052,6 +3109,7 @@ dsError_t dsGetSinkDeviceAtmosCapability(intptr_t handle, dsATMOSCapability_t *c
+  */
+ dsError_t dsEnableMS12Config(intptr_t handle, dsMS12FEATURE_t feature, const bool enable)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked with enable %d.\n", enable);
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -3088,6 +3146,7 @@ dsError_t dsEnableMS12Config(intptr_t handle, dsMS12FEATURE_t feature, const boo
+  */
+ dsError_t dsEnableLEConfig(intptr_t handle, const bool enable)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked with enable %d.\n", enable);
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -3125,6 +3184,7 @@ dsError_t dsEnableLEConfig(intptr_t handle, const bool enable)
+  */
+ dsError_t dsGetLEConfig(intptr_t handle, bool *enable)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -3161,6 +3221,7 @@ dsError_t dsGetLEConfig(intptr_t handle, bool *enable)
+  */
+ dsError_t dsSetMS12AudioProfile(intptr_t handle, const char* profile)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -3175,6 +3236,7 @@ dsError_t dsSetMS12AudioProfile(intptr_t handle, const char* profile)
+ 
+ dsError_t dsSetAudioDucking(intptr_t handle, dsAudioDuckingAction_t action, dsAudioDuckingType_t type, const unsigned char level)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -3211,6 +3273,7 @@ dsError_t dsSetAudioDucking(intptr_t handle, dsAudioDuckingAction_t action, dsAu
+  */
+ dsError_t dsIsAudioMS12Decode(intptr_t handle, bool *hasMS12Decode)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -3246,6 +3309,7 @@ dsError_t dsIsAudioMS12Decode(intptr_t handle, bool *hasMS12Decode)
+  */
+ dsError_t dsAudioOutIsConnected(intptr_t handle, bool* isConnected)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -3393,6 +3457,7 @@ dsError_t dsAudioAtmosCapsChangeRegisterCB(dsAtmosCapsChangeCB_t cbFun)
+  */
+ dsError_t dsGetAudioCapabilities(intptr_t handle, int *capabilities)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -3433,6 +3498,7 @@ dsError_t dsGetAudioCapabilities(intptr_t handle, int *capabilities)
+  */
+ dsError_t dsGetMS12Capabilities(intptr_t handle, int *capabilities)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -3448,6 +3514,7 @@ dsError_t dsGetMS12Capabilities(intptr_t handle, int *capabilities)
+ 
+ dsError_t dsResetDialogEnhancement(intptr_t handle)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -3461,6 +3528,7 @@ dsError_t dsResetDialogEnhancement(intptr_t handle)
+ 
+ dsError_t dsResetBassEnhancer(intptr_t handle)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -3474,6 +3542,7 @@ dsError_t dsResetBassEnhancer(intptr_t handle)
+ 
+ dsError_t dsResetSurroundVirtualizer(intptr_t handle)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -3487,6 +3556,7 @@ dsError_t dsResetSurroundVirtualizer(intptr_t handle)
+ 
+ dsError_t dsResetVolumeLeveller(intptr_t handle)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -3523,6 +3593,7 @@ dsError_t dsResetVolumeLeveller(intptr_t handle)
+  */
+ dsError_t dsSetAssociatedAudioMixing(intptr_t handle, bool mixing)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked with mixing %d.\n", mixing);
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -3559,6 +3630,7 @@ dsError_t dsSetAssociatedAudioMixing(intptr_t handle, bool mixing)
+  */
+ dsError_t dsGetAssociatedAudioMixing(intptr_t handle, bool *mixing)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -3594,6 +3666,7 @@ dsError_t dsGetAssociatedAudioMixing(intptr_t handle, bool *mixing)
+  */
+ dsError_t dsSetFaderControl(intptr_t handle, int mixerbalance)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -3629,6 +3702,7 @@ dsError_t dsSetFaderControl(intptr_t handle, int mixerbalance)
+  */
+ dsError_t dsGetFaderControl(intptr_t handle, int* mixerbalance)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -3690,6 +3764,7 @@ static bool dsAudioIsValidAc4Lang(const char *pLang)
+  */
+ dsError_t dsSetPrimaryLanguage(intptr_t handle, const char* pLang)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -3729,6 +3804,7 @@ dsError_t dsSetPrimaryLanguage(intptr_t handle, const char* pLang)
+  */
+ dsError_t dsGetPrimaryLanguage(intptr_t handle, char* pLang)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -3767,6 +3843,7 @@ dsError_t dsGetPrimaryLanguage(intptr_t handle, char* pLang)
+  */
+ dsError_t dsSetSecondaryLanguage(intptr_t handle, const char* sLang)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -3806,6 +3883,7 @@ dsError_t dsSetSecondaryLanguage(intptr_t handle, const char* sLang)
+  */
+ dsError_t dsGetSecondaryLanguage(intptr_t handle, char* sLang)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -3856,6 +3934,7 @@ dsError_t dsGetHDMIARCPortId(int *portId)
+ */
+ dsError_t dsSetAudioMixerLevels(intptr_t handle, dsAudioInput_t aInput, int volume)
+ {
++	handle = dsHalWidenHandle(handle, _AOPHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsAudioInitialized) {
+         return dsERR_NOT_INITIALIZED;
+diff --git a/dsDisplay.c b/dsDisplay.c
+index e10ea77..385d680 100644
+--- a/dsDisplay.c
++++ b/dsDisplay.c
+@@ -621,6 +621,7 @@ dsError_t dsGetDisplay(dsVideoPortType_t m_vType, int index, intptr_t *handle)
+  */
+ dsError_t dsGetDisplayAspectRatio(intptr_t handle, dsVideoAspectRatio_t *aspect)
+ {
++	handle = dsHalWidenHandle(handle, _VDispHandles); /* tv-emu */
+     hal_info("Invoked\n");
+     VDISPHandle_t *vDispHandle = (VDISPHandle_t *)handle;
+     bool drmConnected = false, drmEnabled = false;
+@@ -701,6 +702,7 @@ dsError_t dsGetDisplayAspectRatio(intptr_t handle, dsVideoAspectRatio_t *aspect)
+  */
+ dsError_t dsSetAllmEnabled (intptr_t  handle, bool enabled)
+ {
++	handle = dsHalWidenHandle(handle, _VDispHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     VDISPHandle_t *vDispHandle = (VDISPHandle_t *)handle;
+ 
+@@ -733,6 +735,7 @@ dsError_t dsSetAllmEnabled (intptr_t  handle, bool enabled)
+  */
+ dsError_t dsGetAllmEnabled (intptr_t  handle, bool *enabled)
+ {
++	handle = dsHalWidenHandle(handle, _VDispHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     VDISPHandle_t *vDispHandle = (VDISPHandle_t *)handle;
+ 
+@@ -764,6 +767,7 @@ dsError_t dsGetAllmEnabled (intptr_t  handle, bool *enabled)
+  */
+ dsError_t dsSetAVIContentType(intptr_t handle, dsAviContentType_t contentType)
+ {
++	handle = dsHalWidenHandle(handle, _VDispHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     VDISPHandle_t *vDispHandle = (VDISPHandle_t *)handle;
+ 
+@@ -797,6 +801,7 @@ dsError_t dsSetAVIContentType(intptr_t handle, dsAviContentType_t contentType)
+  */
+ dsError_t dsGetAVIContentType(intptr_t handle, dsAviContentType_t* contentType)
+ {
++	handle = dsHalWidenHandle(handle, _VDispHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     VDISPHandle_t *vDispHandle = (VDISPHandle_t *)handle;
+ 
+@@ -831,6 +836,7 @@ dsError_t dsGetAVIContentType(intptr_t handle, dsAviContentType_t* contentType)
+  */
+ dsError_t dsSetAVIScanInformation(intptr_t handle, dsAVIScanInformation_t scanInfo)
+ {
++	handle = dsHalWidenHandle(handle, _VDispHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     VDISPHandle_t *vDispHandle = (VDISPHandle_t *)handle;
+ 
+@@ -863,6 +869,7 @@ dsError_t dsSetAVIScanInformation(intptr_t handle, dsAVIScanInformation_t scanIn
+  */
+ dsError_t dsGetAVIScanInformation(intptr_t handle, dsAVIScanInformation_t* scanInfo)
+ {
++	handle = dsHalWidenHandle(handle, _VDispHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     VDISPHandle_t *vDispHandle = (VDISPHandle_t *)handle;
+ 
+@@ -912,6 +919,7 @@ dsError_t dsGetAVIScanInformation(intptr_t handle, dsAVIScanInformation_t* scanI
+  */
+ dsError_t dsRegisterDisplayEventCallback(intptr_t handle, dsDisplayEventCallback_t cb)
+ {
++	handle = dsHalWidenHandle(handle, _VDispHandles); /* tv-emu */
+     hal_info("Invoked\n");
+     VDISPHandle_t *vDispHandle = (VDISPHandle_t *)handle;
+     if (false == _bDisplayInited) {
+@@ -978,6 +986,7 @@ dsError_t dsRegisterDisplayEventCallback(intptr_t handle, dsDisplayEventCallback
+  */
+ dsError_t dsGetEDID(intptr_t handle, dsDisplayEDID_t *edid)
+ {
++	handle = dsHalWidenHandle(handle, _VDispHandles); /* tv-emu */
+     hal_info("Invoked\n");
+     VDISPHandle_t *vDispHandle = (VDISPHandle_t *)handle;
+     bool drmConnected = false, drmEnabled = false;
+@@ -1147,6 +1156,7 @@ dsError_t dsDisplayTerm()
+  */
+ dsError_t dsDisplaygetNativeHandle(intptr_t handle, int *native)
+ {
++	handle = dsHalWidenHandle(handle, _VDispHandles); /* tv-emu */
+     hal_info("Invoked\n");
+     VDISPHandle_t *vDispHandle = (VDISPHandle_t *)handle;
+ 
+@@ -1270,6 +1280,7 @@ static dsVideoPortResolution_t* dsgetResolutionInfo(const char *res_name)
+  */
+ dsError_t dsGetEDIDBytes(intptr_t handle, unsigned char *edid, int *length)
+ {
++	handle = dsHalWidenHandle(handle, _VDispHandles); /* tv-emu */
+     hal_info("Invoked\n");
+     VDISPHandle_t *vDispHandle = (VDISPHandle_t *)handle;
+ 
+diff --git a/dsFPD.c b/dsFPD.c
+index 39219c3..79f6f88 100644
+--- a/dsFPD.c
++++ b/dsFPD.c
+@@ -427,6 +427,8 @@ static void composeLedFilePath(char *outPath, size_t outPathSize, const char *fi
+ static dsError_t detectLedPath(void)
+ {
+ 	const char *candidates[] = {
++		/* tv-emu: the VM has no LED; the virtual device has one as files. */
++		"/run/tvemu/leds/ACT",
+ 		"/sys/class/leds/ACT",
+ 		"/sys/class/leds/led0",
+ 		"/sys/class/leds/act"
+@@ -769,6 +771,7 @@ static unsigned int percentToRawBrightness(dsFPDBrightness_t percent)
+ static void dsFPBestEffortRestoreOnExit(const char *preferredTrigger, const char *preferredLedPath)
+ {
+ 	const char *triggerCandidates[] = {
++		"/run/tvemu/leds/ACT/trigger",
+ 		"/sys/class/leds/ACT/trigger",
+ 		"/sys/class/leds/led0/trigger",
+ 		"/sys/class/leds/act/trigger"
+diff --git a/dsHost.c b/dsHost.c
+index 9753c46..44e3e85 100644
+--- a/dsHost.c
++++ b/dsHost.c
+@@ -41,9 +41,11 @@ static bool host_initialized = false;
+ static bool soc_id_cached = false;
+ static char cached_soc_id[SOCID_BUFFER_SIZE] = {0};
+ 
+-#define SYS_CPU_TEMP "/sys/class/thermal/thermal_zone0/temp"
++/* tv-emu: the VM has no thermal zone and no serial number in its device tree;
++   both are files of the virtual device (tvemu-device). */
++#define SYS_CPU_TEMP "/run/tvemu/temperature"
+ #define PROC_CPUINFO "/proc/cpuinfo"
+-#define SYS_SERIAL_NUMBER "/sys/firmware/devicetree/base/serial-number"
++#define SYS_SERIAL_NUMBER "/etc/tvemu/serial-number"
+ 
+ /**
+  * @brief Initializes the Host HAL sub-system
+diff --git a/dsVideoDevice.c b/dsVideoDevice.c
+index dcfec7a..1fd6158 100644
+--- a/dsVideoDevice.c
++++ b/dsVideoDevice.c
+@@ -141,6 +141,7 @@ dsError_t dsGetVideoDevice(int index, intptr_t *handle)
+  */
+ dsError_t dsSetDFC(intptr_t handle, dsVideoZoom_t dfc)
+ {
++	handle = dsHalWidenHandle(handle, &VDHandle); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bVideoDeviceInited) {
+         return dsERR_NOT_INITIALIZED;
+@@ -174,6 +175,7 @@ dsError_t dsSetDFC(intptr_t handle, dsVideoZoom_t dfc)
+  */
+ dsError_t dsGetDFC(intptr_t handle, dsVideoZoom_t *dfc)
+ {
++	handle = dsHalWidenHandle(handle, &VDHandle); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bVideoDeviceInited) {
+         return dsERR_NOT_INITIALIZED;
+@@ -239,6 +241,7 @@ dsError_t dsVideoDeviceTerm()
+  */
+ dsError_t dsGetHDRCapabilities(intptr_t handle, int *capabilities)
+ {
++	handle = dsHalWidenHandle(handle, &VDHandle); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bVideoDeviceInited) {
+         return dsERR_NOT_INITIALIZED;
+@@ -275,6 +278,7 @@ dsError_t dsGetHDRCapabilities(intptr_t handle, int *capabilities)
+  */
+ dsError_t dsGetSupportedVideoCodingFormats(intptr_t handle, unsigned int *supported_formats)
+ {
++	handle = dsHalWidenHandle(handle, &VDHandle); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bVideoDeviceInited) {
+         return dsERR_NOT_INITIALIZED;
+@@ -309,6 +313,7 @@ dsError_t dsGetSupportedVideoCodingFormats(intptr_t handle, unsigned int *suppor
+  */
+ dsError_t dsGetVideoCodecInfo(intptr_t handle, dsVideoCodingFormat_t codec, dsVideoCodecInfo_t *info)
+ {
++	handle = dsHalWidenHandle(handle, &VDHandle); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bVideoDeviceInited) {
+         return dsERR_NOT_INITIALIZED;
+@@ -345,6 +350,7 @@ dsError_t dsGetVideoCodecInfo(intptr_t handle, dsVideoCodingFormat_t codec, dsVi
+  */
+ dsError_t dsForceDisableHDRSupport(intptr_t handle, bool disable)
+ {
++	handle = dsHalWidenHandle(handle, &VDHandle); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bVideoDeviceInited) {
+         return dsERR_NOT_INITIALIZED;
+@@ -380,6 +386,7 @@ dsError_t dsForceDisableHDRSupport(intptr_t handle, bool disable)
+  */
+ dsError_t dsSetFRFMode(intptr_t handle, int frfmode)
+ {
++	handle = dsHalWidenHandle(handle, &VDHandle); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bVideoDeviceInited) {
+         return dsERR_NOT_INITIALIZED;
+@@ -413,6 +420,7 @@ dsError_t dsSetFRFMode(intptr_t handle, int frfmode)
+  */
+ dsError_t dsGetFRFMode(intptr_t handle, int *frfmode)
+ {
++	handle = dsHalWidenHandle(handle, &VDHandle); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bVideoDeviceInited) {
+         return dsERR_NOT_INITIALIZED;
+@@ -449,6 +457,7 @@ dsError_t dsGetFRFMode(intptr_t handle, int *frfmode)
+  */
+ dsError_t dsGetCurrentDisplayframerate(intptr_t handle, char *framerate)
+ {
++	handle = dsHalWidenHandle(handle, &VDHandle); /* tv-emu */
+     hal_info("invoked.\n");
+ 
+     if (false == _bVideoDeviceInited) {
+@@ -488,6 +497,7 @@ dsError_t dsGetCurrentDisplayframerate(intptr_t handle, char *framerate)
+  */
+ dsError_t dsSetDisplayframerate(intptr_t handle, char *framerate)
+ {
++	handle = dsHalWidenHandle(handle, &VDHandle); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bVideoDeviceInited) {
+         return dsERR_NOT_INITIALIZED;
+diff --git a/dsVideoPort.c b/dsVideoPort.c
+index aa8866b..465cddf 100644
+--- a/dsVideoPort.c
++++ b/dsVideoPort.c
+@@ -674,6 +674,7 @@ static bool parseSurroundFromCtaDataBlock(int tag, const unsigned char *data, in
+ 
+ dsError_t dsRegisterHdcpStatusCallback(intptr_t handle, dsHDCPStatusCallback_t cb)
+ {
++	handle = dsHalWidenHandle(handle, _vopHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsVideoPortInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -850,6 +851,7 @@ dsError_t dsEnableAllVideoPort(bool enabled)
+  */
+ dsError_t dsIsVideoPortEnabled(intptr_t handle, bool *enabled)
+ {
++	handle = dsHalWidenHandle(handle, _vopHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     VOPHandle_t *vopHandle = (VOPHandle_t *)handle;
+     bool drmConnected = false;
+@@ -908,6 +910,7 @@ dsError_t dsIsVideoPortEnabled(intptr_t handle, bool *enabled)
+  */
+ dsError_t dsEnableVideoPort(intptr_t handle, bool enabled)
+ {
++	handle = dsHalWidenHandle(handle, _vopHandles); /* tv-emu */
+     hal_info("invoked.\n");
+ 
+     if (!_bIsVideoPortInitialized) {
+@@ -990,6 +993,7 @@ dsError_t dsEnableVideoPort(intptr_t handle, bool enabled)
+  */
+ dsError_t dsIsDisplayConnected(intptr_t handle, bool *connected)
+ {
++	handle = dsHalWidenHandle(handle, _vopHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     VOPHandle_t *vopHandle = (VOPHandle_t *)handle;
+     bool drmConnected = false;
+@@ -1052,6 +1056,7 @@ dsError_t dsIsDisplayConnected(intptr_t handle, bool *connected)
+  */
+ dsError_t dsEnableDTCP(intptr_t handle, bool contentProtect)
+ {
++	handle = dsHalWidenHandle(handle, _vopHandles); /* tv-emu */
+     hal_info("invoked with contentProtect %d.\n", contentProtect);
+     if(false == _bIsVideoPortInitialized)
+     {
+@@ -1098,6 +1103,7 @@ dsError_t dsEnableDTCP(intptr_t handle, bool contentProtect)
+  */
+ dsError_t dsEnableHDCP(intptr_t handle, bool contentProtect, char *hdcpKey, size_t keySize)
+ {
++	handle = dsHalWidenHandle(handle, _vopHandles); /* tv-emu */
+     // Ref: https://forums.raspberrypi.com/viewtopic.php?t=278193
+     hal_info("invoked with contentProtect %d\n", contentProtect);
+     if (false == _bIsVideoPortInitialized) {
+@@ -1185,6 +1191,7 @@ dsError_t dsEnableHDCP(intptr_t handle, bool contentProtect, char *hdcpKey, size
+  */
+ dsError_t dsIsHDCPEnabled(intptr_t handle, bool *pContentProtected)
+ {
++	handle = dsHalWidenHandle(handle, _vopHandles); /* tv-emu */
+     // Ref: https://forums.raspberrypi.com/viewtopic.php?t=278193
+     hal_info("invoked.\n");
+     if (false == _bIsVideoPortInitialized)
+@@ -1228,6 +1235,7 @@ dsError_t dsIsHDCPEnabled(intptr_t handle, bool *pContentProtected)
+  */
+ dsError_t dsGetResolution(intptr_t handle, dsVideoPortResolution_t *resolution)
+ {
++	handle = dsHalWidenHandle(handle, _vopHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     VOPHandle_t *vopHandle = (VOPHandle_t *)handle;
+     if (false == _bIsVideoPortInitialized) {
+@@ -1356,6 +1364,7 @@ static bool dsInternalVideoGetResolution(char *resolution, size_t resolutionSize
+  */
+ dsError_t dsSetResolution(intptr_t handle, dsVideoPortResolution_t *resolution)
+ {
++	handle = dsHalWidenHandle(handle, _vopHandles); /* tv-emu */
+     /* Auto Select uses 720p. Should be converted to dsVideoPortResolution_t = 720p in DS-VOPConfig, not here */
+     hal_info("invoked.\n");
+     VOPHandle_t *vopHandle = (VOPHandle_t *)handle;
+@@ -1650,6 +1659,7 @@ static bool isValidVopHandle(intptr_t m_handle) {
+  */
+ dsError_t dsIsVideoPortActive(intptr_t handle, bool *active)
+ {
++	handle = dsHalWidenHandle(handle, _vopHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     VOPHandle_t *vopHandle = (VOPHandle_t *)handle;
+     bool connected = false;
+@@ -1703,6 +1713,7 @@ dsError_t dsIsVideoPortActive(intptr_t handle, bool *active)
+  */
+ dsError_t dsGetHDCPProtocol(intptr_t handle, dsHdcpProtocolVersion_t *protocolVersion)
+ {
++	handle = dsHalWidenHandle(handle, _vopHandles); /* tv-emu */
+     // Ref: https://forums.raspberrypi.com/viewtopic.php?t=278193
+     hal_info("invoked.\n");
+     if(false == _bIsVideoPortInitialized)
+@@ -1719,6 +1730,7 @@ dsError_t dsGetHDCPProtocol(intptr_t handle, dsHdcpProtocolVersion_t *protocolVe
+ 
+ dsError_t dsGetHDCPReceiverProtocol (intptr_t handle, dsHdcpProtocolVersion_t *protocolVersion)
+ {
++	handle = dsHalWidenHandle(handle, _vopHandles); /* tv-emu */
+     // Ref: https://forums.raspberrypi.com/viewtopic.php?t=278193
+     hal_info("invoked.\n");
+     if(false == _bIsVideoPortInitialized)
+@@ -1735,6 +1747,7 @@ dsError_t dsGetHDCPReceiverProtocol (intptr_t handle, dsHdcpProtocolVersion_t *p
+ 
+ dsError_t dsGetHDCPCurrentProtocol(intptr_t handle, dsHdcpProtocolVersion_t *protocolVersion)
+ {
++	handle = dsHalWidenHandle(handle, _vopHandles); /* tv-emu */
+     // Ref: https://forums.raspberrypi.com/viewtopic.php?t=278193
+     hal_info("invoked.\n");
+     if(false == _bIsVideoPortInitialized)
+@@ -1772,6 +1785,7 @@ dsError_t dsGetHDCPCurrentProtocol(intptr_t handle, dsHdcpProtocolVersion_t *pro
+  */
+ dsError_t dsGetTVHDRCapabilities(intptr_t handle, int *capabilities)
+ {
++	handle = dsHalWidenHandle(handle, _vopHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if(false == _bIsVideoPortInitialized)
+     {
+@@ -1839,6 +1853,7 @@ dsError_t dsGetTVHDRCapabilities(intptr_t handle, int *capabilities)
+  */
+ dsError_t dsSupportedTvResolutions(intptr_t handle, int *resolutions)
+ {
++	handle = dsHalWidenHandle(handle, _vopHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     VOPHandle_t *vopHandle = (VOPHandle_t *)handle;
+     if (false == _bIsVideoPortInitialized) {
+@@ -1911,6 +1926,7 @@ dsError_t dsSupportedTvResolutions(intptr_t handle, int *resolutions)
+  */
+ dsError_t  dsIsDisplaySurround(intptr_t handle, bool *surround)
+ {
++	handle = dsHalWidenHandle(handle, _vopHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if(false == _bIsVideoPortInitialized)
+     {
+@@ -1975,6 +1991,7 @@ dsError_t  dsIsDisplaySurround(intptr_t handle, bool *surround)
+  */
+ dsError_t dsGetSurroundMode(intptr_t handle, int *surround)
+ {
++	handle = dsHalWidenHandle(handle, _vopHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if(false == _bIsVideoPortInitialized)
+     {
+@@ -2083,6 +2100,7 @@ dsError_t dsVideoFormatUpdateRegisterCB(dsVideoFormatUpdateCB_t cb)
+  */
+ dsError_t dsSetActiveSource(intptr_t handle)
+ {
++	handle = dsHalWidenHandle(handle, _vopHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsVideoPortInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -2117,6 +2135,7 @@ dsError_t dsSetActiveSource(intptr_t handle)
+  */
+ dsError_t dsGetHDCPStatus(intptr_t handle, dsHdcpStatus_t *status)
+ {
++	handle = dsHalWidenHandle(handle, _vopHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsVideoPortInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -2129,6 +2148,7 @@ dsError_t dsGetHDCPStatus(intptr_t handle, dsHdcpStatus_t *status)
+ 
+ dsError_t dsSetForceDisable4KSupport(intptr_t handle, bool disable)
+ {
++	handle = dsHalWidenHandle(handle, _vopHandles); /* tv-emu */
+     hal_info("invoked with disable %d.\n", disable);
+     if (false == _bIsVideoPortInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -2142,6 +2162,7 @@ dsError_t dsSetForceDisable4KSupport(intptr_t handle, bool disable)
+ 
+ dsError_t dsGetForceDisable4KSupport(intptr_t handle, bool *disable)
+ {
++	handle = dsHalWidenHandle(handle, _vopHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsVideoPortInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -2174,6 +2195,7 @@ dsError_t dsGetForceDisable4KSupport(intptr_t handle, bool *disable)
+  */
+ dsError_t dsGetVideoEOTF(intptr_t handle, dsHDRStandard_t *video_eotf)
+ {
++	handle = dsHalWidenHandle(handle, _vopHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsVideoPortInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -2209,6 +2231,7 @@ dsError_t dsGetVideoEOTF(intptr_t handle, dsHDRStandard_t *video_eotf)
+  */
+ dsError_t dsGetMatrixCoefficients(intptr_t handle, dsDisplayMatrixCoefficients_t *matrix_coefficients)
+ {
++	handle = dsHalWidenHandle(handle, _vopHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     bool drmConnected = false;
+     bool drmEnabled = false;
+@@ -2266,6 +2289,7 @@ dsError_t dsGetMatrixCoefficients(intptr_t handle, dsDisplayMatrixCoefficients_t
+  */
+ dsError_t dsGetColorDepth(intptr_t handle, unsigned int *color_depth)
+ {
++	handle = dsHalWidenHandle(handle, _vopHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsVideoPortInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -2309,6 +2333,7 @@ dsError_t dsGetColorDepth(intptr_t handle, unsigned int *color_depth)
+  */
+ dsError_t dsGetColorSpace(intptr_t handle, dsDisplayColorSpace_t *color_space)
+ {
++	handle = dsHalWidenHandle(handle, _vopHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsVideoPortInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -2350,6 +2375,7 @@ dsError_t dsGetColorSpace(intptr_t handle, dsDisplayColorSpace_t *color_space)
+  */
+ dsError_t dsGetQuantizationRange(intptr_t handle, dsDisplayQuantizationRange_t *quantization_range)
+ {
++	handle = dsHalWidenHandle(handle, _vopHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsVideoPortInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -2400,6 +2426,7 @@ dsError_t dsGetQuantizationRange(intptr_t handle, dsDisplayQuantizationRange_t *
+  */
+ dsError_t dsGetCurrentOutputSettings(intptr_t handle, dsHDRStandard_t *video_eotf, dsDisplayMatrixCoefficients_t *matrix_coefficients, dsDisplayColorSpace_t *color_space, unsigned int *color_depth, dsDisplayQuantizationRange_t *quantization_range)
+ {
++	handle = dsHalWidenHandle(handle, _vopHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsVideoPortInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -2467,6 +2494,7 @@ dsError_t dsGetCurrentOutputSettings(intptr_t handle, dsHDRStandard_t *video_eot
+  */
+ dsError_t dsIsOutputHDR(intptr_t handle, bool *hdr)
+ {
++	handle = dsHalWidenHandle(handle, _vopHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsVideoPortInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -2543,6 +2571,7 @@ dsError_t dsResetOutputToSDR()
+  */
+ dsError_t dsSetHdmiPreference(intptr_t handle, dsHdcpProtocolVersion_t *hdcpCurrentProtocol)
+ {
++	handle = dsHalWidenHandle(handle, _vopHandles); /* tv-emu */
+     hal_info("invoked.\n");
+ 
+     if (!_bIsVideoPortInitialized) {
+@@ -2590,6 +2619,7 @@ dsError_t dsSetHdmiPreference(intptr_t handle, dsHdcpProtocolVersion_t *hdcpCurr
+  */
+ dsError_t dsGetHdmiPreference(intptr_t handle, dsHdcpProtocolVersion_t *hdcpCurrentProtocol)
+ {
++	handle = dsHalWidenHandle(handle, _vopHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if	(false == _bIsVideoPortInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -2625,6 +2655,7 @@ dsError_t dsGetHdmiPreference(intptr_t handle, dsHdcpProtocolVersion_t *hdcpCurr
+  */
+ dsError_t dsGetIgnoreEDIDStatus(intptr_t handle, bool *status)
+ {
++	handle = dsHalWidenHandle(handle, _vopHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsVideoPortInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -2669,6 +2700,7 @@ dsError_t dsGetIgnoreEDIDStatus(intptr_t handle, bool *status)
+  */
+ dsError_t dsSetBackgroundColor(intptr_t handle, dsVideoBackgroundColor_t color)
+ {
++	handle = dsHalWidenHandle(handle, _vopHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsVideoPortInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -2720,6 +2752,7 @@ dsError_t dsSetBackgroundColor(intptr_t handle, dsVideoBackgroundColor_t color)
+  */
+ dsError_t dsSetForceHDRMode(intptr_t handle, dsHDRStandard_t mode)
+ {
++	handle = dsHalWidenHandle(handle, _vopHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsVideoPortInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -2759,6 +2792,7 @@ dsError_t dsSetForceHDRMode(intptr_t handle, dsHDRStandard_t mode)
+  */
+ dsError_t dsColorDepthCapabilities(intptr_t handle, unsigned int *colorDepthCapability )
+ {
++	handle = dsHalWidenHandle(handle, _vopHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsVideoPortInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -2808,6 +2842,7 @@ dsError_t dsColorDepthCapabilities(intptr_t handle, unsigned int *colorDepthCapa
+  */
+ dsError_t dsGetPreferredColorDepth(intptr_t handle, dsDisplayColorDepth_t *colorDepth)
+ {
++	handle = dsHalWidenHandle(handle, _vopHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsVideoPortInitialized) {
+         return dsERR_NOT_INITIALIZED;
+@@ -2852,6 +2887,7 @@ dsError_t dsGetPreferredColorDepth(intptr_t handle, dsDisplayColorDepth_t *color
+  */
+ dsError_t dsSetPreferredColorDepth(intptr_t handle, dsDisplayColorDepth_t colorDepth)
+ {
++	handle = dsHalWidenHandle(handle, _vopHandles); /* tv-emu */
+     hal_info("invoked.\n");
+     if (false == _bIsVideoPortInitialized) {
+         return dsERR_NOT_INITIALIZED;
+diff --git a/dshalUtils.c b/dshalUtils.c
+index e50f2c7..a9f66ff 100644
+--- a/dshalUtils.c
++++ b/dshalUtils.c
+@@ -179,6 +179,8 @@ bool dsGetHdmiConnectorState(bool *connected, bool *enabled)
+ #ifdef DRM_MODE_CONNECTOR_HDMIB
+             && connector->connector_type != DRM_MODE_CONNECTOR_HDMIB
+ #endif
++            /* tv-emu: the VM's display is a "Virtual" connector of virtio-gpu. */
++            && connector->connector_type != DRM_MODE_CONNECTOR_VIRTUAL
+         ) {
+             drmModeFreeConnector(connector);
+             continue;
+@@ -295,6 +297,8 @@ int dsApplyHdmiMaxBpcRequestValue(int requestedMaxBpc)
+ #ifdef DRM_MODE_CONNECTOR_HDMIB
+             && connector->connector_type != DRM_MODE_CONNECTOR_HDMIB
+ #endif
++            /* tv-emu: the VM's display is a "Virtual" connector of virtio-gpu. */
++            && connector->connector_type != DRM_MODE_CONNECTOR_VIRTUAL
+            ) {
+             drmModeFreeConnector(connector);
+             continue;
+@@ -411,7 +415,8 @@ int dsInternalGetHdmiEdidBytes(unsigned char *edid, int *length)
+             continue;
+         }
+         /* RPI4 in STB mode configured to enable/support only output through HDMI0*/
+-        if (strstr(entry->d_name, "HDMI-A-1") == NULL) {
++        /* tv-emu: the VM's display is card0-Virtual-1. */
++        if (strstr(entry->d_name, "HDMI-A-1") == NULL && strstr(entry->d_name, "Virtual-1") == NULL) {
+             continue;
+         }
+ 
+@@ -512,6 +517,8 @@ bool dsGetPreferredHdmiMode(char *mode, size_t len)
+ #ifdef DRM_MODE_CONNECTOR_HDMIB
+             && connector->connector_type != DRM_MODE_CONNECTOR_HDMIB
+ #endif
++            /* tv-emu: the VM's display is a "Virtual" connector of virtio-gpu. */
++            && connector->connector_type != DRM_MODE_CONNECTOR_VIRTUAL
+         ) {
+             drmModeFreeConnector(connector);
+             continue;
+diff --git a/dshalUtils.h b/dshalUtils.h
+index 1ed159c..f849c5c 100644
+--- a/dshalUtils.h
++++ b/dshalUtils.h
+@@ -76,4 +76,36 @@ int dsApplyHdmiMaxBpcRequest(void);
+ int dsApplyHdmiMaxBpcRequestValue(int requestedMaxBpc);
+ void dsRegisterConnectorChangeHook(void (*hook)(void));
+ 
++#include <stdint.h>
++
++/* tv-emu: handles that have been through 32 bits.
++ *
++ * A handle of this library is the address of one of its own tables. RDK's
++ * device settings plug-in keeps handles in an int32_t (its interface,
++ * Exchange::IDeviceSettings..., is defined so), which is the whole handle on
++ * 32-bit ARM. On a 64-bit machine the upper half is lost, and the handle
++ * comes back with that half all zeros or all ones. The lower half is intact,
++ * and the upper half is that of the table the handle points into: it is put
++ * back here. A handle that still has its upper half is returned as it is.
++ */
++static inline intptr_t dsHalWidenHandle(intptr_t handle, const void *table)
++{
++	uintptr_t value = (uintptr_t)handle;
++	uintptr_t anchor = (uintptr_t)table;
++	uintptr_t upper = value >> 32;
++	uintptr_t wide;
++
++	if (sizeof(intptr_t) <= 4 || value == 0 || (upper != 0 && upper != 0xffffffffu)) {
++		return handle;
++	}
++	wide = (anchor & ~(uintptr_t)0xffffffffu) | (value & 0xffffffffu);
++	/* The table may lie across a 4 GB boundary from where the handle points. */
++	if (wide > anchor && wide - anchor > 0x80000000u) {
++		wide -= (uintptr_t)1 << 32;
++	} else if (anchor > wide && anchor - wide > 0x80000000u) {
++		wide += (uintptr_t)1 << 32;
++	}
++	return (intptr_t)wide;
++}
++
+ #endif

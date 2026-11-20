@@ -36,7 +36,8 @@ PREFERRED_PROVIDER_virtual/vendor-westeros-sink = "westeros-sink"
 # The names below are the ones this layer is to provide; none exists yet, so
 # a build of the vendor layer stops at the first of them.
 PREFERRED_PROVIDER_virtual/vendor-devicesettings-hal = "devicesettings-hal-tvemu"
-PREFERRED_PROVIDER_virtual/vendor-iarmmgrs-hal = "iarmmgrs-hal-tvemu"
+# The infrared manager's: the middleware chooses its own stand-in (iarmmgrs-hal-noop),
+# as it does for the Pi, whose vendor layer gives one only for an older interface.
 PREFERRED_PROVIDER_virtual/vendor-pwrmgr-hal = "pwrmgr-hal-tvemu"
 PREFERRED_PROVIDER_virtual/vendor-deepsleepmgr-hal = "deepsleepmgr-hal-tvemu"
 PREFERRED_PROVIDER_virtual/mfrlib = "mfrlibs-hal-tvemu"

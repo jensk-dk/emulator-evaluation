@@ -2166,9 +2166,9 @@
         "a stand-in (the ARM64 Debian VM image, started with --rootfs rdke as an RDK-E image would be) booted its kernel and its own init in 1s, in a host-native guest",
         "the image built for the machine tvemu-arm64-rdke (Image and rootfs.ext4 in build/rdke/arm64) booted its kernel and its own init in 2s, in a host-native guest: a minimal image on RDK-E's base layers, without its middleware"
       ],
-      "checked_at": "2026-11-20T19:52:33Z",
-      "seconds": 2.6,
-      "revision": "8d6e9fe6911c4d6e36ac9af106abb3617ab8e1d7",
+      "checked_at": "2026-11-20T22:19:14Z",
+      "seconds": 2.5,
+      "revision": "8b1352f408e77e86da0e9da20e7cdaa27d2cb04c",
       "image_definition_sha256": "7f22e737c9570eb58ee6145755a42dae19214a6c46c1093d7082a0eb30b9b0ee"
     }
   }

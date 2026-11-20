@@ -48,3 +48,17 @@ LICENSE_FLAGS_ACCEPTED += "commercial_gst-fluendo-mpegdemux \
 OVERRIDES .= ":rdkv-oss"
 
 # Not taken from the Pi: KERNEL_ARPI_MAJOR_VERSION (its Android kernel).
+
+# RDK-E's Bluetooth stack (bluez5) gets the same patches and the same install
+# steps from two layers of the middleware build, meta-rdk-bluetooth and
+# meta-oss-common-config; the second patch set does not apply on the first,
+# and the second install step removes what the first has removed. RDK's
+# layered build does not build the stack in that step: it takes the package
+# from a feed. Built from source in one build, one layer's set has to go.
+BBMASK += "meta-rdk-bluetooth/bluez5/"
+
+# What a vendor layer delivers has its version from the vendor layer: on the
+# Pi in vendor_pkg_versions.inc. Of that file, what a build here has needed:
+# Essos' resource manager, at the Pi's revision.
+SRCREV:pn-essosrmgr = "7495f918caad0f21c4cabaadae7947a6843500c7"
+PV:pn-essosrmgr = "1.99"

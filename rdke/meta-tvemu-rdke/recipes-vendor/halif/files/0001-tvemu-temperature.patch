@@ -1,0 +1,36 @@
+Power manager on tv-emu's virtual machine
+
+The VM has no thermal zone and no CPU frequency scaling, which is what the
+Pi's power states act on: without the governor's file the component does not
+start, and no power state can be set. Both are files of the virtual device:
+/run/tvemu/temperature, in thousandths of a degree, and
+/run/tvemu/scaling_governor.
+
+Upstream-Status: Inappropriate [tv-emu virtual machine]
+
+diff --git a/source/plat-power.c b/source/plat-power.c
+index f506bba..f73695b 100644
+--- a/source/plat-power.c
++++ b/source/plat-power.c
+@@ -69,7 +69,10 @@ schedutil:
+     Aims to provide a balance between performance and power saving based on real-time system load.
+     Generally considered more efficient and responsive compared to other governors.
+ */
+-#define CPU_FREQ_SCALING_GOVERNOR_PATH "/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"
++/* tv-emu: the Pi shows its power state in the CPU's frequency governor. The VM
++   has no CPU frequency scaling; the virtual device has the governor as a file,
++   where the state the middleware has set can be read. */
++#define CPU_FREQ_SCALING_GOVERNOR_PATH "/run/tvemu/scaling_governor"
+ 
+ /**
+  * @brief Get the CPU frequency scaling governor.
+@@ -422,7 +425,8 @@ pmStatus_t PLAT_API_GetWakeupSrc(PWRMGR_WakeupSrcType_t srcType, bool  *enable)
+ 
+ #define CPU_FREQ_SCALING_CUR_FREQ_PATH  "/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq"
+ #define CPU_FREQ_SCALING_SETSPEED_PATH  "/sys/devices/system/cpu/cpu0/cpufreq/scaling_setspeed"
+-#define THERMAL_ZONE_TEMPERATURE_PATH   "/sys/class/thermal/thermal_zone0/temp"
++/* tv-emu: the VM has no thermal zone; the virtual device has a file. */
++#define THERMAL_ZONE_TEMPERATURE_PATH   "/run/tvemu/temperature"
+ 
+ /* Warning: not tuned; before enabling; finetune these */
+ #define NORMAL_CLOCK_SPEED  1000 // value for normal state

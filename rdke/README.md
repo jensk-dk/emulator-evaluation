@@ -6,14 +6,14 @@ an agreed requirement: nothing in `openspec/specs/` asks for it, the launcher
 does not know it, and it is not part of the target image (`target/`), whose
 definition it must not change.
 
-**What there is: a machine definition, and four images built from it that
-boot host-native on a Mac: a minimal one, to a root shell; one with Weston;
-one with Westeros, RDK's own Wayland compositor, which draws on the VM's
-display with a device backend of this layer; and one with Thunder, the
-framework of RDK-E's middleware, which runs with RDK's message buses and
-telemetry and answers on its JSON-RPC interface. No plug-in that talks to
-hardware is in any of them, Westeros and Thunder are not in one image yet,
-and there is no browser.**
+**What there is: a machine definition with a vendor layer for it, and
+RDK-E's whole middleware built for it as 64-bit programs. The image boots
+host-native on a Mac: Thunder runs with RDK's plug-ins and daemons, RDK's
+window manager opens the VM's display through Westeros, and the middleware
+reads the device's identity, display, power state and temperature from this
+layer's components. There is no application layer: no browser and no user
+interface, so the display stays black. Smaller images, with which the steps
+were tried one at a time, are described below.**
 
 ## The machine: `tvemu-arm64-rdke`
 
@@ -346,6 +346,90 @@ vendor and product layers are not public (looked for on 2026-11-20). It
 shows that RDK itself builds middleware that is neither ARM nor 32-bit, and
 where stubs for a machine without hardware can be taken from.
 
+## The vendor layer: the ten components, and one more
+
+    rdke/build.sh --middleware 64 tvemu-middleware-image
+    ./emu run --mode vm --rootfs rdke
+
+RDK-E's middleware expects a vendor layer to provide ten things
+(`virtual/...`, see the probe above). The Raspberry Pi's implementations of
+them are written for Linux' own interfaces (DRM, ALSA, the kernel's CEC
+framework, sysfs), not for Broadcom's. `recipes-vendor` therefore builds
+the same sources at the same releases and replaces what in them is the
+Pi's. What stands in for hardware that a VM does not have is a file of the
+virtual device (`tvemu-device`: `/etc/tvemu`, and `/run/tvemu`, made at each
+start), which can be read and written while the target runs.
+
+| Component (recipe) | In the VM | Seen working |
+|---|---|---|
+| Device settings (`devicesettings-hal-tvemu`) | The display is virtio-gpu's connector, `card0` and "Virtual-1" where the Pi has `card1` and "HDMI-A-1". Its EDID is the one QEMU gives the display. The front panel's LED is `/run/tvemu/leds/ACT`. Temperature and serial number are the virtual device's | Connected displays: HDMI0, with the EDID; connected audio ports: HDMI0. The LED's brightness went from 0 to 255 when the power state was set to ON |
+| Display information (`displayinfo-soc`) | `card0` | Connected, 1920x1080 |
+| Manufacturer data (`mfrlibs-hal-tvemu`) | Serial number and revision from `/etc/tvemu/cpuinfo`, in the form of the Pi's `/proc/cpuinfo` | Serial number 00000000TVEMU001 and hardware id tvemu1 in the answers of DeviceInfo and System |
+| Power manager (`pwrmgr-hal-tvemu`) | The Pi shows its power state in the CPU's frequency governor, which a VM does not have: it is `/run/tvemu/scaling_governor`. The temperature is `/run/tvemu/temperature` | STANDBY to ON through the System plug-in: the file went from `conservative` to `performance`. Writing 71000 to the temperature file changed the thermal state the plug-in reports from 45 to 71 |
+| Deep sleep (`deepsleepmgr-hal-tvemu`) | unchanged | built; not tried |
+| HDMI-CEC (`hdmicec-hal-tvemu`) | unchanged: it uses `/dev/cec0`, which the VM's kernel does not have | built; not tried |
+| System audio (`systemaudioplatform`) | unchanged, on GStreamer | built; not tried: the VM has no sound device |
+| GStreamer utilities, platform part (`rdk-gstreamer-utils-platform`) | unchanged | built; Rialto and the media plug-ins build against it |
+| Miracast (`miracast-hal-tvemu`) | unchanged, on GStreamer | built; not tried |
+| Audio service (`audio-service-tvemu`) | nothing, as on the Pi | |
+
+Also in `recipes-vendor`: two more providers with nothing in them, as on the
+Pi (protected-content GStreamer elements, the security API's adapter);
+GStreamer's adaptations as the Pi's layer has them; and **`sysint-soc`**, the
+vendor's part of RDK-E's system integration, which is not one of the ten and
+without which the middleware does not start properly: the device's
+properties (`/etc/device-vendor.properties`: make tv-emu, model TVEMU), the
+unit `nvram.service` that the plug-ins' start-up waits for, the remote
+control's key map, and the settings of Thunder's process for the VM's
+display (Westeros' backend, `card0`, no planes). With it RDK's window
+manager starts in Thunder and opens the display at 1920x1080; the picture is
+black, since nothing is installed that draws.
+
+**The middleware, built.** With these, `packagegroup-middleware-layer`
+builds: 8145 tasks, none failing, on the macOS host on 2026-11-20. The image
+is 639 MB. Started host-native, the system comes up in about a minute with
+one failed unit (`dobby.service`, RDK's container daemon, which ends with a
+segmentation fault; not looked into).
+
+**What RDK-E's code assumes of 32-bit ARM.** Found by building and running
+it as 64-bit programs; each is handled in this layer, with a comment at the
+place:
+
+- *Formats.* By far the most common: sizes, 64-bit numbers and times printed
+  with formats that fit on 32-bit only, in recipes that make the warning an
+  error. Not errors here, for all service plug-ins and five other components
+  (`recipes-middleware/include/tvemu-64bit-formats.inc`).
+- *Handles in 32 bits.* RDK's device settings plug-in keeps the hardware
+  layer's handles in an `int32_t`; its interface is defined so. A handle is
+  an address, and half of a 64-bit address is lost: the hardware layer
+  refused every handle, and no display was reported. The hardware layer here
+  puts the lost half back where a handle comes in (`dsHalWidenHandle`, at
+  136 functions). It can, because its handles all point into its own tables.
+- *A length written through the wrong pointer* in the TR-069 component
+  (patched), *a pointer cast to a 32-bit number* in rtRemote (let through),
+  *code that is not position-independent linked into a shared library* in
+  the app managers (compiled so now), and *a callback whose handle is an
+  `int`* in the device settings manager (let through).
+- *32-bit only inputs:* two of RDK's patches to GStreamer set a compiler
+  option of 32-bit ARM (left out for 64-bit), and a cloud agent is unpacked
+  from a package built for 32-bit ARM (the 64-bit one of the same release is
+  taken).
+
+**What only RDK-E's layered build hides.** RDK builds vendor layer and
+middleware apart and joins them as packages. Built in one build: the
+Bluetooth stack is patched and installed by two layers (one is masked),
+three files are provided by two packages each, a library does not name the
+platform part it links against, and one source has its revision from the
+vendor layer.
+
+**Not done, of "as much as feasible":** a simulated HDMI link for CEC (the
+kernel has a virtual CEC driver); a sound device, without which the audio
+settings and system audio have nothing to act on; the list of supported
+resolutions, which comes back empty, and the current resolution, which the
+middleware gives as 720p while the display is at 1080p; power states and
+the display's resolution tied to the launcher; and no check covers any of
+this.
+
 ## Starting an image
 
     ./emu run --mode vm --rootfs rdke [--window]
@@ -392,8 +476,10 @@ That it builds and boots is shown by the minimal image above, with the
 
 ## What is open
 
-1. **The rest of a vendor layer.** Westeros' device backend is there. The
-   machine names other recipes that do not exist: the
+1. **The vendor layer, in part.** Its components are there and the
+   middleware builds on them (see above); several are not adapted to the VM
+   or not tried. When this list was first written, the machine named recipes
+   that did not exist: the
    hardware abstraction for device settings, power, deep sleep, HDMI-CEC,
    manufacturer data and others (`...-hal-tvemu`), and Westeros' video
    sink. A build of the vendor layer
