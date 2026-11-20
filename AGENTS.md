@@ -28,3 +28,24 @@ The requirements behind this: "Set up the simulated ARM targets only on
 request" (host-setup), "Offer the simulated ARM targets where the host is set
 up for them" (execution-modes), and "Keep the simulated ARM targets built and
 verified" (functional-verification).
+
+## Measure a host with the script
+
+A host's disk space, install time, build times and performance results are
+taken with `python3 evaluation/measure.py run`, not with commands typed one
+by one, so that every host is measured the same way
+(performance-evaluation: "Measure a host with one command";
+`evaluation/procedures.md`, "One command for a host").
+
+- **Look first.** `python3 evaluation/measure.py run --dry-run` says what it
+  would run and remove.
+- **Ask before the stages that remove.** The build stages empty the container
+  engine's build cache, and `--install` removes the host installation and
+  needs someone at the host for a password. Run those only when the user has
+  asked for them; `--stages sizes,performance,verify` removes nothing.
+- **Keep the simulated ARM targets in.** Use `--no-arm-targets` only on a host
+  that cannot be set up for them, and say so.
+- **Enter no value by hand.** The script writes
+  `evaluation/footprint/HOST_MACHINE.json`, and
+  `python3 evaluation/measure.py table` prints the rows for
+  `evaluation/footprint.md`.

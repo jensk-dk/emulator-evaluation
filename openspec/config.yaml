@@ -119,6 +119,16 @@ context: |
   the time that installing, building each target, and running the performance
   evaluation took. These are actual measurements as well; a value that has not
   been measured is identified as unavailable.
+  One command must take a host's measurements, so that every host is
+  measured the same way: it times the build of each target from a container
+  engine without the project's images and kept build steps, takes the sizes
+  of the targets and of the host installation, runs and records every
+  performance workload in every emulator mode, and runs the verification
+  checks; on request it first removes the host installation and times the
+  setup script. It says what it removes and asks first, can say what it
+  would do without doing it, goes on after a failed step and reports
+  failure, and keeps the values in a record per host and machine. The
+  values that the report states are taken with it.
   The recorded results must also be shown on a results page, which a command
   of the launcher serves on the host and opens in the host's browser. The page
   reads the result records each time it loads. It describes the hosts as the

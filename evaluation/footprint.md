@@ -12,7 +12,11 @@ three build values that its disk had no room for.** A value is filled in when a
 task provides it, with the date and how it was taken. Until then it reads
 "not measured", and the report shows it as unavailable. No value is
 estimated. How the values are taken is in the
-[procedures](procedures.md#disk-space-and-times).
+[procedures](procedures.md#disk-space-and-times): since 2026-11-20 with
+`python3 evaluation/measure.py run`, which keeps them in
+`evaluation/footprint/HOST_MACHINE.json` and prints them as rows for a table
+here (`measure.py table`). The tables below were taken by hand, before the
+script.
 
 Sizes are in decimal units (1 GB is 1000 MB, a thousand million bytes), as the
 container engine and Finder give them; `du` counts in units of 1024, and its

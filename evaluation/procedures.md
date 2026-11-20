@@ -578,6 +578,51 @@ host's can be. The
 rules for every measurement hold here too: a quiet host, and a value that was
 not measured on the host reads "not measured".
 
+### One command for a host
+
+[measure.py](measure.py) takes all of this on a host, and the performance
+runs with it (performance-evaluation: "Measure a host with one command").
+A host's values are taken with it since 2026-11-20; the steps below say what
+it does and how the values before that were taken by hand.
+
+    python3 evaluation/measure.py run --dry-run       # says what it would do
+    python3 evaluation/measure.py run                 # builds, sizes, performance, verification
+    python3 evaluation/measure.py run --install       # the installation first
+    python3 evaluation/measure.py table               # rows for footprint.md
+
+(`py -3 evaluation\measure.py` on Windows.) Its stages, in order: `install`
+(only with `--install` or when named), `build-each`, `build-together`,
+`sizes`, `performance`, `verify`; `--stages` chooses among them. It says what
+it removes and asks, unless `--yes` is given. `--no-arm-targets` leaves the
+simulated ARM targets out on a host that is not set up for them, and the
+record then has no values for them. `--mute` starts the emulator muted for
+the performance runs.
+
+- The performance runs are recorded in `evaluation/results/` and the
+  verification in `evaluation/verification/`, as when they are run by hand.
+  The other values go to `evaluation/footprint/HOST_MACHINE.json`, each with
+  its date, its command, the source revision and the image definition.
+  `table` prints them as rows for the host's table in
+  [footprint.md](footprint.md), which the results page shows; what is to be
+  said about the host beside them (its network connection, what a removal
+  left in place) is still written there by a person.
+- The output of every command is kept in `build/measure/`.
+- A failed step is in the record as failed and does not stop the others; the
+  command reports failure at its end.
+- The installation's places are the ones of step 4 below, with all of
+  `build/host` (Qt for Python and the RedRat support) in place of
+  `build/host/gui`. On Linux, Docker's storage is read only when `sudo` asks
+  for no password (`sudo -v` first); otherwise that value is not measured.
+- What it does not do: on Windows it does not make Podman's machine anew
+  before each build (see below), which is still done by hand, one stage at a
+  time; on Linux it removes no QEMU packages that the setup's record does
+  not list; it does not time the STB simulator
+  ([stb-timings.py](stb-timings.py)); and it measures no network connection.
+- The `install` stage needs someone at the host: an administrator's password
+  on Linux and macOS, the installers' elevation prompts on Windows.
+
+### What is measured, and how
+
 - **Performance evaluation, time.** Not measured again: every recorded run
   has its duration, and `python3 evaluation/footprint.py times` adds them up
   per host and mode.

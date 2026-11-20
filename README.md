@@ -1179,6 +1179,14 @@ exception above).
   page that shows them as charts (see below).
 - `evaluation/verification/`: what `./emu verify` has confirmed, per host and
   machine (`HOST_MACHINE.json`; see "Machines" in the procedures).
+- [evaluation/measure.py](evaluation/measure.py): one command that measures a
+  host. `python3 evaluation/measure.py run` times the build of each target,
+  takes the sizes, runs and records every performance workload in every mode
+  and runs the verification; with `--install` it first removes the host
+  installation and times `./setup.sh`. It says what it removes and asks
+  first; `--dry-run` only says what it would do. The values are kept in
+  `evaluation/footprint/HOST_MACHINE.json`
+  ([procedures](evaluation/procedures.md#one-command-for-a-host)).
 - [evaluation/footprint.md](evaluation/footprint.md): the disk space of the
   host installation and of each target, and the install, build and run times
   that the report has to state. The macOS and the Linux host are measured,

@@ -123,28 +123,40 @@ def _bytes(count):
     return "%.2f GB" % (count / 1e9) if count >= 1e9 else "%.0f MB" % (count / 1e6)
 
 
-def sizes(args):
-    sys.path.insert(0, str(ROOT))
+def _listed_bytes(text):
+    """A size as the container engine lists it ("1.54GB"), in bytes."""
+    units = {"b": 1, "kb": 1e3, "mb": 1e6, "gb": 1e9, "tb": 1e12}
+    number = text.strip().rstrip("BbKkMmGgTt ")
+    unit = text.strip()[len(number):].strip().lower()
+    try:
+        return int(float(number) * units[unit])
+    except (ValueError, KeyError):
+        return None
+
+
+def target_sizes():
+    """The targets built on this host: for each its name, its size in bytes
+    (None where the container engine does not have the image), and how the
+    size was taken. evaluation/measure.py records what this returns."""
+    sys.path.insert(0, str(ROOT)) if str(ROOT) not in sys.path else None
     sys.dont_write_bytecode = True
     from emulator import container, host, image
-    print("Targets built on %s, image %s:\n" % (host.host_id(), image.definition()["version"]))
-    found = False
+    found = []
     for arch in image.ARCHS:
         manifest = image.load_manifest("vm", arch)
         if not manifest or not manifest.get("files"):
             continue
-        found = True
         files = manifest["files"]
-        print("VM image, %s (%s%s, built %s): %s" % (
-            arch, manifest.get("version"), "" if image.is_current(manifest) else ", not the current definition",
-            manifest.get("built_at"), _bytes(sum(entry["bytes"] for entry in files.values()))))
-        for name, entry in files.items():
-            print("    %-12s %s" % (name, _bytes(entry["bytes"])))
+        found.append({"target": "vm-%s" % arch, "kind": "vm", "arch": arch, "version": manifest.get("version"),
+                      "current": image.is_current(manifest), "built_at": manifest.get("built_at"),
+                      "bytes": sum(entry["bytes"] for entry in files.values()),
+                      "files": {name: entry["bytes"] for name, entry in files.items()},
+                      "how": "the sizes of its files added: " + ", ".join(
+                          "%s %s" % (name, _bytes(entry["bytes"])) for name, entry in files.items())})
     for arch in image.ARCHS:
         manifest = image.load_manifest("container", arch)
         if not manifest:
             continue
-        found = True
         tag = manifest["image_tag"]
         # The engine the launcher uses: a host can have a second runtime
         # installed whose engine does not answer (seen on Windows).
@@ -158,9 +170,29 @@ def sizes(args):
                                    text=True, env=host.tool_env())
             if asked.returncode == 0 and asked.stdout.strip():
                 size = asked.stdout.strip().splitlines()[0]
-        print("Container image, %s (%s%s, built %s): %s" % (
-            arch, tag, "" if image.is_current(manifest) else ", not the current definition", manifest.get("built_at"),
-            size + ", as the container engine lists it (`image ls`)" if size else "the container engine does not have it"))
+        found.append({"target": "container", "kind": "container", "arch": arch, "tag": tag,
+                      "current": image.is_current(manifest), "built_at": manifest.get("built_at"),
+                      "bytes": _listed_bytes(size) if size else None, "listed": size,
+                      "how": "%s, as the container engine lists it (`image ls`)" % size if size
+                      else "the container engine does not have it"})
+    return found
+
+
+def sizes(args):
+    sys.path.insert(0, str(ROOT)) if str(ROOT) not in sys.path else None
+    from emulator import host, image
+    print("Targets built on %s, image %s:\n" % (host.host_id(), image.definition()["version"]))
+    found = target_sizes()
+    for target in found:
+        stale = "" if target["current"] else ", not the current definition"
+        if target["kind"] == "vm":
+            print("VM image, %s (%s%s, built %s): %s" % (target["arch"], target["version"], stale, target["built_at"],
+                                                         _bytes(target["bytes"])))
+            for name, count in target["files"].items():
+                print("    %-12s %s" % (name, _bytes(count)))
+        else:
+            print("Container image, %s (%s%s, built %s): %s" % (target["arch"], target["tag"], stale,
+                                                                target["built_at"], target["how"]))
     if not found:
         print("none: ./emu build builds them")
     return 0
