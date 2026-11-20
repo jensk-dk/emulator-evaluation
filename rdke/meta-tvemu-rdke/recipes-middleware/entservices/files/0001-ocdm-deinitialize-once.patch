@@ -1,0 +1,28 @@
+OCDM: do not clean up twice when the plug-in cannot start
+
+Initialize() calls Deinitialize() itself when it fails, which releases the
+service and sets it to null. Thunder (R4.4) then calls Deinitialize() once
+more for the failed activation, and that second call uses the null service:
+the whole framework ends with a segmentation fault. Seen on tv-emu, where the
+implementation could not be instantiated; any failure of Initialize() does it.
+
+Upstream-Status: Pending [not yet offered to rdkcentral/entservices-opencdmi]
+
+diff --git a/plugin/OCDM.cpp b/plugin/OCDM.cpp
+index dd29c5b..d10545c 100644
+--- a/plugin/OCDM.cpp
++++ b/plugin/OCDM.cpp
+@@ -157,6 +157,13 @@ namespace Plugin {
+ 
+     /*virtual*/ void OCDM::Deinitialize(PluginHost::IShell* service)
+     {
++        if (_service == nullptr) {
++            // Initialize() failed and has cleaned up already, by calling this
++            // itself. The framework calls it once more when an activation
++            // fails: there is nothing left to release.
++            return;
++        }
++
+         ASSERT(_service == service);
+ 
+         _service->Unregister(&_notification);

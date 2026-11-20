@@ -6,12 +6,14 @@ an agreed requirement: nothing in `openspec/specs/` asks for it, the launcher
 does not know it, and it is not part of the target image (`target/`), whose
 definition it must not change.
 
-**What there is: a machine definition, and three images built from it that
+**What there is: a machine definition, and four images built from it that
 boot host-native on a Mac: a minimal one, to a root shell; one with Weston;
-and one with Westeros, RDK's own Wayland compositor, which draws on the VM's
-display with a device backend of this layer. All have RDK-E's base system.
-Of RDK-E's middleware only Westeros runs: no Thunder, no RDK service, no
-browser.**
+one with Westeros, RDK's own Wayland compositor, which draws on the VM's
+display with a device backend of this layer; and one with Thunder, the
+framework of RDK-E's middleware, which runs with RDK's message buses and
+telemetry and answers on its JSON-RPC interface. No plug-in that talks to
+hardware is in any of them, Westeros and Thunder are not in one image yet,
+and there is no browser.**
 
 ## The machine: `tvemu-arm64-rdke`
 
@@ -247,6 +249,103 @@ sent straight from the window's key channel, as a key of the host's keyboard
   image does not have.
 - No verification check covers this; it was run by hand.
 
+## RDK-E's middleware: what a build of it needs
+
+    rdke/probe-middleware.sh        # 64-bit programs
+    rdke/probe-middleware.sh 32     # RDK-E's own arrangement
+
+fetches the middleware layers that RDK-E's middleware manifest names and has
+Yocto resolve the middleware's package group for this machine, in a dry run:
+nothing is built. Run on 2026-11-20:
+
+- **The layers are public.** All seven were fetched without a login:
+  meta-rdk, meta-rdk-video, meta-middleware-generic-support,
+  meta-rdk-oss-ext-middleware, meta-rdk-bluetooth, meta-python2 and
+  meta-oss-common-config. Whether every source repository that their recipes
+  name is public as well is seen only when they are fetched in a build.
+- **All 3266 recipes parse** with this machine, with either userland.
+- **Every recipe of the middleware is there.** What does not resolve is the
+  vendor side. 81 of the package group's packages fall away, each for want
+  of one of ten things that a vendor layer provides:
+  `virtual/mfrlib`, `virtual/vendor-devicesettings-hal`,
+  `virtual/vendor-pwrmgr-hal`, `virtual/vendor-deepsleepmgr-hal`,
+  `virtual/vendor-hdmicec-hal`, `virtual/vendor-audio-service`,
+  `virtual/vendor-systemaudioplatform`, `virtual/vendor-displayinfo-soc`,
+  `virtual/vendor-miracast-soc` and
+  `virtual/vendor-rdk-gstreamer-utils-platform`; and an eleventh, GStreamer
+  (`gstreamer1.0-plugins-base-app`), which the middleware masks in
+  openembedded-core because a vendor layer delivers it.
+- **64-bit and 32-bit come out the same**: the same ten, the same 81. Nothing
+  in resolving the middleware asks for the 32-bit arrangement.
+- **Thunder and the core services resolve today**, with no vendor stand-in:
+  `wpeframework`, its client libraries, `entservices-apis`, `rbus`,
+  `iarmbus`, `rdk-logger`, `telemetry` and `rfc`, for 64-bit: 2976 tasks, of
+  them some 200 recipes to compile.
+- **There is no browser in the middleware.** No recipe for WPE WebKit is in
+  these layers: it is in the application layer.
+
+That a recipe resolves does not say that it compiles, least of all for
+64-bit; that is seen in a build.
+
+### Thunder and the core services, built and run
+
+    rdke/build.sh --middleware 64 tvemu-thunder-image
+    ./emu run --mode vm --rootfs rdke
+
+`--middleware` adds RDK-E's middleware layers to the build. They set RDK's
+own distro, so the build has a directory of its own and compiles the base
+system again (once). `tvemu-thunder-image` is the minimal image with Thunder
+4.4.8 (`wpeframework`), its client libraries, `rbus`, `iarmbus`,
+`rdk-logger`, `telemetry`, `rfc` and `entservices-apis`. Built for 64-bit programs on the macOS
+host on 2026-11-20: 3186 tasks, no error left; the root file system is
+147 MB. Started host-native:
+
+- `wpeframework.service` is active and listens on 127.0.0.1:9998; the rbus
+  router and session manager, the IARM bus daemon and telemetry run beside
+  it.
+- Asked over JSON-RPC from the target's shell (`curl` to
+  `http://127.0.0.1:9998/jsonrpc`), Thunder answers: `Controller.1.version`
+  gives 4.4.8, `Controller.1.subsystems` lists Platform, Security, Network,
+  Graphics and others as active, and `Controller.1.status` lists its
+  plug-ins, the Controller and OCDM.
+- So RDK's code for these parts compiles and runs as 64-bit programs. One
+  place did not compile as it is: the OpenCDM plug-in prints a `size_t`
+  with `%d`, an error under `-Werror=format` where `size_t` is not an `int`.
+  The layer relaxes that warning for it
+  (`recipes-middleware/entservices/entservices-opencdmi.bbappend`), as RDK's
+  virtual-device build does for its power manager plug-in.
+- Found and fixed: **activating the OCDM plug-in ended Thunder**
+  (`Controller.1.activate`, callsign OCDM), with a segmentation fault. Two
+  things came together, neither of them about 64-bit or the VM:
+  - The image lacked `entservices-apis`, which has the libraries that carry
+    the plug-ins' interfaces between processes (the proxy stubs). The
+    plug-in's part in a process of its own could therefore not be
+    instantiated ("Failed to find a Proxy"), and the plug-in said so. The
+    image has the package now.
+  - The plug-in cleans up twice when it cannot start: its `Initialize` calls
+    `Deinitialize` itself, which sets its service to null, and Thunder then
+    calls `Deinitialize` once more for the failed activation, which uses the
+    null service. Any failure to start does that, on any device.
+    `0001-ocdm-deinitialize-once.patch` makes the second call return.
+  Run after both: the plug-in activates, twice in a row, and Thunder keeps
+  its process. With the proxy stubs moved away in the running target, to
+  make it fail as before, the activation is answered with an error
+  (`ERROR_OPENING_FAILED`), the plug-in stays deactivated, and Thunder keeps
+  its process. The plug-in decrypts nothing: the image has no DRM system.
+- Found: `dobby.service`, RDK's container daemon, which the packages bring
+  with them, does not start. Not looked into.
+- This image has no compositor: it was built to try Thunder alone.
+
+**RDK builds a virtual device of its own.** The middleware layers have a
+variant `vdevice_x86-64-mw`: an x86-64 build with a small package group
+(Thunder, HDMI-CEC, IARM bus, telemetry, the power manager and LED control
+plug-ins) on an XFCE image, with stand-ins for the hardware abstraction
+compiled from stubs that the plug-ins' repositories carry (`vdevice-noop`),
+and with hardware abstraction over binder (AIDL) for the power manager. Its
+vendor and product layers are not public (looked for on 2026-11-20). It
+shows that RDK itself builds middleware that is neither ARM nor 32-bit, and
+where stubs for a machine without hardware can be taken from.
+
 ## Starting an image
 
     ./emu run --mode vm --rootfs rdke [--window]
@@ -307,9 +406,9 @@ That it builds and boots is shown by the minimal image above, with the
 3. **The kernel options, in full.** Binder, AppArmor and virtio-gpu were
    seen at work in the booted image; dm-verity, EROFS and sound were not
    looked at. `CONFIG_ASHMEM`, which the Pi sets, is left out.
-4. **Pi-specific settings in the middleware.** Recipes of the middleware may
-   key on `rpi` or `raspberrypi4`; without those overrides such settings do
-   not apply here. The middleware layers have not been read for this.
+4. **Building the middleware.** It resolves but for ten things of a vendor
+   layer (see above), and nothing of it is built. Its recipes may also key
+   on `rpi` or `raspberrypi4`; the layers have not been read for that.
 5. **The launcher's side, in part.** `./emu run --mode vm --rootfs rdke`
    boots an image from `build/rdke/arm64`, and the remote control's keys
    reach it. Sound is not connected, captures (`--screenshot`) are refused,

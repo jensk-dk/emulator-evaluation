@@ -41,6 +41,28 @@ if ! grep -q 43cbd8fb4914328094ccdb4bb827d74b1bac2046 "$layers/poky/meta/recipes
   cp -R "$work/oe-core/meta/recipes-devtools/pseudo" "$layers/poky/meta/recipes-devtools/pseudo"
 fi
 
+# RDK-E's middleware layers, for the scripts that ask for them. Repository,
+# revision, directory: rdke-middleware.xml of middleware-manifest-rdke
+# (develop, 2026-11-20) and, through rdke-middleware-generic-manifest
+# 4c83776, middleware-generic.xml.
+fetch_middleware() {
+  mw="$work/middleware"
+  mkdir -p "$mw"
+  at() {
+    [ -d "$mw/$3" ] && return 0
+    git init -q "$mw/$3"
+    git -C "$mw/$3" fetch -q --depth 1 "https://github.com/rdkcentral/$1.git" "$2"
+    git -C "$mw/$3" -c advice.detachedHead=false checkout -q FETCH_HEAD
+  }
+  at meta-middleware-generic-support 46301078413a1c8210188c52afa43939b5b0a075 meta-middleware-generic-support
+  at meta-rdk 222d55d56090f0cd0cb5ae99ab37f08ff9d7a87a meta-rdk
+  at meta-rdk-video b855acce6070a59569613a663f78d18fc3104c93 meta-rdk-video
+  at meta-rdk-oss-ext-middleware 7475e5490a14a0b90246ae91d93b6e85bd2ac4c0 meta-rdk-oss-ext-middleware
+  at meta-rdk-bluetooth refs/tags/1.1.0 meta-rdk-bluetooth
+  at meta-python2 refs/tags/rdk-4.0.0 meta-python2
+  at meta-oss-common-config refs/tags/1.4.0 meta-oss-common-config
+}
+
 cat > "$work/Dockerfile" <<'EOT'
 FROM ubuntu:22.04
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
@@ -68,6 +90,29 @@ MULTICONFIG = ""
 INHERIT:remove = "buildhistory"
 TVEMU_USERLAND = "$2"
 EOC
+if [ "${3:-}" = middleware ]; then
+# With RDK-E's middleware: the layers and their order of meta-rdk's
+# bblayers.conf.sample, with this layer as the product and vendor layer. The
+# middleware layers set the distro "rdk", which has its own version of the
+# build configuration (meta-rdk, local.conf.sample).
+M=/work/rdk/middleware
+echo 'CONF_VERSION = "1"' >> conf/local.conf
+cat > conf/bblayers.conf <<EOC
+LCONF_VERSION = "6"
+BBPATH = "\${TOPDIR}"
+BBFILES ?= ""
+RDKROOT = "/work/rdk"
+BBLAYERS = " \
+  $L/profile $L/common /work/meta-tvemu-rdke $M/meta-python2 $M/meta-rdk-video $M/meta-rdk \
+  $M/meta-middleware-generic-support $M/meta-rdk-oss-ext-middleware $M/meta-rdk-bluetooth \
+  $L/meta-image-support-rdke $M/meta-oss-common-config $L/meta-rdk-halif-headers \
+  $L/meta-stack-layering-support $L/meta-rdk-oss-reference \
+  $L/poky/meta $L/meta-openembedded/meta-oe $L/meta-openembedded/meta-python \
+  $L/meta-openembedded/meta-webserver $L/meta-openembedded/meta-multimedia \
+  $L/meta-openembedded/meta-networking $L/meta-rdk-auxiliary \
+"
+EOC
+else
 cat > conf/bblayers.conf <<EOC
 LCONF_VERSION = "6"
 BBPATH = "\${TOPDIR}"
@@ -80,4 +125,5 @@ BBLAYERS = " \
   $L/meta-stack-layering-support $L/meta-rdk-auxiliary \
 "
 EOC
+fi
 EOT

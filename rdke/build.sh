@@ -3,7 +3,11 @@
 # core-image-minimal on RDK-E's common layers (its base system, its systemd),
 # with this machine's kernel. No RDK middleware, and no vendor layer.
 #
-#   rdke/build.sh [64|32] [BITBAKE TARGET ...]
+#   rdke/build.sh [--middleware] [64|32] [BITBAKE TARGET ...]
+#
+# --middleware adds RDK-E's middleware layers to the build (Thunder and the
+# rest), which also makes the distro RDK's own: a build directory of its own,
+# and nearly everything is built again for it.
 #
 # 64 (the default) builds 64-bit programs, which a host-native VM on a Mac
 # needs; 32 is RDK-E's own arrangement (see README.md). The build runs in an
@@ -14,6 +18,12 @@
 # "emu run --mode vm --rootfs rdke" looks for them.
 set -eu
 . "$(dirname -- "$0")/lib.sh"
+layers_kind=""
+if [ "${1:-}" = --middleware ]; then
+  layers_kind=middleware
+  shift
+  fetch_middleware
+fi
 userland=${1:-64}
 [ $# -gt 0 ] && shift
 targets=${*:-core-image-minimal}
@@ -22,9 +32,9 @@ mkdir -p "$out"
 
 cat > "$work/build-in-container.sh" <<'EOT'
 #!/bin/bash
-userland=$1; shift
+userland=$1; kind=$2; shift 2
 cd /build
-. /work/rdk/configure.sh /build/build-$userland "$userland"
+. /work/rdk/configure.sh /build/build-$userland${kind:+-$kind} "$userland" "$kind"
 cat >> conf/local.conf <<EOC
 DL_DIR = "/build/downloads"
 SSTATE_DIR = "/build/sstate-cache"
@@ -50,4 +60,4 @@ chmod +x "$work/build-in-container.sh"
 "$runtime" volume create tvemu-rdke-build >/dev/null
 "$runtime" run --rm --user root -v tvemu-rdke-build:/build tvemu-rdke-check chown builder:builder /build
 "$runtime" run --rm -v "$work:/work/rdk:ro" -v "$here/meta-tvemu-rdke:/work/meta-tvemu-rdke:ro" \
-  -v tvemu-rdke-build:/build -v "$out:/out" tvemu-rdke-check /work/rdk/build-in-container.sh "$userland" $targets
+  -v tvemu-rdke-build:/build -v "$out:/out" tvemu-rdke-check /work/rdk/build-in-container.sh "$userland" "$layers_kind" $targets
