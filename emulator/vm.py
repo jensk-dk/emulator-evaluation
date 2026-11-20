@@ -176,9 +176,24 @@ class Console:
                 item.close()
 
 
+def plain_command_line(guest, verbose=True):
+    """The kernel command line for a root file system that is not the
+    launcher's own (emulator/rootfs.py): it starts its own init, and takes
+    no workload, driver or display settings from the launcher."""
+    parts = ["console=" + CONSOLE[guest], "root=/dev/vda", "rootfstype=ext4", "rw", "net.ifnames=0", "panic=-1"]
+    if not verbose:
+        parts += ["quiet", "loglevel=3"]
+    return " ".join(parts)
+
+
 def run_command(resolved, artifacts, data_disk, cmdline, cpus, memory_mb, console_on_tty, extra_args, options,
-                display_backend="none", console=None):
+                display_backend="none", console=None, files=None):
+    """`files` names the kernel, the root file system and the initial RAM disk
+    (or None) where they are not the launcher's own image in `artifacts`;
+    `data_disk` is None for a target that gets no scratch disk."""
     guest = resolved["guest_arch"]
+    files = files or {"kernel": artifacts / "vmlinuz", "initrd": artifacts / "initrd.img",
+                      "root": artifacts / "rootfs.img"}
     binary = host.require_tool(QEMU_BINARY[guest], "VM mode with a %s guest" % guest)
     disk_cache = options.get("disk-cache")
     cache = ",cache=%s" % disk_cache if disk_cache else ""
@@ -186,14 +201,20 @@ def run_command(resolved, artifacts, data_disk, cmdline, cpus, memory_mb, consol
         binary, "-name", "emu-target", "-nodefaults", "-display", display_backend, "-no-reboot",
         "-machine", resolved["machine"], "-accel", resolved["accelerator"], "-cpu", resolved["cpu_model"],
         "-smp", str(cpus), "-m", str(memory_mb),
-        "-kernel", str(artifacts / "vmlinuz"), "-initrd", str(artifacts / "initrd.img"), "-append", cmdline,
-        # The root filesystem is never modified: writes go to a discarded overlay.
-        "-drive", "if=none,id=root,format=raw,snapshot=on,file=%s" % _escape(artifacts / "rootfs.img"),
-        "-device", "virtio-blk-pci,drive=root",
-        "-drive", "if=none,id=data,format=raw,file=%s%s" % (_escape(data_disk), cache),
-        "-device", "virtio-blk-pci,drive=data",
-        "-netdev", "user,id=net0", "-device", "virtio-net-pci,netdev=net0",
+        "-kernel", str(files["kernel"]),
     ]
+    if files.get("initrd"):
+        command += ["-initrd", str(files["initrd"])]
+    command += [
+        "-append", cmdline,
+        # The root filesystem is never modified: writes go to a discarded overlay.
+        "-drive", "if=none,id=root,format=raw,snapshot=on,file=%s" % _escape(files["root"]),
+        "-device", "virtio-blk-pci,drive=root",
+    ]
+    if data_disk:
+        command += ["-drive", "if=none,id=data,format=raw,file=%s%s" % (_escape(data_disk), cache),
+                    "-device", "virtio-blk-pci,drive=data"]
+    command += ["-netdev", "user,id=net0", "-device", "virtio-net-pci,netdev=net0"]
     if console:
         backend = "socket,id=console,host=127.0.0.1,port=%d" % console.port
     else:

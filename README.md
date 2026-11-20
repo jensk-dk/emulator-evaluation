@@ -389,7 +389,7 @@ creates Podman's engine, which runs in WSL 2.
 ## Launcher
 
     ./emu
-    ./emu run [--mode container|vm] [--arch native|arm32|arm64] [--workload NAME]
+    ./emu run [--mode container|vm] [--arch native|arm32|arm64] [--rootfs debian|rdke] [--workload NAME]
               [--cpus N] [--memory MIB] [--resolution 720p|1080p|4k] [--graphics auto|host|emulated]
               [--window] [--fullscreen]
               [--redrat-profile ID] [--redrat-device ID]
@@ -420,6 +420,28 @@ the guest booted to the prompt in 8 s (2026-11-17, `./emu verify vm-x86_64`).
 The image takes 1.86 GB, and its build added 11.4 GB to the container
 engine's disk there, which does not shrink again
 ([disk space and times](evaluation/footprint.md)).
+
+`--rootfs` names the root file system the target starts from. `debian`, the
+default, is the image this project builds, with the workloads below. `rdke`
+is experimental: an [RDK-E](rdke/README.md) image built with Yocto, which the
+launcher does not build. With it the launcher boots the kernel and the root
+file system it finds in `build/rdke/arm64` (`Image` and `rootfs.ext4`;
+`--option rdke-dir=DIR` names another directory) in an ARM64 VM with a
+display, and the target runs its own software, with its console in the
+terminal:
+
+    ./emu run --mode vm --rootfs rdke --window
+
+It is VM mode only, with an ARM64 guest: `--arch native` on an ARM64 host,
+`--arch arm64` (a simulated CPU) elsewhere. Workloads, driver features,
+captures, RedRat input, `--record` and `--repeat` belong to the Debian root
+file system and are refused with a reason; remote control keys do not reach
+an RDK-E target yet. `./emu doctor` and `./emu build --rootfs rdke` say
+whether an image is there. `rdke/build.sh` builds a minimal image, which
+boots to a root shell; it has RDK-E's base system and none of its middleware.
+The option is verified with a stand-in, the ARM64 Debian VM image started
+the same way, and with that minimal image where a host has built it
+(`./emu verify rootfs-option`).
 
 Workloads: `prompt` (interactive shell), `bench` (CPU, memory and I/O
 benchmarks), `driver-check`, `graphics-demo`, `media-decode`, `web-bench`

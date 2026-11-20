@@ -8,7 +8,8 @@ import sys
 import threading
 import time
 
-from . import armtargets, catalog, container, drivers as driver_features, graphics, host, image, redrat, vm, window
+from . import armtargets, catalog, container, drivers as driver_features, graphics, host, image, redrat, rootfs, \
+    vm, window
 from .errors import EmuError
 from .paths import BUILD_DIR
 
@@ -26,6 +27,8 @@ KNOWN_OPTIONS = {
     "venus": "VM mode with host graphics: map Vulkan to the host GPU too (yes/no, default: when QEMU offers it on Linux)",
     "window": "VM mode with a window: qemu shows the display in QEMU's own window, which has no toolbar and takes "
               "no remote control keys (default: the launcher's window wherever it can show the display)",
+    rootfs.RDKE_DIR_OPTION: "--rootfs rdke: the directory with the RDK-E image's kernel and root file system "
+                            "(default: build/rdke/arm64)",
 }
 KNOWN_OPTIONS.update(driver_features.AUDIO_OPTIONS)
 
@@ -36,8 +39,9 @@ class RunOptions:
                  echo=True, stdin_script=None, quiet_build=False, rebuild=False, resolution=None, graphics=None,
                  screenshot_dir=None, screenshot_format="png", window=False, muted=False, on_audio=None,
                  fullscreen=False, on_line=None, on_viewer=None,
-                 redrat_profile=None, redrat_device=None):
+                 redrat_profile=None, redrat_device=None, rootfs=rootfs.DEFAULT):
         self.mode = mode
+        self.rootfs = rootfs                    # the root file system the target starts from (emulator/rootfs.py)
         self.workload = workload
         self.args = list(args)
         self.arch = arch
@@ -125,13 +129,14 @@ def _image_identity(manifest, kind):
     return identity
 
 
-def _display_plan(opts, probe, window=None):
+def _display_plan(opts, probe, window=None, always=False):
     """The display this run gives the target, or None when it has none. A
     display is attached for workloads that use one, and whenever a resolution,
-    a graphics provider or a window is asked for. `window` names the emulator's
-    display backend that shows it in one."""
+    a graphics provider or a window is asked for; `always` is for a target
+    whose own software uses one. `window` names the emulator's display backend
+    that shows it in one."""
     declared = catalog.workload(opts.workload) or {}
-    if not (declared.get("display") or opts.resolution or opts.graphics or opts.screenshot_dir or window):
+    if not (always or declared.get("display") or opts.resolution or opts.graphics or opts.screenshot_dir or window):
         return None
     width, height = graphics.resolution(opts.resolution)
     plan = graphics.choose(opts.graphics, probe)
@@ -149,9 +154,44 @@ def _display_record(plan, device):
                          "device": device}}
 
 
+def _require_rdke(opts):
+    """What a run from the RDK-E root file system cannot have: everything that
+    the Debian root file system's own software provides."""
+    refused = None
+    if opts.mode != "vm":
+        refused = ("the RDK-E root file system runs in VM mode only: there is no container image of it",
+                   "add --mode vm")
+    elif opts.workload != "prompt":
+        refused = ("the workloads are part of the Debian root file system; from the RDK-E one the target starts "
+                   "its own software", "leave out --workload")
+    elif opts.args:
+        refused = ("workload arguments are for the Debian root file system's workloads", None)
+    elif dict(opts.drivers) != dict(driver_features.parse([])) or getattr(opts.drivers, "declined", None):
+        refused = ("driver features are provided by services of the Debian root file system", "leave out --driver")
+    elif opts.screenshot_dir:
+        refused = ("captures are taken when a workload of the Debian root file system reports a finished frame",
+                   "leave out --screenshot")
+    elif opts.redrat_profile:
+        refused = ("remote control keys do not reach a target started from the RDK-E root file system yet",
+                   "leave out --redrat-profile")
+    elif opts.rebuild:
+        refused = ("the launcher does not build the RDK-E root file system", "%s says how it is built"
+                   % rootfs.RDKE_README)
+    elif opts.stdin_script is not None:
+        refused = ("a scripted prompt needs the Debian root file system", None)
+    if refused:
+        raise EmuError(refused[0], hint=refused[1])
+
+
 def launch(opts):
     """Run a workload; returns an Outcome. Raises EmuError when the emulator
     cannot be started at all."""
+    if opts.rootfs not in rootfs.CHOICES:
+        raise EmuError("unknown root file system %r (known: %s)" % (opts.rootfs, ", ".join(rootfs.CHOICES)))
+    rdke = opts.rootfs == rootfs.RDKE
+    if rdke:
+        _require_rdke(opts)
+        opts.drivers = driver_features.Chosen()     # no driver feature: the target has none of their services
     for name in opts.options:
         if name not in KNOWN_OPTIONS:
             raise EmuError("unknown --option %r (known: %s)" % (name, ", ".join(sorted(KNOWN_OPTIONS))))
@@ -198,6 +238,10 @@ def launch(opts):
     opts.drivers = drivers
     # Attach straight to the terminal for a person; capture everything else.
     attached = interactive and opts.stdin_script is None and host.stdin_is_tty() and sys.stdout.isatty()
+    on_terminal = attached
+    # The RDK-E target reports nothing to the launcher: its console is the
+    # launcher's own output, on a terminal or not.
+    attached = attached or rdke
     plan = None
     screens = None
     capturer = None
@@ -269,11 +313,18 @@ def launch(opts):
             guest = resolved["guest_arch"]
             # Neither a build nor a VM for a simulated ARM target that this
             # host is not set up for.
-            armtargets.require(guest, container.detect)
-            manifest = image.ensure("vm", container.detect, guest, quiet=opts.quiet_build, rebuild=opts.rebuild)
-            data_disk = run_dir / "data.img"
-            with open(data_disk, "wb") as handle:
-                handle.truncate(int(opts.options.get("data-disk-mb", DEFAULT_DATA_DISK_MB)) * 1024 * 1024)
+            files = data_disk = manifest = None
+            if rdke:
+                if guest != rootfs.RDKE_ARCH:
+                    raise EmuError("the RDK-E root file system is built for an ARM64 guest, and this run's guest "
+                                   "is %s" % guest, hint="--arch arm64 runs it on a simulated CPU")
+                files = rootfs.rdke_files(opts.options)
+            else:
+                armtargets.require(guest, container.detect)
+                manifest = image.ensure("vm", container.detect, guest, quiet=opts.quiet_build, rebuild=opts.rebuild)
+                data_disk = run_dir / "data.img"
+                with open(data_disk, "wb") as handle:
+                    handle.truncate(int(opts.options.get("data-disk-mb", DEFAULT_DATA_DISK_MB)) * 1024 * 1024)
             qemu = host.require_tool(vm.QEMU_BINARY[guest], "VM mode with a %s guest" % guest)
             virtio_sound = True
             if opts.drivers.get("audio") in ("emulated", "host"):
@@ -285,7 +336,7 @@ def launch(opts):
                                              else ""))
             plan = driver_features.plan_vm(opts.drivers, str(run_dir), opts.options, opts.muted, virtio_sound)
             terminal = None
-            if attached:
+            if on_terminal:
                 size = shutil.get_terminal_size()
                 name = os.environ.get("TERM", "")
                 terminal = (name if name.replace("-", "").isalnum() else "vt100", size.columns, size.lines)
@@ -309,7 +360,8 @@ def launch(opts):
                                                                else "with host graphics acceleration this QEMU "
                                                                     "can show the display nowhere else"),
                                hint="leave out --option window=qemu" if asked else "add --graphics emulated")
-            display = _display_plan(opts, lambda: graphics.probe_vm(qemu, None if own else kind), kind)
+            # RDK-E's own software draws its user interface: always a display.
+            display = _display_plan(opts, lambda: graphics.probe_vm(qemu, None if own else kind), kind, always=rdke)
             display_args, display_backend, display_device = [], "none", None
             vnc = None
             if display:
@@ -321,9 +373,14 @@ def launch(opts):
                     # listens on (10.0.2.2 is this host, seen from the target).
                     vnc_args, vnc, vnc_directory = graphics.vnc_endpoint()
                     display_args += vnc_args
-                    port = window.free_port()
-                    plan.kernel_settings["remote"] = "10.0.2.2:%d" % port
-                    viewer_plan = {"display": vnc, "keys_listen": port, "directory": vnc_directory}
+                    viewer_plan = {"display": vnc, "directory": vnc_directory}
+                    if rdke:
+                        outcome.notes.append("remote control keys do not reach a target started from the RDK-E root "
+                                             "file system yet: nothing in it fetches them from the window")
+                    else:
+                        port = window.free_port()
+                        plan.kernel_settings["remote"] = "10.0.2.2:%d" % port
+                        viewer_plan["keys_listen"] = port
                 elif kind and opts.fullscreen:
                     display_args.append("-full-screen")
                 if display["screen_hold"]:
@@ -331,20 +388,34 @@ def launch(opts):
                     display_args += capture_args
                     screens = graphics.Screens(opts.screenshot_dir, outcome.run_id, opts.screenshot_format,
                                                lambda path: capturer.capture(path, opts.screenshot_format))
-            cmdline = vm.kernel_command_line(guest, opts.workload, opts.args, opts.drivers,
-                                             _flag(opts.options, "verbose-boot"), terminal, display,
-                                             plan.kernel_settings)
+            if rdke:
+                # Boot messages are shown unless the run says not to: the
+                # target reports nothing else to the launcher.
+                cmdline = vm.plain_command_line(guest, str(opts.options.get("verbose-boot", "yes")).lower()
+                                                not in ("0", "no", "false", "off"))
+                # A keyboard for QEMU's own window, which types into the guest.
+                display_args += ["-device", "virtio-keyboard-pci"]
+            else:
+                cmdline = vm.kernel_command_line(guest, opts.workload, opts.args, opts.drivers,
+                                                 _flag(opts.options, "verbose-boot"), terminal, display,
+                                                 plan.kernel_settings)
             if interactive and not attached and host.host_os() == "windows":
                 console = vm.Console()
             command, binary = vm.run_command(
                 resolved, image.artifact_dir("vm", guest), data_disk, cmdline, opts.cpus, opts.memory_mb,
-                attached, display_args + plan.qemu_args + opts.extra_args, opts.options, display_backend, console)
+                on_terminal, display_args + plan.qemu_args + opts.extra_args, opts.options, display_backend, console,
+                files)
             emulator = {"mode": "vm", "variant": resolved["variant"], "guest_arch": guest,
                         "accelerator": resolved["accelerator"], "cpu_model": resolved["cpu_model"],
                         "machine": resolved["machine"], "runtime": vm.qemu_version(binary)}
             if display:
                 emulator.update(_display_record(display, display_device))
-            image_identity = _image_identity(manifest, "vm")
+            if rdke:
+                emulator["rootfs"] = rootfs.RDKE
+                image_identity = {"name": rootfs.RDKE, "kind": "vm", "arch": guest,
+                                  "files": {key: str(path) for key, path in files.items() if path}}
+            else:
+                image_identity = _image_identity(manifest, "vm")
         else:
             raise EmuError("unknown mode: %s" % opts.mode)
 
@@ -423,13 +494,28 @@ def launch(opts):
         if attached:
             outcome.attached = True
             outcome.started_at = time.time()
+            # Off a terminal too, what is typed or piped into the launcher
+            # goes to the target's console.
             process = subprocess.Popen(command, env=host.tool_env())
             started(process)
+
+            def on_timeout():
+                outcome.timed_out = True
+                process.kill()
+
+            # Only a target that reports nothing is stopped by the clock here:
+            # a person at the Debian prompt ends it themself.
+            watchdog = threading.Timer(opts.timeout, on_timeout) if opts.timeout and rdke else None
+            if watchdog:
+                watchdog.start()
             try:
                 outcome.process_exit = process.wait()
             except KeyboardInterrupt:
                 process.kill()
                 raise
+            finally:
+                if watchdog:
+                    watchdog.cancel()
             outcome.duration_seconds = time.time() - outcome.started_at
         else:
             _capture(command, opts, outcome, interactive, None if attached else screens, console, started)

@@ -92,7 +92,7 @@ check types a command into it and expects the computed answer back
 Checks for requirements that were written on 2026-11-17 for what had been
 built without one (task 9.2). None of them is a measurement.
 
-    ./emu verify doctor report-serve report-page build-cleanup setup-check vm-x86_64
+    ./emu verify doctor report-serve report-page build-cleanup setup-check vm-x86_64 rootfs-option
 
 - **What the launcher finds on the host** (`doctor`). The command must say
   something about the host, the VM emulators, the accelerator, the container
@@ -143,6 +143,20 @@ built without one (task 9.2). None of them is a measurement.
   and must report an x86-64 machine on a simulated CPU. On a host of another
   CPU architecture the check is "unavailable" unless the x86-64 target image
   has been built: it does not build it.
+
+- **Choice of root file system** (`rootfs-option`). `emu run` must offer
+  `--rootfs` with `debian` and `rdke`, and Debian without it. With `rdke`
+  the launcher must refuse, with a reason, container mode, a workload, a
+  driver feature and an ARM32 guest, and name the directory when it has no
+  image. Then a stand-in is started as an RDK-E image would be: the host's
+  ARM64 Debian VM image, named with `--option rdke-dir`. Its kernel must
+  start and its own init must get to work, and the launcher's own init must
+  not run. Where the host has an image in `build/rdke/arm64`
+  (`rdke/build.sh` builds a minimal one), that one is started the same way
+  and must get as far. This checks the launcher's side and that such an
+  image boots, not RDK-E's own software, which the minimal image does not
+  have. On a host without the ARM64 VM image or its emulator the check is
+  "unavailable".
 
 ## Driver strategies
 

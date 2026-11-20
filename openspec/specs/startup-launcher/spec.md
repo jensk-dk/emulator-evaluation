@@ -115,3 +115,34 @@ The startup launcher MUST offer a command that shows what it finds on the host, 
 
 - WHEN the command is run
 - THEN it says for each target image whether it is not built, current, or out of date
+
+### Requirement: Choose the root file system of the target
+
+The startup launcher MUST accept a setting that names the root file system the target starts from: the Debian root file system of the evaluation, which is the default, or an RDK-E root file system. Without the setting, and with it naming Debian, the launcher MUST behave as it does without the setting existing. The settings window MUST offer the setting like every other.
+
+The RDK-E root file system is experimental and is not part of the evaluation matrix: no result is recorded from it, and no performance or verification requirement applies to what runs in it. The launcher does not build it. Asked for it, the launcher MUST start an ARM64 virtual machine from the kernel and the root file system it finds in a directory of the checkout, or in one that an emulator option names, give the machine a display, and leave the target to start its own software, with the target's console on the launcher's output. The launcher MUST NOT start anything, and MUST say why, when the RDK-E root file system is asked for together with something only the Debian one provides: container mode, a workload other than the prompt, a driver feature, a capture directory, a RedRat profile, a rebuild, recording or repeating; with a guest CPU architecture other than ARM64; or when the directory has no kernel or no root file system, in which case it names the directory and says where building the image is described. The build command and the command that shows what the launcher finds on the host MUST say whether an RDK-E image is there, and its absence MUST NOT count as a missing host dependency.
+
+#### Scenario: Start from the Debian root file system by default
+
+- WHEN the emulator is started without the setting
+- THEN the target starts from the Debian root file system, as it did before the setting existed
+
+#### Scenario: Start from an RDK-E root file system
+
+- WHEN the emulator is started in VM mode with the setting naming RDK-E, and the directory has a kernel and a root file system
+- THEN an ARM64 virtual machine boots that kernel with that root file system, the target's own init runs, and its console is shown
+
+#### Scenario: Refuse what the RDK-E root file system does not provide
+
+- WHEN the RDK-E root file system is asked for with container mode, a workload, a driver feature, or another setting that only the Debian root file system provides
+- THEN the launcher starts nothing and says why
+
+#### Scenario: No RDK-E image
+
+- WHEN the RDK-E root file system is asked for and the directory has no kernel or no root file system
+- THEN the launcher starts nothing, names the directory, and says where building the image is described
+
+#### Scenario: Say whether an RDK-E image is there
+
+- WHEN the command that shows what the launcher finds on the host is run
+- THEN it says whether an RDK-E image is there, and does not report failure because none is

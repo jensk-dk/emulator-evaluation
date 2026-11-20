@@ -6,7 +6,7 @@ import statistics
 import sys
 
 from . import armtargets, catalog, container, drivers as driver_features, graphics, host, hostaudio, image, redrat, \
-    report, results, verify, vm, window
+    report, results, rootfs, verify, vm, window
 from .errors import EmuError
 from .paths import BUILD_DIR
 from .run import DEFAULT_CPUS, DEFAULT_MEMORY_MB, KNOWN_OPTIONS, RunOptions, launch
@@ -25,6 +25,7 @@ examples:
   emu run --mode vm --workload graphics-demo --resolution 4k --record
   emu run --workload graphics-demo --graphics emulated --screenshot shots -- --tests gles,vulkan
   emu run --mode vm --workload graphics-demo --window
+  emu run --mode vm --rootfs rdke --window     boot an RDK-E image (experimental)
   emu config redrat                          create a RedRat profile without starting the emulator
   emu verify                                   run every verification check on this host
 
@@ -77,6 +78,9 @@ def cmd_run(args):
     workload_args = list(args.workload_args)
     if workload_args[:1] == ["--"]:
         workload_args = workload_args[1:]
+    if args.rootfs == rootfs.RDKE and (args.record or args.repeat != 1):
+        raise EmuError("a target started from the RDK-E root file system reports no results: there is nothing to "
+                       "record or to repeat", hint="leave out --record and --repeat")
     outcomes = []
     for index in range(args.repeat):
         opts = RunOptions(
@@ -85,19 +89,19 @@ def cmd_run(args):
             extra_args=args.emulator_arg or [], timeout=args.timeout, rebuild=args.rebuild and index == 0,
             resolution=args.resolution, graphics=args.graphics, screenshot_dir=args.screenshot,
             window=args.window, muted=args.mute, fullscreen=args.fullscreen,
-            redrat_profile=args.redrat_profile, redrat_device=args.redrat_device)
+            redrat_profile=args.redrat_profile, redrat_device=args.redrat_device, rootfs=args.rootfs)
         outcome = launch(opts)
         outcomes.append(outcome)
         if outcome.window_closed:
             print("emu: the display window was closed, which ended the emulator", file=sys.stderr)
             return 0
+        if outcome.timed_out:
+            print("emu: timed out after %s seconds" % args.timeout, file=sys.stderr)
+            return 124
         if outcome.attached:
             if outcome.process_exit > 255:
                 print("emu: the emulator ended with status %s" % _status(outcome.process_exit), file=sys.stderr)
             return outcome.process_exit
-        if outcome.timed_out:
-            print("emu: timed out after %s seconds" % args.timeout, file=sys.stderr)
-            return 124
         if outcome.exit_code is None:
             print("emu: the emulator stopped before the workload reported an exit status (emulator exit %s)"
                   % outcome.process_exit, file=sys.stderr)
@@ -178,6 +182,12 @@ def cmd_report(args):
 
 
 def cmd_build(args):
+    if args.rootfs == rootfs.RDKE:
+        # Not the launcher's to build: say whether it is there.
+        present, said = rootfs.rdke_state()
+        print("emu: the RDK-E root file system is built with Yocto, not by the launcher (%s)" % rootfs.RDKE_README)
+        print("emu: %s" % (said if present else said + "; nothing to start --rootfs rdke from"))
+        return 0 if present else 1
     modes = ("container", "vm") if args.mode == "all" else (args.mode,)
     native = host.host_arch()
     for mode in modes:
@@ -288,6 +298,9 @@ def cmd_doctor(args):
             manifest = image.load_manifest(kind, arch)
             state = "not built" if not manifest else "current" if image.is_current(manifest) else "out of date"
             print("image       %-9s %-6s %s" % (kind, arch, state))
+    # Not a dependency and not built here: the image of the other root file system.
+    present, said = rootfs.rdke_state()
+    print("rootfs      rdke: %s" % (said if present else "not there (built with Yocto, see %s)" % rootfs.RDKE_README))
     if problems:
         print("\n%s" % host.SETUP_HINT)
     return 1 if problems else 0
@@ -358,6 +371,11 @@ def build_parser():
                      help="emulator execution mode (default: container)")
     run.add_argument("--arch", choices=("native", "arm32", "arm64", "x86_64"), default="native",
                      help="VM guest CPU architecture (default: native, the host's own)")
+    run.add_argument("--rootfs", choices=rootfs.CHOICES, default=rootfs.DEFAULT,
+                     help="the root file system the target starts from: debian is the evaluation's own image, with "
+                          "the workloads; rdke is an RDK-E image built with Yocto, which the launcher boots in an "
+                          "ARM64 VM and which runs its own software (experimental; see rdke/README.md) "
+                          "(default: %(default)s)")
     run.add_argument("--workload", default="prompt", metavar="NAME",
                      help="target OS workload: prompt, bench, driver-check, graphics-demo "
                           "(default: prompt; see: emu workloads)")
@@ -410,6 +428,9 @@ def build_parser():
     build.add_argument("--mode", choices=("container", "vm", "all"), default="all")
     build.add_argument("--arch", choices=("native", "arm32", "arm64", "x86_64", "all"), default="native",
                        help="VM image architecture (default: native)")
+    build.add_argument("--rootfs", choices=rootfs.CHOICES, default=rootfs.DEFAULT,
+                       help="debian builds the launcher's own image; rdke only says whether an RDK-E image is "
+                            "there, since that one is built with Yocto (default: %(default)s)")
     build.add_argument("--rebuild", action="store_true", help="build even if the image is current")
     build.add_argument("--keep-old", action="store_true",
                        help="leave earlier builds' images and unused build steps in the container engine "

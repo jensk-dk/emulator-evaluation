@@ -2662,8 +2662,99 @@ def check_vm_x86_64():
         emulator["accelerator"], emulator["cpu_model"], outcome.boot_seconds)]
 
 
+def check_rootfs_option():
+    """--rootfs: the Debian root file system unless the RDK-E one is asked
+    for, which the launcher boots as it finds it and refuses what it cannot
+    give. No RDK-E image exists on the hosts yet: what is booted here is a
+    stand-in, the host's ARM64 Debian VM image under the RDK-E option."""
+    from . import rootfs
+    from .cli import run_parser
+    action = [item for item in run_parser()._actions if item.dest == "rootfs"]
+    _require(action and tuple(action[0].choices) == rootfs.CHOICES and action[0].default == rootfs.DEBIAN,
+             "\"emu run\" does not offer --rootfs with %s, and %s as the default" % (rootfs.CHOICES, rootfs.DEBIAN))
+    _require(run_parser().parse_args([]).rootfs == rootfs.DEBIAN, "without --rootfs the root file system is not Debian's")
+
+    def refused(**changes):
+        try:
+            launch(RunOptions(**dict({"mode": "vm", "rootfs": rootfs.RDKE, "echo": False}, **changes)))
+        except EmuError as error:
+            return str(error)
+        return None
+
+    with tempfile.TemporaryDirectory() as empty:
+        said = {"container mode": refused(mode="container"), "a workload": refused(workload="bench"),
+                "a driver feature": refused(drivers=driver_features.parse(["hwrng=mocked"])),
+                "an ARM32 guest": refused(arch="arm32", options={rootfs.RDKE_DIR_OPTION: empty}),
+                "a directory without an image": refused(arch="arm64", options={rootfs.RDKE_DIR_OPTION: empty})}
+        _require(all(said.values()), "--rootfs rdke was not refused with: %s" % ", ".join(
+            what for what, message in said.items() if not message))
+        _require(empty in said["a directory without an image"], "without an image the launcher does not name the "
+                 "directory it looked in: %s" % said["a directory without an image"])
+    lines = ["--rootfs offers %s, and %s without it" % (" and ".join(rootfs.CHOICES), rootfs.DEBIAN),
+             "--rootfs rdke is refused with %s; without an image the launcher names the directory" % ", ".join(said)]
+
+    stand_in = image.artifact_dir("vm", rootfs.RDKE_ARCH)
+    manifest = image.load_manifest("vm", rootfs.RDKE_ARCH)
+    arch = "native" if host.host_arch() == rootfs.RDKE_ARCH else rootfs.RDKE_ARCH
+    if not (manifest and image.is_current(manifest) and all((stand_in / name).is_file() for name in image.VM_FILES)) \
+            or not host.find_tool(vm.QEMU_BINARY[rootfs.RDKE_ARCH]):
+        raise CheckUnavailable("\n".join(lines + [
+            "nothing was booted: the stand-in is the ARM64 Debian VM image, which is not built on this host, or "
+            "its emulator is not installed (%s)" % host.ARM_SETUP_HINT]))
+
+    def boot(directory):
+        """Start an image with --rootfs rdke until its own init is at work;
+        returns what the console showed and how long it took."""
+        command = [sys.executable, "-m", "emulator", "run", "--mode", "vm", "--arch", arch, "--rootfs", rootfs.RDKE,
+                   "--option", "%s=%s" % (rootfs.RDKE_DIR_OPTION, directory), "--timeout", "600"]
+        # In a process group of its own, so that ending the launcher here ends
+        # the emulator it started as well.
+        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
+                                   cwd=str(ROOT), start_new_session=os.name != "nt",
+                                   env=host.tool_env({"PYTHONPATH": str(ROOT), "PYTHONDONTWRITEBYTECODE": "1"}))
+        seen, started = [], time.time()
+        try:
+            for raw in iter(process.stdout.readline, b""):
+                seen.append(raw.decode("utf-8", errors="replace").rstrip())
+                # The target's own init at work: the launcher's init would report EMU-READY instead.
+                if "Reached target" in seen[-1] or "login:" in seen[-1]:
+                    break
+        finally:
+            if os.name == "nt":
+                subprocess.run(["taskkill", "/T", "/F", "/PID", str(process.pid)], capture_output=True)
+            else:
+                try:
+                    os.killpg(process.pid, 9)
+                except OSError:
+                    pass
+            process.wait()
+            process.stdout.close()
+        text = "\n".join(seen)
+        _require("Linux version" in text, "the kernel in %s did not start: %s" % (directory, text[-400:]))
+        _require("Reached target" in text or "login:" in text, "the own init of the root file system in %s did not "
+                 "get to work: %s" % (directory, text[-400:]))
+        _require("EMU-READY" not in text, "the launcher's own init ran, which --rootfs rdke must not ask for")
+        return text, time.time() - started
+
+    kind = "host-native" if arch == "native" else "simulated ARM64"
+    _, seconds = boot(stand_in)
+    lines.append("a stand-in (the ARM64 Debian VM image, started with --rootfs rdke as an RDK-E image would be) "
+                 "booted its kernel and its own init in %.0fs, in a %s guest" % (seconds, kind))
+    # An image built for the RDK-E machine, where this host has one.
+    present, said = rootfs.rdke_state()
+    if not present:
+        return lines + ["no RDK-E image is built on this host, so none was booted"]
+    text, seconds = boot(rootfs.rdke_dir())
+    _require("tvemu-arm64-rdke" in text or "systemd" in text, "what booted from %s does not look like the image of "
+             "the machine tvemu-arm64-rdke: %s" % (rootfs.rdke_dir(), text[-400:]))
+    return lines + ["the image built for the machine tvemu-arm64-rdke (%s) booted its kernel and its own init in "
+                    "%.0fs, in a %s guest: a minimal image on RDK-E's base layers, without its middleware"
+                    % (said, seconds, kind)]
+
+
 def _command_checks():
     return {
+        "rootfs-option": (check_rootfs_option, "9.4", "--rootfs chooses the Debian or the RDK-E root file system"),
         "doctor": (check_doctor, "9.2", "the launcher shows what it finds on the host, and names what is missing"),
         "report-serve": (check_report_serve, "9.2", "the results command serves the page and all that it reads"),
         "report-page": (check_report_page, "9.2", "the results page shows every record and its sections"),

@@ -24,10 +24,10 @@
         "4 hosts x 4 modes = 16 combinations, each measuring 6 performance areas",
         "every declared host combination has a host entry: linux-x86_64, windows-x86_64, macos-x86_64, macos-arm64"
       ],
-      "checked_at": "2026-11-19T18:40:43Z",
+      "checked_at": "2026-11-20T14:11:05Z",
       "seconds": 0.0,
-      "revision": "6b653126afd33240b11fc6a11c752d4e9597bc63-dirty",
-      "image_definition_sha256": "89bc6b0173f669e524954e6e843a4225c0b0519197cd3910f3df5b710c8a88b2"
+      "revision": "0d380a40c991131aaf325b79873491f6a0513dfa-dirty",
+      "image_definition_sha256": "7f22e737c9570eb58ee6145755a42dae19214a6c46c1093d7082a0eb30b9b0ee"
     },
     "workloads": {
       "status": "pass",
@@ -41,24 +41,24 @@
         "graphics: graphics-demo 1.0.0 (implemented), web-bench 1.1.0 (implemented)",
         "audio_video_decoding: media-decode 1.0.0 (implemented), web-bench 1.1.0 (implemented)"
       ],
-      "checked_at": "2026-11-19T18:40:44Z",
+      "checked_at": "2026-11-20T14:11:05Z",
       "seconds": 0.0,
-      "revision": "6b653126afd33240b11fc6a11c752d4e9597bc63-dirty",
-      "image_definition_sha256": "89bc6b0173f669e524954e6e843a4225c0b0519197cd3910f3df5b710c8a88b2"
+      "revision": "0d380a40c991131aaf325b79873491f6a0513dfa-dirty",
+      "image_definition_sha256": "7f22e737c9570eb58ee6145755a42dae19214a6c46c1093d7082a0eb30b9b0ee"
     },
     "image": {
       "status": "pass",
       "task": "1.2",
       "description": "the client OS image boots in VM mode and its revision is recorded",
       "details": [
-        "emu-target-debian 0.6.0 booted in 0.4s, kernel 6.12.115+deb13.1-arm64",
+        "emu-target-debian 0.6.0 booted in 0.3s, kernel 6.12.115+deb13.1-arm64",
         "source: Debian 13 (trixie), docker.io/library/debian:trixie-slim@sha256:a72b4433de1c, apt snapshot 20261104T212339Z",
-        "definition 89bc6b0173f6, build revision 6b653126afd33240b11fc6a11c752d4e9597bc63-dirty, rootfs sha256 8f6d536d8320"
+        "definition 7f22e737c957, build revision b5614341e33b58afd3f0c90a4d31d20bac3a3759, rootfs sha256 87bae9433bf4"
       ],
-      "checked_at": "2026-11-19T18:40:44Z",
-      "seconds": 1.0,
-      "revision": "6b653126afd33240b11fc6a11c752d4e9597bc63-dirty",
-      "image_definition_sha256": "89bc6b0173f669e524954e6e843a4225c0b0519197cd3910f3df5b710c8a88b2"
+      "checked_at": "2026-11-20T14:12:24Z",
+      "seconds": 0.9,
+      "revision": "0d380a40c991131aaf325b79873491f6a0513dfa-dirty",
+      "image_definition_sha256": "7f22e737c9570eb58ee6145755a42dae19214a6c46c1093d7082a0eb30b9b0ee"
     },
     "prompt-container": {
       "status": "pass",
@@ -66,12 +66,12 @@
       "description": "the container image starts the target OS and a prompt",
       "details": [
         "target OS environment up in 0.1s; the prompt answered a typed command",
-        "image sha256:882c63a9b2bb69e7c83f78ae439527b6b6062f1ad1ad9710d4b21287e18cebdc"
+        "image sha256:441262b63214fd44a1d5e9183f9b5c8dc6b9eae7ffa3951edba0008b5995fdd5"
       ],
-      "checked_at": "2026-11-19T18:40:45Z",
-      "seconds": 1.0,
-      "revision": "6b653126afd33240b11fc6a11c752d4e9597bc63-dirty",
-      "image_definition_sha256": "89bc6b0173f669e524954e6e843a4225c0b0519197cd3910f3df5b710c8a88b2"
+      "checked_at": "2026-11-20T14:11:06Z",
+      "seconds": 0.9,
+      "revision": "0d380a40c991131aaf325b79873491f6a0513dfa-dirty",
+      "image_definition_sha256": "7f22e737c9570eb58ee6145755a42dae19214a6c46c1093d7082a0eb30b9b0ee"
     },
     "prompt-vm": {
       "status": "pass",
@@ -80,10 +80,10 @@
       "details": [
         "booted on hvf (aarch64, cpu host) in 0.4s; the prompt answered a typed command"
       ],
-      "checked_at": "2026-11-19T18:40:46Z",
+      "checked_at": "2026-11-20T15:00:42Z",
       "seconds": 1.0,
-      "revision": "6b653126afd33240b11fc6a11c752d4e9597bc63-dirty",
-      "image_definition_sha256": "89bc6b0173f669e524954e6e843a4225c0b0519197cd3910f3df5b710c8a88b2"
+      "revision": "0d380a40c991131aaf325b79873491f6a0513dfa-dirty",
+      "image_definition_sha256": "7f22e737c9570eb58ee6145755a42dae19214a6c46c1093d7082a0eb30b9b0ee"
     },
     "bench-container": {
       "status": "pass",
@@ -119,21 +119,21 @@
         "312 records, all fully identified",
         "this host has bench results for: container, vm-arm32, vm-arm64, vm-native"
       ],
-      "checked_at": "2026-11-19T20:27:42Z",
+      "checked_at": "2026-11-20T14:12:23Z",
       "seconds": 0.3,
-      "revision": "6b653126afd33240b11fc6a11c752d4e9597bc63-dirty",
-      "image_definition_sha256": "89bc6b0173f669e524954e6e843a4225c0b0519197cd3910f3df5b710c8a88b2"
+      "revision": "0d380a40c991131aaf325b79873491f6a0513dfa-dirty",
+      "image_definition_sha256": "7f22e737c9570eb58ee6145755a42dae19214a6c46c1093d7082a0eb30b9b0ee"
     },
     "vm-arm32": {
       "status": "pass",
       "task": "3.1",
       "description": "ARM32 VM guest mode starts the target OS workload",
       "details": [
-        "armv7l guest on tcg simulating cortex-a15 (CPU part 0xc0f) booted in 18.9s and ran the prompt workload"
+        "armv7l guest on tcg simulating cortex-a15 (CPU part 0xc0f) booted in 18.6s and ran the prompt workload"
       ],
-      "checked_at": "2026-11-19T20:51:31Z",
-      "seconds": 19.6,
-      "revision": "6b653126afd33240b11fc6a11c752d4e9597bc63-dirty",
+      "checked_at": "2026-11-20T14:11:32Z",
+      "seconds": 19.4,
+      "revision": "0d380a40c991131aaf325b79873491f6a0513dfa-dirty",
       "image_definition_sha256": "7f22e737c9570eb58ee6145755a42dae19214a6c46c1093d7082a0eb30b9b0ee"
     },
     "vm-arm64": {
@@ -141,11 +141,11 @@
       "task": "3.1",
       "description": "ARM64 VM guest mode starts the target OS workload",
       "details": [
-        "aarch64 guest on tcg simulating cortex-a53 (CPU part 0xd03) booted in 4.9s and ran the prompt workload"
+        "aarch64 guest on tcg simulating cortex-a53 (CPU part 0xd03) booted in 4.7s and ran the prompt workload"
       ],
-      "checked_at": "2026-11-19T20:51:12Z",
-      "seconds": 5.6,
-      "revision": "6b653126afd33240b11fc6a11c752d4e9597bc63-dirty",
+      "checked_at": "2026-11-20T14:11:13Z",
+      "seconds": 5.4,
+      "revision": "0d380a40c991131aaf325b79873491f6a0513dfa-dirty",
       "image_definition_sha256": "7f22e737c9570eb58ee6145755a42dae19214a6c46c1093d7082a0eb30b9b0ee"
     },
     "drivers-container": {
@@ -153,28 +153,28 @@
       "task": "3.2",
       "description": "emulated, mocked and host-routed drivers in container mode",
       "details": [
-        "emulated: no host-side process ran; provider model:emu-swrng-1; 121528.5 bytes/s",
-        "mocked: sample is the stub's fixed pattern; provider mock:fixed-pattern; 3477867287.0 bytes/s",
-        "host: sample found in the 1781760 bytes served by the host-side process; provider host:host.docker.internal:52098; 3548072.9 bytes/s"
+        "emulated: no host-side process ran; provider model:emu-swrng-1; 110616.8 bytes/s",
+        "mocked: sample is the stub's fixed pattern; provider mock:fixed-pattern; 3723470219.5 bytes/s",
+        "host: sample found in the 1617920 bytes served by the host-side process; provider host:host.docker.internal:54837; 3223410.6 bytes/s"
       ],
-      "checked_at": "2026-11-19T18:41:25Z",
-      "seconds": 2.2,
-      "revision": "6b653126afd33240b11fc6a11c752d4e9597bc63-dirty",
-      "image_definition_sha256": "89bc6b0173f669e524954e6e843a4225c0b0519197cd3910f3df5b710c8a88b2"
+      "checked_at": "2026-11-20T14:11:34Z",
+      "seconds": 2.1,
+      "revision": "0d380a40c991131aaf325b79873491f6a0513dfa-dirty",
+      "image_definition_sha256": "7f22e737c9570eb58ee6145755a42dae19214a6c46c1093d7082a0eb30b9b0ee"
     },
     "drivers-vm": {
       "status": "pass",
       "task": "3.2",
       "description": "emulated, mocked and host-routed drivers in host-native VM mode",
       "details": [
-        "emulated: no host-side process ran; provider kernel:virtio_rng.0; 4592438.8 bytes/s",
-        "mocked: sample is the stub's fixed pattern; provider mock:fixed-pattern; 4071815681.4 bytes/s",
-        "host: sample found in the 917696 bytes served by the host-side process; provider kernel:virtio_rng.0; 1732856.3 bytes/s"
+        "emulated: no host-side process ran; provider kernel:virtio_rng.0; 4603148.1 bytes/s",
+        "mocked: sample is the stub's fixed pattern; provider mock:fixed-pattern; 4006726256.3 bytes/s",
+        "host: sample found in the 786624 bytes served by the host-side process; provider kernel:virtio_rng.0; 1476880.5 bytes/s"
       ],
-      "checked_at": "2026-11-19T18:41:27Z",
+      "checked_at": "2026-11-20T14:11:37Z",
       "seconds": 2.4,
-      "revision": "6b653126afd33240b11fc6a11c752d4e9597bc63-dirty",
-      "image_definition_sha256": "89bc6b0173f669e524954e6e843a4225c0b0519197cd3910f3df5b710c8a88b2"
+      "revision": "0d380a40c991131aaf325b79873491f6a0513dfa-dirty",
+      "image_definition_sha256": "7f22e737c9570eb58ee6145755a42dae19214a6c46c1093d7082a0eb30b9b0ee"
     },
     "drivers-vm-arm32": {
       "status": "pass",
@@ -1317,14 +1317,14 @@
       "task": "7.3, 9.2",
       "description": "the settings window offers every launcher setting and gives its arguments and their command line",
       "details": [
-        "the window has a field for every argument of \"emu run\": arch, cpus, driver, emulator_arg, graphics, memory, mode, mute, option, rebuild, record, redrat_device, redrat_profile, repeat, resolution, screenshot, timeout, window_mode, workload, workload_args",
+        "the window has a field for every argument of \"emu run\": arch, cpus, driver, emulator_arg, graphics, memory, mode, mute, option, rebuild, record, redrat_device, redrat_profile, repeat, resolution, rootfs, screenshot, timeout, window_mode, workload, workload_args",
         "mode, VM guest CPU (off in container mode), workload, window mode and the others set as a person would; Start gave: emu run --mode vm --arch arm64 --workload graphics-demo --cpus 2 --memory 1024 --resolution 4k --graphics emulated --fullscreen --mute --driver hwrng=mocked --option accel=tcg --option verbose-boot=yes --record --repeat 2 --timeout 120 -- --tests wayland --seconds 1",
         "the launcher's own parser reads those arguments as what was set, and the command line the window shows is the one of those arguments; with nothing set it shows \"emu run\"",
         "unchanged, Start gives \"emu run\"; a timeout of \"soon\" is refused with the launcher's reason (Argument --timeout: invalid float value: 'soon'); closing the window starts nothing"
       ],
-      "checked_at": "2026-11-19T21:33:43Z",
-      "seconds": 2.8,
-      "revision": "6b653126afd33240b11fc6a11c752d4e9597bc63-dirty",
+      "checked_at": "2026-11-20T15:00:41Z",
+      "seconds": 2.9,
+      "revision": "0d380a40c991131aaf325b79873491f6a0513dfa-dirty",
       "image_definition_sha256": "7f22e737c9570eb58ee6145755a42dae19214a6c46c1093d7082a0eb30b9b0ee"
     },
     "settings-launch": {
@@ -1336,9 +1336,9 @@
         "its results are those of the same arguments on the command line: [('hwrng', 'mocked', 'mock:fixed-pattern', '4d4f434b45442d4857524e472d56312e', True)]",
         "with arguments (\"emu workloads\") the launcher did as they say, without the window"
       ],
-      "checked_at": "2026-11-19T21:33:45Z",
-      "seconds": 2.0,
-      "revision": "6b653126afd33240b11fc6a11c752d4e9597bc63-dirty",
+      "checked_at": "2026-11-20T14:11:05Z",
+      "seconds": 1.9,
+      "revision": "0d380a40c991131aaf325b79873491f6a0513dfa-dirty",
       "image_definition_sha256": "7f22e737c9570eb58ee6145755a42dae19214a6c46c1093d7082a0eb30b9b0ee"
     },
     "window-display-vm": {
@@ -1910,9 +1910,9 @@
         "with qemu-system-aarch64 hidden from the launcher (a stand-in for a host without it) it named that as missing, pointed to the setup script and ended with status 1",
         "with qemu-system-arm hidden, it said that the ARM32 target is not set up and named the setup option, named no missing dependency for it, and ended with status 0 as before"
       ],
-      "checked_at": "2026-11-19T21:33:39Z",
-      "seconds": 1.0,
-      "revision": "6b653126afd33240b11fc6a11c752d4e9597bc63-dirty",
+      "checked_at": "2026-11-20T15:00:38Z",
+      "seconds": 1.2,
+      "revision": "0d380a40c991131aaf325b79873491f6a0513dfa-dirty",
       "image_definition_sha256": "7f22e737c9570eb58ee6145755a42dae19214a6c46c1093d7082a0eb30b9b0ee"
     },
     "report-serve": {
@@ -1920,13 +1920,13 @@
       "task": "9.2",
       "description": "the results command serves the page and all that it reads",
       "details": [
-        "the results command served the page, and over one connection that it kept open: the list of 264 records and each record, 4 verification records, the known issues, what is stated about the machines, and the disk space and time values",
+        "the results command served the page, and over one connection that it kept open: the list of 312 records and each record, 4 verification records, the known issues, what is stated about the machines, and the disk space and time values",
         "the server does not answer on the host's own network address: the page is served to this host only"
       ],
-      "checked_at": "2026-11-19T19:22:29Z",
-      "seconds": 0.1,
-      "revision": "6b653126afd33240b11fc6a11c752d4e9597bc63-dirty",
-      "image_definition_sha256": "89bc6b0173f669e524954e6e843a4225c0b0519197cd3910f3df5b710c8a88b2"
+      "checked_at": "2026-11-20T14:12:22Z",
+      "seconds": 0.2,
+      "revision": "0d380a40c991131aaf325b79873491f6a0513dfa-dirty",
+      "image_definition_sha256": "7f22e737c9570eb58ee6145755a42dae19214a6c46c1093d7082a0eb30b9b0ee"
     },
     "report-page": {
       "status": "pass",
@@ -1937,10 +1937,10 @@
         "it has the hosts, the support matrix with the list of known issues, 47 charts, and 3 tables of disk space and times",
         "not checked: choosing the hosts, relative values, and what pointing at a row or a cell shows"
       ],
-      "checked_at": "2026-11-19T20:30:14Z",
-      "seconds": 0.7,
-      "revision": "6b653126afd33240b11fc6a11c752d4e9597bc63-dirty",
-      "image_definition_sha256": "89bc6b0173f669e524954e6e843a4225c0b0519197cd3910f3df5b710c8a88b2"
+      "checked_at": "2026-11-20T14:12:23Z",
+      "seconds": 1.0,
+      "revision": "0d380a40c991131aaf325b79873491f6a0513dfa-dirty",
+      "image_definition_sha256": "7f22e737c9570eb58ee6145755a42dae19214a6c46c1093d7082a0eb30b9b0ee"
     },
     "setup-check": {
       "status": "pass",
@@ -2154,6 +2154,21 @@
       "checked_at": "2026-11-19T21:33:38Z",
       "seconds": 0.0,
       "revision": "6b653126afd33240b11fc6a11c752d4e9597bc63-dirty",
+      "image_definition_sha256": "7f22e737c9570eb58ee6145755a42dae19214a6c46c1093d7082a0eb30b9b0ee"
+    },
+    "rootfs-option": {
+      "status": "pass",
+      "task": "9.4",
+      "description": "--rootfs chooses the Debian or the RDK-E root file system",
+      "details": [
+        "--rootfs offers debian and rdke, and debian without it",
+        "--rootfs rdke is refused with container mode, a workload, a driver feature, an ARM32 guest, a directory without an image; without an image the launcher names the directory",
+        "a stand-in (the ARM64 Debian VM image, started with --rootfs rdke as an RDK-E image would be) booted its kernel and its own init in 1s, in a host-native guest",
+        "the image built for the machine tvemu-arm64-rdke (Image and rootfs.ext4 in build/rdke/arm64) booted its kernel and its own init in 2s, in a host-native guest: a minimal image on RDK-E's base layers, without its middleware"
+      ],
+      "checked_at": "2026-11-20T15:00:37Z",
+      "seconds": 2.5,
+      "revision": "0d380a40c991131aaf325b79873491f6a0513dfa-dirty",
       "image_definition_sha256": "7f22e737c9570eb58ee6145755a42dae19214a6c46c1093d7082a0eb30b9b0ee"
     }
   }

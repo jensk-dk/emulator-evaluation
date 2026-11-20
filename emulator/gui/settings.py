@@ -40,7 +40,7 @@ DEFAULT = "(default)"
 # Where a field is shown, and what it is called. An argument that is not
 # named here gets a field under "Other", named after the argument.
 GROUPS = (
-    ("Target", (("mode", "Mode"), ("arch", "VM guest CPU"), ("workload", "Workload"),
+    ("Target", (("mode", "Mode"), ("arch", "VM guest CPU"), ("rootfs", "Root file system"), ("workload", "Workload"),
                 ("workload_args", "Workload arguments"), ("cpus", "CPUs"), ("memory", "Memory (MiB)"))),
     ("Display", (("window_mode", "Window mode"), ("redrat_profile", "RedRat profile (optional)"),
                  ("redrat_device", "RedRat receiver"),
@@ -55,7 +55,7 @@ GROUPS = (
 WINDOW_MODES = (("none", []), ("window", ["--window"]), ("full screen", ["--fullscreen"]))
 RANGES = {"cpus": (1, 256, 1), "memory": (128, 1048576, 256), "repeat": (1, 1000, 1)}
 LABELS = {"container": "container", "vm": "VM", "native": "native (the host's own)", "arm32": "ARM32", "arm64": "ARM64",
-          "x86_64": "x86-64"}
+          "x86_64": "x86-64", "debian": "Debian (with the workloads)", "rdke": "RDK-E (experimental)"}
 
 
 class Field:
