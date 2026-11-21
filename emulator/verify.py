@@ -2759,13 +2759,36 @@ RDKE_PAGE = "file:///usr/share/tvemu/page/index.html"
 RDKE_PAGE_BACKGROUND = (0x10, 0x24, 0x3c)
 RDKE_PAGE_CORNER = (0xe0, 0x48, 0x3a)
 RDKE_PAGE_KEYS = (("ok", "Enter-13"), ("up", "ArrowUp-38"), ("down", "ArrowDown-40"), ("left", "ArrowLeft-37"),
-                  ("right", "ArrowRight-39"), ("back", "Backspace-8"), ("1", "1-49"), ("play", "MediaPlay-179"))
+                  ("right", "ArrowRight-39"), ("back", "Backspace-8"), ("1", "1-49"), ("play", "MediaPlay-179"),
+                  ("red", "ColorF0Red-403"), ("green", "ColorF1Green-404"), ("yellow", "ColorF2Yellow-405"),
+                  ("blue", "ColorF3Blue-406"), ("exit", "Escape-27"))
 
 
-def check_rdke_browser():
-    """RDK's browser in an RDK-E image, as a person at the launcher's window
-    has it: a page drawn by WPE WebKit on the display that RDK's window
-    manager gave it, and the remote control's keys arriving in the page."""
+def _rdke_page_drawn(viewer, seen, seconds):
+    """Whether the launcher's window gets the picture of the image's page
+    within `seconds`: its red corner blocks on its dark blue."""
+    with tempfile.TemporaryDirectory(prefix="emu-verify-") as directory:
+        path = os.path.join(directory, "display.ppm")
+
+        def picture():
+            if not viewer.ask(do="save-display", path=path).get("saved"):
+                return None
+            shown = imagefile.load(path)
+            width, height, at = shown.width, shown.height, shown.pixel
+            corners = [at(8, 8), at(width - 9, 8), at(8, height - 9), at(width - 9, height - 9)]
+            seen["picture"] = {"size": (width, height), "corners": corners, "middle": at(width // 2, height // 2)}
+            near = lambda found, wanted: all(abs(a - b) <= 6 for a, b in zip(found, wanted))
+            return all(near(corner, RDKE_PAGE_CORNER) for corner in corners) and \
+                near(seen["picture"]["middle"], RDKE_PAGE_BACKGROUND)
+        return bool(_wait(picture, seconds, 1))
+
+
+def _rdke_session(body):
+    """Starts the RDK-E image of this host with the launcher's window, waits
+    for its shell, and has `body(viewer, typed, answer, seen, console, lock,
+    slow)` do a check's work in it: `typed` types a line on the console,
+    `answer` waits for a console line, and `seen` takes what the check found.
+    Returns `seen`, the kind of guest, and what the image is."""
     from . import rootfs
     present, said = rootfs.rdke_state()
     if not present:
@@ -2816,45 +2839,7 @@ def check_rdke_browser():
             seen["unavailable"] = ("the RDK-E image on this host (%s) has no browser: it is not tvemu-browser-image"
                                    % said)
             return
-        # The image's own user interface has the display from boot; the page takes its place.
-        typed("systemctl stop tvemu-refui; tvemu-app-start HtmlApp %s; echo tvemu-started-$?" % RDKE_PAGE)
-        started = answer(r"tvemu-started-\d+", 300)
-        if started != "tvemu-started-0":
-            with lock:
-                seen["error"] = "the page was not shown (%s): %s" % (started, " | ".join(console[-6:]))
-            return
-        with lock:
-            seen["start"] = next((line.strip() for line in console if line.startswith("tvemu-app-start: ")), "")
-        with tempfile.TemporaryDirectory(prefix="emu-verify-") as directory:
-            path = os.path.join(directory, "display.ppm")
-
-            def picture():
-                if not viewer.ask(do="save-display", path=path).get("saved"):
-                    return None
-                shown = imagefile.load(path)
-                width, height, at = shown.width, shown.height, shown.pixel
-                corners = [at(8, 8), at(width - 9, 8), at(8, height - 9), at(width - 9, height - 9)]
-                seen["picture"] = {"size": (width, height), "corners": corners, "middle": at(width // 2, height // 2)}
-                near = lambda found, wanted: all(abs(a - b) <= 6 for a, b in zip(found, wanted))
-                return all(near(corner, RDKE_PAGE_CORNER) for corner in corners) and \
-                    near(seen["picture"]["middle"], RDKE_PAGE_BACKGROUND)
-            seen["drawn"] = bool(_wait(picture, 120 * slow, 1))
-        typed("C() { curl -s -m 10 -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"HtmlApp.1.'$1'\"}' "
-              "http://127.0.0.1:9998/jsonrpc; }; echo tvemu-fps=$(C fps | sed 's/.*result\"://;s/}.*//')")
-        seen["fps"] = (answer(r"tvemu-fps=\d*", 30) or "=").split("=", 1)[1]
-        for count, (key, _) in enumerate(RDKE_PAGE_KEYS, 1):
-            viewer.ask(do="send-key", code=remote.CODES[key])
-            # The page's address after the key: "...index.html#3-ArrowDown-40".
-            marker = "tvemu-key-%d=" % count
-            for attempt in range(8):
-                with lock:
-                    del console[:]
-                typed("echo %s$(C url | sed -n 's/.*#\\([^\"]*\\)\".*/\\1/p')" % marker)
-                found = (answer(re.escape(marker) + r"[\w-]*", 15) or "=").split("=", 1)[1]
-                if found.startswith("%d-" % count):
-                    break
-                time.sleep(0.5 * slow)
-            seen["keys"][key] = found
+        body(viewer, typed, answer, seen, console, lock, slow)
 
     def drive(viewer):
         def guarded():
@@ -2878,6 +2863,43 @@ def check_rdke_browser():
         raise CheckUnavailable(seen["unavailable"])
     _require("error" not in seen, seen.get("error"))
     _require(not outcome.timed_out, "the run did not end by itself: %r" % seen)
+    kind = "host-native" if arch == "native" else "simulated ARM64"
+    return seen, kind, said
+
+
+def check_rdke_browser():
+    """RDK's browser in an RDK-E image, as a person at the launcher's window
+    has it: a page drawn by WPE WebKit on the display that RDK's window
+    manager gave it, and the remote control's keys arriving in the page."""
+    def body(viewer, typed, answer, seen, console, lock, slow):
+        # The image's own user interface has the display from boot; the page takes its place.
+        typed("systemctl stop tvemu-refui; tvemu-app-start HtmlApp %s; echo tvemu-started-$?" % RDKE_PAGE)
+        started = answer(r"tvemu-started-\d+", 300)
+        if started != "tvemu-started-0":
+            with lock:
+                seen["error"] = "the page was not shown (%s): %s" % (started, " | ".join(console[-6:]))
+            return
+        with lock:
+            seen["start"] = next((line.strip() for line in console if line.startswith("tvemu-app-start: ")), "")
+        seen["drawn"] = _rdke_page_drawn(viewer, seen, 120 * slow)
+        typed("C() { curl -s -m 10 -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"HtmlApp.1.'$1'\"}' "
+              "http://127.0.0.1:9998/jsonrpc; }; echo tvemu-fps=$(C fps | sed 's/.*result\"://;s/}.*//')")
+        seen["fps"] = (answer(r"tvemu-fps=\d*", 30) or "=").split("=", 1)[1]
+        for count, (key, _) in enumerate(RDKE_PAGE_KEYS, 1):
+            viewer.ask(do="send-key", code=remote.CODES[key])
+            # The page's address after the key: "...index.html#3-ArrowDown-40".
+            marker = "tvemu-key-%d=" % count
+            for attempt in range(8):
+                with lock:
+                    del console[:]
+                typed("echo %s$(C url | sed -n 's/.*#\\([^\"]*\\)\".*/\\1/p')" % marker)
+                found = (answer(re.escape(marker) + r"[\w-]*", 15) or "=").split("=", 1)[1]
+                if found.startswith("%d-" % count):
+                    break
+                time.sleep(0.5 * slow)
+            seen["keys"][key] = found
+
+    seen, kind, said = _rdke_session(body)
     _require(seen.get("drawn"), "the display does not show the page (its red corners on its dark blue): %r"
              % seen.get("picture"))
     wrong = ["%s arrived as %r, not %r" % (key, seen["keys"].get(key), "%d-%s" % (count, name))
@@ -2885,7 +2907,6 @@ def check_rdke_browser():
              if seen["keys"].get(key) != "%d-%s" % (count, name)]
     _require(not wrong, "remote control keys did not arrive in the page as a web page expects them: %s"
              % "; ".join(wrong))
-    kind = "host-native" if arch == "native" else "simulated ARM64"
     return ["the RDK-E image (%s) started in a %s guest, and RDK's browser plug-in HtmlApp (WPE WebKit) showed the "
             "image's page on a display of RDK's window manager: %s" % (said, kind, seen["start"]),
             "the launcher's window got the page's picture at %dx%d: its red corner blocks and its background are "
@@ -2896,11 +2917,95 @@ def check_rdke_browser():
                                                                for key, name in RDKE_PAGE_KEYS))]
 
 
+def check_rdke_launcher():
+    """An application started and ended in an RDK-E image the way RDK's
+    reference user interface does it: with org.rdk.RDKShell, which RDK-E's
+    middleware no longer has and the image stands in for (tvemu-rdkshell),
+    and with the remote control's EXIT key, which the user interface takes."""
+    def body(viewer, typed, answer, seen, console, lock, slow):
+        typed("test -e /etc/WPEFramework/plugins/org.rdk.RDKShell.json; echo tvemu-standin-$?")
+        if answer(r"tvemu-standin-\d+", 30) != "tvemu-standin-0":
+            seen["unavailable"] = "the RDK-E image on this host has no stand-in for org.rdk.RDKShell (tvemu-rdkshell)"
+            return
+        typed("S() { curl -s -m 120 -d \"{\\\"jsonrpc\\\":\\\"2.0\\\",\\\"id\\\":1,\\\"method\\\":"
+              "\\\"$1\\\"${2:+,\\\"params\\\":$2}}\" http://127.0.0.1:9998/jsonrpc; }")
+
+        def asked(name, command, seconds=30):
+            """The number that `command` prints, asked for until it is there."""
+            marker = "tvemu-%s=" % name
+            with lock:
+                del console[:]
+            typed("echo %s$(%s)" % (marker, command))
+            return (answer(re.escape(marker) + r"\d+", seconds) or "=").split("=", 1)[1]
+
+        # The user interface starts some time after Thunder, and takes the display and the keys.
+        ready = _wait(lambda: asked("ui", "systemctl is-active tvemu-refui | grep -c '^active'") == "1" and
+                      asked("types", "S org.rdk.RDKShell.1.getAvailableTypes | grep -c HtmlApp") == "1",
+                      300 * slow, 2)
+        if not ready:
+            typed("echo tvemu-units=$(systemctl is-active wpeframework wpeframework-rdkshell tvemu-refui | tr '\\n' ,)")
+            seen["error"] = ("the user interface and the stand-in for org.rdk.RDKShell did not start in %d s (Thunder, "
+                             "the stand-in's unit, the user interface's unit: %s)"
+                             % (300 * slow, (answer(r"tvemu-units=[\w,-]+", 30) or "=").split("=", 1)[1]))
+            return
+        # The user interface asks for its keys (EXIT among them) when its first page has loaded; a
+        # person cannot start an application before that either.
+        if not _wait(lambda: asked("keys", "journalctl -b --no-pager | grep -c 'TvemuRDKShell: key intercepts for "
+                                   "residentapp: done' | grep -c '^[1-9]'") == "1", 180 * slow, 2):
+            seen["error"] = "the user interface did not ask for its keys in %d s" % (180 * slow)
+            return
+        time.sleep(3 * slow)
+        seen["launched"] = asked("launch", "S org.rdk.RDKShell.1.launch '{\"callsign\":\"HtmlApp\",\"type\":"
+                                 "\"HtmlApp\",\"uri\":\"%s\"}' | grep -c '\"success\":true'" % RDKE_PAGE, 180)
+        seen["drawn"] = seen["launched"] == "1" and _rdke_page_drawn(viewer, seen, 120 * slow)
+        seen["running"] = asked("running", "S org.rdk.RDKShell.1.getState | grep -c '\"HtmlApp\",\"state\":"
+                                "\"resumed\"'")
+        # A key for the application, then the key that ends it.
+        seen["focus"] = asked("focus", "S org.rdk.RDKWindowManager.1.getFocused | grep -c htmlapp")
+        viewer.ask(do="send-key", code=remote.CODES["ok"])
+        seen["key"] = bool(_wait(lambda: asked("key", "S HtmlApp.1.url | grep -c '#1-Enter-13'") == "1",
+                                 30 * slow, 1))
+        typed("echo tvemu-address=$(S HtmlApp.1.url | sed -n 's/.*index.html\\([^\"]*\\)\".*/\\1/p')")
+        seen["address"] = (answer(r"tvemu-address=[#\w-]*", 30) or "=").split("=", 1)[1]
+        # The user interface takes no key while it goes from one of its screens to the next, which it
+        # does by itself after it starts: EXIT is pressed again, as a person would.
+        for press in range(1, 7):
+            viewer.ask(do="send-key", code=remote.CODES["exit"])
+            seen["presses"] = press
+            seen["ended"] = bool(_wait(lambda: asked("state", "S org.rdk.RDKShell.1.getState | grep -c HtmlApp")
+                                       == "0", 10 * slow, 1))
+            if seen["ended"]:
+                break
+        seen["left"] = seen["ended"] and not _rdke_page_drawn(viewer, {}, 5 * slow)
+        seen["clients"] = asked("clients", "S org.rdk.RDKShell.1.getClients | grep -c residentapp")
+
+    seen, kind, said = _rdke_session(body)
+    _require(seen.get("launched") == "1", "org.rdk.RDKShell's launch did not start HtmlApp: %r" % seen)
+    _require(seen.get("drawn"), "the display does not show the application's page: %r" % seen.get("picture"))
+    _require(seen.get("running") == "1", "org.rdk.RDKShell's getState does not name HtmlApp as resumed: %r" % seen)
+    _require(seen.get("key"), "the OK key did not arrive in the application (it %s the window manager's focus, and its page's "
+             "address ends in %r)" % ("has" if seen.get("focus") == "1" else "does not have", seen.get("address")))
+    _require(seen.get("ended"), "the EXIT key did not end the application: the user interface did not take it")
+    _require(seen.get("left"), "the application's page is still on the display after EXIT")
+    _require(seen.get("clients") == "1", "the user interface has no display after the application ended")
+    return ["the RDK-E image (%s) started in a %s guest with RDK's reference user interface, and a call of "
+            "org.rdk.RDKShell's launch, as that user interface makes it, started the browser plug-in HtmlApp with the "
+            "image's page: the launcher's window got the page's picture at %dx%d" % ((said, kind) +
+                                                                                    seen["picture"]["size"]),
+            "the image's stand-in answered the call (RDK-E's middleware has org.rdk.RDKWindowManager in its place) "
+            "and names the application as resumed; the OK key arrived in the application",
+            "the EXIT key%s went to the user interface, which ended the application: it is no longer in "
+            "org.rdk.RDKShell's getState, its page is off the display, and the user interface has its display"
+            % ("" if seen["presses"] == 1 else ", pressed %d times before it was taken," % seen["presses"])]
+
+
 def _command_checks():
     return {
         "rootfs-option": (check_rootfs_option, "9.4", "--rootfs chooses the Debian or the RDK-E root file system"),
         "rdke-browser": (check_rdke_browser, "9.4", "RDK's browser shows a page in an RDK-E image and gets the "
                                                     "remote control's keys"),
+        "rdke-launcher": (check_rdke_launcher, "9.4", "RDK's user interface can start an application in an RDK-E "
+                                                      "image, and the EXIT key ends it"),
         "doctor": (check_doctor, "9.2", "the launcher shows what it finds on the host, and names what is missing"),
         "report-serve": (check_report_serve, "9.2", "the results command serves the page and all that it reads"),
         "report-page": (check_report_page, "9.2", "the results page shows every record and its sections"),

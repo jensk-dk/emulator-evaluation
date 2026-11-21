@@ -1,0 +1,7 @@
+{"keyMappings": [
+ {"keyCode": 174, "mapped": {"keyCode": 27, "modifiers": []}},
+ {"keyCode": 398, "mapped": {"keyCode": 405, "modifiers": []}},
+ {"keyCode": 399, "mapped": {"keyCode": 406, "modifiers": []}},
+ {"keyCode": 400, "mapped": {"keyCode": 403, "modifiers": []}},
+ {"keyCode": 401, "mapped": {"keyCode": 404, "modifiers": []}}
+]}

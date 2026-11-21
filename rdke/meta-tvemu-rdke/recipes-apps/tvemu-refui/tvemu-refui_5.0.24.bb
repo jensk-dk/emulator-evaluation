@@ -32,5 +32,5 @@ do_install() {
 }
 
 FILES:${PN} += "/home/root/lxresui ${systemd_system_unitdir} ${sysconfdir}/lighttpd.d"
-RDEPENDS:${PN} = "tvemu-app-start lighttpd"
+RDEPENDS:${PN} = "tvemu-app-start tvemu-rdkshell lighttpd"
 INSANE_SKIP:${PN} += "file-rdeps"

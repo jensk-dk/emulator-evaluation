@@ -1,0 +1,6 @@
+{
+ "locator":"libWPEFrameworkTvemuRDKShell.so",
+ "classname":"TvemuRDKShell",
+ "callsign":"org.rdk.RDKShell",
+ "autostart":false
+}

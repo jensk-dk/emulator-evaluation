@@ -17,6 +17,7 @@ IMAGE_INSTALL:append = " \
     tvemu-app-start \
     tvemu-refui \
     tvemu-browser-page \
+    tvemu-rdkshell \
     "
 
 IMAGE_ROOTFS_EXTRA_SPACE = "393216"

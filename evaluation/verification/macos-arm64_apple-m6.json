@@ -129,11 +129,11 @@
       "task": "3.1",
       "description": "ARM32 VM guest mode starts the target OS workload",
       "details": [
-        "armv7l guest on tcg simulating cortex-a15 (CPU part 0xc0f) booted in 17.4s and ran the prompt workload"
+        "armv7l guest on tcg simulating cortex-a15 (CPU part 0xc0f) booted in 10.9s and ran the prompt workload"
       ],
-      "checked_at": "2026-11-21T04:57:20Z",
-      "seconds": 18.2,
-      "revision": "a47b80c8bc3da57c87d3f9895738b7b7d61e08b9-dirty",
+      "checked_at": "2026-11-21T10:30:50Z",
+      "seconds": 11.7,
+      "revision": "e2c9b3326fb4f8e31509d3cdbad4d44a920148fe-dirty",
       "image_definition_sha256": "7f22e737c9570eb58ee6145755a42dae19214a6c46c1093d7082a0eb30b9b0ee"
     },
     "vm-arm64": {
@@ -141,11 +141,11 @@
       "task": "3.1",
       "description": "ARM64 VM guest mode starts the target OS workload",
       "details": [
-        "aarch64 guest on tcg simulating cortex-a53 (CPU part 0xd03) booted in 4.8s and ran the prompt workload"
+        "aarch64 guest on tcg simulating cortex-a53 (CPU part 0xd03) booted in 5.0s and ran the prompt workload"
       ],
-      "checked_at": "2026-11-21T04:57:01Z",
-      "seconds": 5.5,
-      "revision": "a47b80c8bc3da57c87d3f9895738b7b7d61e08b9-dirty",
+      "checked_at": "2026-11-21T10:30:39Z",
+      "seconds": 5.7,
+      "revision": "e2c9b3326fb4f8e31509d3cdbad4d44a920148fe-dirty",
       "image_definition_sha256": "7f22e737c9570eb58ee6145755a42dae19214a6c46c1093d7082a0eb30b9b0ee"
     },
     "drivers-container": {
@@ -1923,9 +1923,9 @@
         "the results command served the page, and over one connection that it kept open: the list of 312 records and each record, 4 verification records, the known issues, what is stated about the machines, and the disk space and time values",
         "the server does not answer on the host's own network address: the page is served to this host only"
       ],
-      "checked_at": "2026-11-21T04:58:01Z",
+      "checked_at": "2026-11-21T10:30:33Z",
       "seconds": 0.1,
-      "revision": "a47b80c8bc3da57c87d3f9895738b7b7d61e08b9-dirty",
+      "revision": "e2c9b3326fb4f8e31509d3cdbad4d44a920148fe-dirty",
       "image_definition_sha256": "7f22e737c9570eb58ee6145755a42dae19214a6c46c1093d7082a0eb30b9b0ee"
     },
     "report-page": {
@@ -1937,9 +1937,9 @@
         "it has the hosts, the support matrix with the list of known issues, 47 charts, and 3 tables of disk space and times",
         "not checked: choosing the hosts, relative values, and what pointing at a row or a cell shows"
       ],
-      "checked_at": "2026-11-21T04:58:01Z",
-      "seconds": 1.3,
-      "revision": "a47b80c8bc3da57c87d3f9895738b7b7d61e08b9-dirty",
+      "checked_at": "2026-11-21T10:30:33Z",
+      "seconds": 0.9,
+      "revision": "e2c9b3326fb4f8e31509d3cdbad4d44a920148fe-dirty",
       "image_definition_sha256": "7f22e737c9570eb58ee6145755a42dae19214a6c46c1093d7082a0eb30b9b0ee"
     },
     "setup-check": {
@@ -2166,9 +2166,9 @@
         "a stand-in (the ARM64 Debian VM image, started with --rootfs rdke as an RDK-E image would be) booted its kernel and its own init in 1s, in a host-native guest",
         "the image built for the machine tvemu-arm64-rdke (Image and rootfs.ext4 in build/rdke/arm64) booted its kernel and its own init in 2s, in a host-native guest: a minimal image on RDK-E's base layers, without its middleware"
       ],
-      "checked_at": "2026-11-21T04:56:54Z",
-      "seconds": 2.4,
-      "revision": "a47b80c8bc3da57c87d3f9895738b7b7d61e08b9-dirty",
+      "checked_at": "2026-11-21T10:30:32Z",
+      "seconds": 2.5,
+      "revision": "e2c9b3326fb4f8e31509d3cdbad4d44a920148fe-dirty",
       "image_definition_sha256": "7f22e737c9570eb58ee6145755a42dae19214a6c46c1093d7082a0eb30b9b0ee"
     },
     "rdke-browser": {
@@ -2177,12 +2177,26 @@
       "description": "RDK's browser shows a page in an RDK-E image and gets the remote control's keys",
       "details": [
         "the RDK-E image (Image and rootfs.ext4 in build/rdke/arm64) started in a host-native guest, and RDK's browser plug-in HtmlApp (WPE WebKit) showed the image's page on a display of RDK's window manager: tvemu-app-start: HtmlApp shows file:///usr/share/tvemu/page/index.html on wst-htmlapp (1920x1080)",
-        "the launcher's window got the page's picture at 1920x1080: its red corner blocks and its background are where the page draws them; the plug-in reports 31 frames a second",
-        "8 remote control keys sent from the window arrived in the page, each with a web page's name and code for it: ok as Enter, up as ArrowUp, down as ArrowDown, left as ArrowLeft, right as ArrowRight, back as Backspace, 1 as 1, play as MediaPlay"
+        "the launcher's window got the page's picture at 1920x1080: its red corner blocks and its background are where the page draws them; the plug-in reports 32 frames a second",
+        "13 remote control keys sent from the window arrived in the page, each with a web page's name and code for it: ok as Enter, up as ArrowUp, down as ArrowDown, left as ArrowLeft, right as ArrowRight, back as Backspace, 1 as 1, play as MediaPlay, red as ColorF0Red, green as ColorF1Green, yellow as ColorF2Yellow, blue as ColorF3Blue, exit as Escape"
       ],
-      "checked_at": "2026-11-21T04:53:13Z",
-      "seconds": 27.7,
-      "revision": "a47b80c8bc3da57c87d3f9895738b7b7d61e08b9-dirty",
+      "checked_at": "2026-11-21T10:30:01Z",
+      "seconds": 28.1,
+      "revision": "e2c9b3326fb4f8e31509d3cdbad4d44a920148fe-dirty",
+      "image_definition_sha256": "7f22e737c9570eb58ee6145755a42dae19214a6c46c1093d7082a0eb30b9b0ee"
+    },
+    "rdke-launcher": {
+      "status": "pass",
+      "task": "9.4",
+      "description": "RDK's user interface can start an application in an RDK-E image, and the EXIT key ends it",
+      "details": [
+        "the RDK-E image (Image and rootfs.ext4 in build/rdke/arm64) started in a host-native guest with RDK's reference user interface, and a call of org.rdk.RDKShell's launch, as that user interface makes it, started the browser plug-in HtmlApp with the image's page: the launcher's window got the page's picture at 1920x1080",
+        "the image's stand-in answered the call (RDK-E's middleware has org.rdk.RDKWindowManager in its place) and names the application as resumed; the OK key arrived in the application",
+        "the EXIT key went to the user interface, which ended the application: it is no longer in org.rdk.RDKShell's getState, its page is off the display, and the user interface has its display"
+      ],
+      "checked_at": "2026-11-21T10:30:29Z",
+      "seconds": 27.8,
+      "revision": "e2c9b3326fb4f8e31509d3cdbad4d44a920148fe-dirty",
       "image_definition_sha256": "7f22e737c9570eb58ee6145755a42dae19214a6c46c1093d7082a0eb30b9b0ee"
     }
   }

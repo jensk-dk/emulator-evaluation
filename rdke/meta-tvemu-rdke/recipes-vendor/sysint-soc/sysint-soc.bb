@@ -11,6 +11,7 @@ LIC_FILES_CHKSUM = "file://LICENSE;md5=b1e01b26bacfc2232046c90a330332b3"
 SRC_URI = "git://github.com/rdkcentral/rdkvhal-sysint-raspberrypi4;protocol=https;nobranch=1 \
            file://device-vendor.properties \
            file://00-wpeframework-vendor.conf \
+           file://tvemu-rcu-keymapping.json \
            "
 SRCREV = "1ea276103df0a227e95545bcfe27e3811787fafa"
 PV = "1.1.22"
@@ -56,10 +57,22 @@ do_install() {
 
     # The remote control's configuration and key map, as the Pi has them: the
     # key map takes Linux key codes, which the emulator's remote control sends.
+    # To the Pi's map come the keys of the emulator's remote control that it
+    # leaves out (tvemu-rcu-keymapping.json): EXIT as Escape, which RDK's user
+    # interface takes as the way out of an application, and the colour keys,
+    # whose Linux codes the window manager does not know.
     install -D -m 0644 ${S}/etc/rdk-bt-rcu-config.json ${D}${sysconfdir}/vendor/input/ctrlm_config.json
     install -D -m 0755 ${S}/scripts/device-specific-reset.sh ${D}/lib/rdk/device-specific-reset.sh
     if [ -n "${WINDOWMANAGER_RCU_KEYMAP_FILE}" ]; then
-        install -D -m 0644 ${S}/etc/generic_rcu_keymapping.json ${D}${WINDOWMANAGER_RCU_KEYMAP_FILE}
+        install -d $(dirname ${D}${WINDOWMANAGER_RCU_KEYMAP_FILE})
+        python3 -c 'import json, sys
+keys = json.load(open(sys.argv[1]))
+more = json.load(open(sys.argv[2]))["keyMappings"]
+codes = [entry["keyCode"] for entry in more]
+keys["keyMappings"] = [entry for entry in keys["keyMappings"] if entry["keyCode"] not in codes] + more
+json.dump(keys, open(sys.argv[3], "w"), indent=1)' \
+            ${S}/etc/generic_rcu_keymapping.json ${WORKDIR}/tvemu-rcu-keymapping.json ${D}${WINDOWMANAGER_RCU_KEYMAP_FILE}
+        chmod 0644 ${D}${WINDOWMANAGER_RCU_KEYMAP_FILE}
     fi
 }
 

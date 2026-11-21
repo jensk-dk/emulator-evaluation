@@ -472,6 +472,45 @@ that "launch" did: a display from the window manager (`createDisplay`, named
 the plug-in started and given its address through Thunder's controller, and
 the focus (`setFocus`).
 
+**The user interface itself starts every application with RDKShell too.**
+A card on its Home screen ends in `org.rdk.RDKShell.1.launch`; before that
+the interface shows an empty page of its own and asks RDKShell which kinds
+of application there are (`getAvailableTypes`). Without RDKShell that
+question fails and the empty page stays: a card gave a blank screen. The
+releases of the user interface from 6.0 on have no RDKShell calls; they
+start applications with `org.rdk.AppManager`, as packages in containers,
+which is RDK-E's way and is not tried here (see "What is open").
+
+The image therefore has a **stand-in for RDKShell** (`tvemu-rdkshell`): a
+Thunder plug-in under the call sign `org.rdk.RDKShell` that answers the
+calls this user interface makes, with the window manager and the
+applications' own plug-ins.
+
+| RDKShell's call | What the stand-in does |
+| --- | --- |
+| `launch` | a display from the window manager, the application's plug-in activated on it and given its address, the focus; the event `onLaunched` |
+| `destroy`, `kill` | the plug-in deactivated; the event `onDestroyed` |
+| `suspend` | the plug-in suspended, its display hidden |
+| `setVisibility`, `getVisibility`, `setFocus` | the window manager's `setVisible`, `getVisibility`, `setFocus` |
+| `addKeyIntercept(s)`, `removeKeyIntercept` | the window manager's calls of the same names |
+| `enableInactivityReporting`, `setInactivityInterval`, `resetInactivityTime` | the window manager's calls of the same names |
+| `getAvailableTypes`, `getState` | the browser's call signs that this Thunder has, and those that run |
+| `getClients`, `getZOrder` | the window manager's displays |
+| `moveToFront`, `moveToBack`, `moveBehind`, opacity, scale, bounds, animations | answered with success, nothing changed |
+| `launchApplication` (a native application) | refused |
+
+It is started by a unit of its own (`wpeframework-rdkshell.service`), as
+RDK-E starts Thunder's plug-ins, and the user interface's unit waits for it.
+RDKShell's other events (first frame, inactivity, focus) are not sent.
+
+**The EXIT key ends an application.** The user interface asks for the keys
+Home and Escape wherever the focus is, and takes either as the way back to
+its Home screen. The emulator's remote control has EXIT, whose Linux key
+code the Pi's key map for the window manager does not have; it arrived as
+"volume down". The image's key map (`/etc/rcu_keymap.json`, from
+`sysint-soc`) is the Pi's with five keys added: EXIT as Escape, and the
+four colour keys, whose Linux codes the window manager does not know.
+
 **Three things had to be changed for the browser to run:**
 
 - *The names of the graphics libraries.* RDK patches libepoxy to take them
@@ -513,20 +552,42 @@ of swap added to the engine's VM for the time of the build.
   from the launcher's window, arrive in the page as `Enter`, `ArrowUp`,
   `ArrowDown`, `ArrowLeft`, `ArrowRight`, `Backspace`, `1` and `MediaPlay`,
   with the key codes a web page expects (13, 38, 40, 37, 39, 8, 49, 179).
-- **`./emu verify rdke-browser`** does the last two by itself and passes
-  (28 s): it boots the image, shows the page, compares the picture in the
-  launcher's window with what the page draws, and sends the eight keys.
+- **Applications from the Home screen.** With the stand-in for RDKShell,
+  the first two cards of the row "Lightning Apps" (GuessThatCity, FRacer)
+  each opened their application full screen in the plug-in `LightningApp`;
+  the applications are fetched from the internet. The arrow keys moved the
+  selection inside FRacer, which showed 37 to 47 frames a second. EXIT ended
+  each application and brought the Home screen back, with the card still
+  selected. The other cards and rows were not tried.
+- **The colour keys and EXIT in a page:** `ColorF0Red`, `ColorF1Green`,
+  `ColorF2Yellow`, `ColorF3Blue` (403 to 406) and `Escape` (27).
+- **`./emu verify rdke-browser`** does the page and its keys by itself and
+  passes (28 s): it boots the image, shows the page, compares the picture
+  in the launcher's window with what the page draws, and sends thirteen
+  keys.
+- **`./emu verify rdke-launcher`** passes (28 s): with the user interface
+  running it calls RDKShell's `launch` for `HtmlApp` with the image's page,
+  as the user interface does for a card, finds the page's picture in the
+  window, sends OK to the application, and ends it with EXIT. Before it
+  waited for the user interface to ask for its keys, EXIT was not taken in
+  about one run of five; it presses EXIT again in that case. The presumed
+  cause, that the user interface takes no key while it changes screens, was
+  not confirmed.
 
 **Found, and open:**
 
-- *The colour keys do not arrive.* The red key reaches the page as
-  "Unidentified", code 0: RDK's window manager has no entry for its Linux
-  key code (398, "unknown key code" in its log). Green, yellow and blue were
-  not tried and are presumably the same.
 - *The user interface asks for plug-ins that are not there* (HdmiInput,
   UsbAccess, Cobalt, Amazon, Netflix, FireboltApp), and Xcast ends with a
-  failure after it starts. The interface carries on without them. Nothing
-  was started from its Home screen: no application, no video.
+  failure after it starts. The interface carries on without them. Its cards
+  for those applications (YouTube, Netflix, Amazon) cannot start anything.
+- *The stand-in keeps no stacking order.* The user interface hides itself
+  when an application starts and shows itself when it ends, so nothing was
+  seen to be wrong; a picture of the interface over a running application
+  (its volume or settings overlays) was not tried.
+- *The browser of the user interface is over its memory limit:* Thunder
+  logs "Critical memory usage" for it (about 260 MB of 250 MB) at the Home
+  screen. Nothing was seen to follow from it.
+- *No video was played* from the Home screen.
 - *The pairing step waits for a Bluetooth remote control*; there is none,
   and it is skipped by hand (OK) or by its own countdown.
 - *Not tried:* video and sound in the browser, the other call signs
@@ -577,15 +638,18 @@ That shows that the definition is consistent with RDK-E's common layers.
 That it builds and boots is shown by the minimal image above, with the
 64-bit userland only.
 
-    ./emu verify rootfs-option rdke-browser
+    ./emu verify rootfs-option rdke-browser rdke-launcher
 
 `rootfs-option` boots whatever image is in `build/rdke/arm64` to its own
 init. `rdke-browser` needs `tvemu-browser-image` there: it shows the image's
 page in RDK's browser, compares the picture that reaches the launcher's
-window, and sends remote control keys through the window to the page. On a
-host without the image, or with another image, it ends as unavailable.
-Westeros alone, the middleware's device interfaces and the reference user
-interface are not covered by a check.
+window, and sends remote control keys through the window to the page.
+`rdke-launcher` needs the same image: with the reference user interface
+running, it starts an application with the call the user interface makes
+for a card, and ends it with the EXIT key. On a host without the image, or
+with another image, both end as unavailable. Westeros alone, the
+middleware's device interfaces and the user interface's own screens are not
+covered by a check.
 
 ## What is open
 
@@ -610,11 +674,14 @@ interface are not covered by a check.
    interface are in the image directly (see above). RDK-E's own way, the
    browser as an application package that the application managers run in
    a container, is not tried, and its container daemon (Dobby) ends with a
-   segmentation fault at start in this image.
+   segmentation fault at start in this image. The user interface in the
+   image is the last line of releases that starts applications with
+   RDKShell (5.0.24), on a stand-in for it; the releases from 6.0 on use
+   the application managers.
 5. **The launcher's side, in part.** `./emu run --mode vm --rootfs rdke`
    boots an image from `build/rdke/arm64`, and the remote control's keys
-   reach it (`rdke-browser` checks that). Sound is not connected, captures
-   (`--screenshot`) are refused, and the colour keys do not arrive.
+   reach it (`rdke-browser` checks that). Sound is not connected, and
+   captures (`--screenshot`) are refused.
 6. **RDK's own virtual device.** RDK's build scripts mention a "vdevice"
    product layer (build-scripts, pull request 30, June 2026). No public
    repository of it was found on 2026-11-20. If one is published, it may be

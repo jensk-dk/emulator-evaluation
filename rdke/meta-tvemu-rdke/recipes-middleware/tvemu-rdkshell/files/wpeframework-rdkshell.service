@@ -1,0 +1,14 @@
+[Unit]
+Description=The stand-in for org.rdk.RDKShell, started in Thunder
+After=wpeframework.service
+Requires=wpeframework.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# RDK-E starts Thunder's plug-ins with units like this one, not with the
+# plug-ins' own "autostart". Thunder answers some time after it starts.
+ExecStart=/bin/sh -c 'for try in $(seq 120); do curl -s -m 5 -d "{\\"jsonrpc\\":\\"2.0\\",\\"id\\":1,\\"method\\":\\"Controller.1.activate\\",\\"params\\":{\\"callsign\\":\\"org.rdk.RDKShell\\"}}" http://127.0.0.1:9998/jsonrpc | grep -q result && exit 0; sleep 1; done; exit 1'
+
+[Install]
+WantedBy=multi-user.target

@@ -1,7 +1,8 @@
 [Unit]
 Description=RDK's reference user interface on the VM's display
-After=wpeframework.service lighttpd.service
-Wants=wpeframework.service lighttpd.service
+# The user interface starts its applications with org.rdk.RDKShell.
+After=wpeframework.service lighttpd.service wpeframework-rdkshell.service
+Wants=wpeframework.service lighttpd.service wpeframework-rdkshell.service
 
 [Service]
 Type=oneshot
