@@ -1,0 +1,54 @@
+#!/bin/sh
+# tvemu-app-start CALLSIGN URL [CLIENT]
+# tvemu-app-start --stop CALLSIGN
+#
+# Shows a page in one of the browser's Thunder plug-ins (HtmlApp,
+# LightningApp, ResidentApp, WebKitBrowser), full screen and with the keys:
+# what org.rdk.RDKShell's "launch" did on RDK devices, done with the window
+# manager that has taken its place (org.rdk.RDKWindowManager). The window
+# manager makes a Wayland display for the application, the plug-in's browser
+# connects to it under the name in its configuration ("wst-" and the call
+# sign in small letters), and the display gets the focus.
+#
+# tvemu-app-start --stop CALLSIGN ends the plug-in's browser; its display goes
+# with it.
+call() {
+    curl -s -m 30 -H 'Content-Type: application/json' -d \
+        "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"$1\"${2:+,\"params\":$2}}" http://127.0.0.1:9998/jsonrpc
+}
+if [ "${1:-}" = --stop ]; then
+    call Controller.1.deactivate "{\"callsign\":\"${2:?usage: tvemu-app-start --stop CALLSIGN}\"}" > /dev/null
+    exit 0
+fi
+callsign=${1:?usage: tvemu-app-start CALLSIGN URL [CLIENT]}
+url=${2:?usage: tvemu-app-start CALLSIGN URL [CLIENT]}
+client=${3:-$(echo "$callsign" | tr 'A-Z' 'a-z')}
+# What a call answered, when it answered with an error.
+failed() { case "$1" in *'"error"'*|'') return 0 ;; esac; return 1; }
+
+# Thunder starts the window manager some time after it starts itself.
+tries=0
+until call org.rdk.RDKWindowManager.1.getApps | grep -q '"result"'; do
+    tries=$((tries + 1))
+    if [ "$tries" -gt 120 ]; then
+        echo "tvemu-app-start: the window manager did not answer in two minutes" >&2
+        exit 1
+    fi
+    sleep 1
+done
+
+# The display mode the emulator gave the VM ("1920x1080").
+mode=$(head -n 1 /sys/class/drm/card0-Virtual-1/modes 2>/dev/null)
+width=${mode%x*}; height=${mode#*x}
+: "${width:=1920}" "${height:=1080}"
+
+answer=$(call org.rdk.RDKWindowManager.1.createDisplay \
+    "{\"clientId\":\"$client\",\"displayName\":\"wst-$client\",\"displayWidth\":$width,\"displayHeight\":$height}")
+if failed "$answer"; then echo "tvemu-app-start: no display for $client: $answer" >&2; exit 1; fi
+answer=$(call Controller.1.activate "{\"callsign\":\"$callsign\"}")
+if failed "$answer"; then echo "tvemu-app-start: $callsign did not start: $answer" >&2; exit 1; fi
+answer=$(call "$callsign.1.url" "\"$url\"")
+if failed "$answer"; then echo "tvemu-app-start: $callsign did not take $url: $answer" >&2; exit 1; fi
+call org.rdk.RDKWindowManager.1.setFocus "{\"client\":\"$client\"}" > /dev/null
+call org.rdk.RDKWindowManager.1.setVisible "{\"client\":\"$client\",\"visible\":true}" > /dev/null
+echo "tvemu-app-start: $callsign shows $url on wst-$client (${width}x${height})"

@@ -46,6 +46,10 @@ PARALLEL_MAKE = "-j 6"
 # and was ended for want of memory in an engine with 8 GB.
 PARALLEL_MAKE:pn-llvm = "-j 3"
 EXTRA_OECMAKE:append:pn-llvm = " -DLLVM_PARALLEL_LINK_JOBS=1"
+# WebKit, for the same reason: fewer compilers at once, and no link-time
+# optimisation, whose link takes more memory than the engine has.
+PARALLEL_MAKE:pn-wpe-webkit = "-j 2"
+WPE_WEBKIT_LTO:pn-wpe-webkit = ""
 EOC
 [ -f /work/rdk/local-extra.conf ] && cat /work/rdk/local-extra.conf >> conf/local.conf
 bitbake "$@" || exit 1

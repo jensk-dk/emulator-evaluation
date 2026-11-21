@@ -430,6 +430,109 @@ middleware gives as 720p while the display is at 1080p; power states and
 the display's resolution tied to the launcher; and no check covers any of
 this.
 
+## The browser, and RDK's user interface
+
+    rdke/build.sh --middleware 64 tvemu-browser-image
+
+builds `tvemu-middleware-image` with RDK's browser and RDK's reference user
+interface on top:
+
+- **WPE WebKit 2.46.2**, from RDK's own recipe and with RDK's patches, and
+  its backend for Westeros (`wpe-backend-rdk`, through Essos).
+- **The browser's Thunder plug-in** (`webkitbrowser-plugin`), which offers
+  the browser under several call signs with their own settings:
+  `WebKitBrowser`, `HtmlApp`, `LightningApp`, `ResidentApp` and others.
+- **RDK's reference user interface** (`rdke-refui` 5.0.24, a Lightning
+  application), served by the image's own web server as on a device, and
+  started at boot in `ResidentApp` (`tvemu-refui`).
+- **A page to try the browser on** (`tvemu-browser-page`), which shows the
+  size of its window, a count of frames drawn and the last key it was given.
+- **`tvemu-app-start CALLSIGN URL`**, which shows a page in one of the
+  plug-in's browsers, full screen and with the keys.
+
+On a device the user interface comes from RDK-E's third layer, the
+application layer (`meta-application-rdke-dev`), which is built apart from
+the middleware and joined to it as packages. Here its two recipes for the
+user interface are redone in this layer, so that one build gives the image.
+
+**RDK-E no longer has the browser in the middleware.** Its configuration sets
+the distro feature `enable_bolt_apps`, which takes WPE WebKit, the plug-in
+and the backend out of the middleware's package group: the browser is meant
+to come as an application package, run in a container by the application
+managers. This image names them itself, as RDK devices had them before. The
+container runtime that the new way needs (Dobby) does not run here yet, see
+"What is open".
+
+**RDK's start script for the user interface does not fit this middleware.**
+`residentApp.sh` calls `org.rdk.RDKShell.1.launch`. This middleware has
+`org.rdk.RDKWindowManager` in RDKShell's place, which makes displays and
+gives the focus but starts nothing. `tvemu-app-start` does the three steps
+that "launch" did: a display from the window manager (`createDisplay`, named
+`wst-` and the call sign, which is the name in the plug-in's configuration),
+the plug-in started and given its address through Thunder's controller, and
+the focus (`setFocus`).
+
+**Three things had to be changed for the browser to run:**
+
+- *The names of the graphics libraries.* RDK patches libepoxy to take them
+  from the build, for a vendor layer to give. Without them libepoxy looks
+  for a library called `EGL_LIB_NAME`, and the browser's web process ends at
+  its first drawing call. The layer gives Mesa's.
+- *Branch target identification (BTI).* openembedded-core builds 64-bit ARM
+  code with `-mbranch-protection=standard`, which marks WebKit's library as
+  safe for BTI. The JavaScript interpreter in it is assembly without the
+  landing instructions that the marking promises. An Apple CPU has BTI, a
+  host-native VM gives it to the target, and the kernel ended the web
+  process with "undefined instruction" at the first script it ran. A
+  Raspberry Pi 4's CPU has no BTI and does not show this. The layer builds
+  WebKit without the option.
+- *RDK's player (AAMP).* The plug-in's bindings for it need AAMP built, and
+  AAMP's build misses a library here. The bindings are left out; the browser
+  plays media itself without them.
+
+WebKit is also the one thing here that a container engine with 8 GB cannot
+build as it is: a single source file took 5.4 GB to compile. The build ran
+with two compilers at a time, without link-time optimisation, and with 8 GB
+of swap added to the engine's VM for the time of the build.
+
+**What was seen**, on macOS (ARM64), host-native, on 2026-11-21:
+
+- **The image starts RDK's user interface by itself.** About 50 s after the
+  kernel starts, the display shows the reference user interface's first-run
+  steps. With the remote control's keys from the launcher's window it was
+  taken through them (pairing a remote control skipped, a language chosen,
+  the network step skipped) to its Home screen, with the RDK logo, its side
+  menu and its rows of applications. Some of those tiles stay plain colours:
+  their pictures are fetched from the internet and did not all arrive.
+- **The page in `HtmlApp`** (`browser-page.png`, taken from QEMU), after
+  `systemctl stop tvemu-refui` and
+  `tvemu-app-start HtmlApp file:///usr/share/tvemu/page/index.html`: full
+  screen at 1920x1080, with the plug-in reporting 31 to 45 frames a second.
+  The drawing is done by Mesa's `llvmpipe`, on the target's CPU.
+- **Keys in the page.** OK, the four arrows, Back, the digit 1 and Play, sent
+  from the launcher's window, arrive in the page as `Enter`, `ArrowUp`,
+  `ArrowDown`, `ArrowLeft`, `ArrowRight`, `Backspace`, `1` and `MediaPlay`,
+  with the key codes a web page expects (13, 38, 40, 37, 39, 8, 49, 179).
+- **`./emu verify rdke-browser`** does the last two by itself and passes
+  (28 s): it boots the image, shows the page, compares the picture in the
+  launcher's window with what the page draws, and sends the eight keys.
+
+**Found, and open:**
+
+- *The colour keys do not arrive.* The red key reaches the page as
+  "Unidentified", code 0: RDK's window manager has no entry for its Linux
+  key code (398, "unknown key code" in its log). Green, yellow and blue were
+  not tried and are presumably the same.
+- *The user interface asks for plug-ins that are not there* (HdmiInput,
+  UsbAccess, Cobalt, Amazon, Netflix, FireboltApp), and Xcast ends with a
+  failure after it starts. The interface carries on without them. Nothing
+  was started from its Home screen: no application, no video.
+- *The pairing step waits for a Bluetooth remote control*; there is none,
+  and it is skipped by hand (OK) or by its own countdown.
+- *Not tried:* video and sound in the browser, the other call signs
+  (`WebKitBrowser`, `LightningApp`), the web inspector, a simulated CPU
+  (`--arch arm64` on a host that is not ARM64), and any host but the Mac.
+
 ## Starting an image
 
     ./emu run --mode vm --rootfs rdke [--window]
@@ -474,6 +577,16 @@ That shows that the definition is consistent with RDK-E's common layers.
 That it builds and boots is shown by the minimal image above, with the
 64-bit userland only.
 
+    ./emu verify rootfs-option rdke-browser
+
+`rootfs-option` boots whatever image is in `build/rdke/arm64` to its own
+init. `rdke-browser` needs `tvemu-browser-image` there: it shows the image's
+page in RDK's browser, compares the picture that reaches the launcher's
+window, and sends remote control keys through the window to the page. On a
+host without the image, or with another image, it ends as unavailable.
+Westeros alone, the middleware's device interfaces and the reference user
+interface are not covered by a check.
+
 ## What is open
 
 1. **The vendor layer, in part.** Its components are there and the
@@ -485,20 +598,23 @@ That it builds and boots is shown by the minimal image above, with the
    sink. A build of the vendor layer
    stops at the first of them. The Pi's `vendor_pkg_versions.inc`, which pins
    the versions of what a vendor layer delivers, is not taken over either.
-2. **Building more than the minimal image.** That one fits the container
-   engine's disk on the Mac; RDK-E's middleware, with a browser, is on the
-   order of 100 GB and hours, and needs another build host or a larger
-   engine disk. The 32-bit userland is not built at all.
+2. **The 32-bit userland, and other build hosts.** Everything here is
+   built with 64-bit programs, in a container on the Mac (engine disk
+   200 GB, memory 8 GB, with swap added for WebKit). The 32-bit userland,
+   which is how RDK-E is built, is not built at all, and nothing is built
+   on Linux or Windows.
 3. **The kernel options, in full.** Binder, AppArmor and virtio-gpu were
    seen at work in the booted image; dm-verity, EROFS and sound were not
    looked at. `CONFIG_ASHMEM`, which the Pi sets, is left out.
-4. **Building the middleware.** It resolves but for ten things of a vendor
-   layer (see above), and nothing of it is built. Its recipes may also key
-   on `rpi` or `raspberrypi4`; the layers have not been read for that.
+4. **The application layer as RDK-E means it.** The browser and the user
+   interface are in the image directly (see above). RDK-E's own way, the
+   browser as an application package that the application managers run in
+   a container, is not tried, and its container daemon (Dobby) ends with a
+   segmentation fault at start in this image.
 5. **The launcher's side, in part.** `./emu run --mode vm --rootfs rdke`
    boots an image from `build/rdke/arm64`, and the remote control's keys
-   reach it. Sound is not connected, captures (`--screenshot`) are refused,
-   and no check sends keys to an RDK-E target.
+   reach it (`rdke-browser` checks that). Sound is not connected, captures
+   (`--screenshot`) are refused, and the colour keys do not arrive.
 6. **RDK's own virtual device.** RDK's build scripts mention a "vdevice"
    product layer (build-scripts, pull request 30, June 2026). No public
    repository of it was found on 2026-11-20. If one is published, it may be

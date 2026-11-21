@@ -2752,9 +2752,155 @@ def check_rootfs_option():
                     % (said, seconds, kind)]
 
 
+# What the page of the RDK-E image (rdke/meta-tvemu-rdke, tvemu-browser-page)
+# shows, and what its address says of each remote control key it is given:
+# the key's name and code as a web page gets them.
+RDKE_PAGE = "file:///usr/share/tvemu/page/index.html"
+RDKE_PAGE_BACKGROUND = (0x10, 0x24, 0x3c)
+RDKE_PAGE_CORNER = (0xe0, 0x48, 0x3a)
+RDKE_PAGE_KEYS = (("ok", "Enter-13"), ("up", "ArrowUp-38"), ("down", "ArrowDown-40"), ("left", "ArrowLeft-37"),
+                  ("right", "ArrowRight-39"), ("back", "Backspace-8"), ("1", "1-49"), ("play", "MediaPlay-179"))
+
+
+def check_rdke_browser():
+    """RDK's browser in an RDK-E image, as a person at the launcher's window
+    has it: a page drawn by WPE WebKit on the display that RDK's window
+    manager gave it, and the remote control's keys arriving in the page."""
+    from . import rootfs
+    present, said = rootfs.rdke_state()
+    if not present:
+        raise CheckUnavailable("no RDK-E image is built on this host (%s); %s says how one is built"
+                               % (said, rootfs.RDKE_README))
+    if not host.find_tool(vm.QEMU_BINARY[rootfs.RDKE_ARCH]):
+        raise CheckUnavailable("the emulator for an ARM64 guest is not installed (%s)" % host.ARM_SETUP_HINT)
+    if not window.gui_python():
+        raise CheckUnavailable("Qt for Python (%s) is not installed on this host, so the launcher has no windows; %s"
+                               % (window.PACKAGE, host.SETUP_HINT))
+    arch = "native" if host.host_arch() == rootfs.RDKE_ARCH else rootfs.RDKE_ARCH
+    # A simulated CPU takes many times as long for all of it.
+    slow = 1 if arch == "native" else 15
+    reader, writer = os.pipe()
+    console, lock = [], threading.Lock()
+    seen = {"keys": {}}
+
+    def on_line(line):
+        with lock:
+            console.append(line)
+
+    def answer(pattern, seconds):
+        """The console line that is `pattern` (a regular expression), once
+        it is there. What is typed is echoed too, in pieces where the
+        console wraps it: every answer is asked for so that its line cannot
+        be a piece of the command that asks for it."""
+        def find():
+            with lock:
+                return next((line.strip() for line in console if re.fullmatch(pattern, line.strip())), None)
+        return _wait(find, seconds * slow, 0.3)
+
+    def typed(text):
+        os.write(writer, text.encode() + b"\n")
+
+    def work(viewer):
+        # The image logs root in on the console.
+        ready = None
+        for attempt in range(60):
+            typed("stty cols 250; echo tvemu-$((6*7))-shell-%d" % attempt)
+            ready = answer(r"tvemu-42-shell-\d+", 5)
+            if ready:
+                break
+        if not ready:
+            seen["error"] = "the image's console took no command in %d s" % (300 * slow)
+            return
+        typed("command -v tvemu-app-start > /dev/null; echo tvemu-browser-$?")
+        if answer(r"tvemu-browser-\d+", 30) != "tvemu-browser-0":
+            seen["unavailable"] = ("the RDK-E image on this host (%s) has no browser: it is not tvemu-browser-image"
+                                   % said)
+            return
+        # The image's own user interface has the display from boot; the page takes its place.
+        typed("systemctl stop tvemu-refui; tvemu-app-start HtmlApp %s; echo tvemu-started-$?" % RDKE_PAGE)
+        started = answer(r"tvemu-started-\d+", 300)
+        if started != "tvemu-started-0":
+            with lock:
+                seen["error"] = "the page was not shown (%s): %s" % (started, " | ".join(console[-6:]))
+            return
+        with lock:
+            seen["start"] = next((line.strip() for line in console if line.startswith("tvemu-app-start: ")), "")
+        with tempfile.TemporaryDirectory(prefix="emu-verify-") as directory:
+            path = os.path.join(directory, "display.ppm")
+
+            def picture():
+                if not viewer.ask(do="save-display", path=path).get("saved"):
+                    return None
+                shown = imagefile.load(path)
+                width, height, at = shown.width, shown.height, shown.pixel
+                corners = [at(8, 8), at(width - 9, 8), at(8, height - 9), at(width - 9, height - 9)]
+                seen["picture"] = {"size": (width, height), "corners": corners, "middle": at(width // 2, height // 2)}
+                near = lambda found, wanted: all(abs(a - b) <= 6 for a, b in zip(found, wanted))
+                return all(near(corner, RDKE_PAGE_CORNER) for corner in corners) and \
+                    near(seen["picture"]["middle"], RDKE_PAGE_BACKGROUND)
+            seen["drawn"] = bool(_wait(picture, 120 * slow, 1))
+        typed("C() { curl -s -m 10 -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"HtmlApp.1.'$1'\"}' "
+              "http://127.0.0.1:9998/jsonrpc; }; echo tvemu-fps=$(C fps | sed 's/.*result\"://;s/}.*//')")
+        seen["fps"] = (answer(r"tvemu-fps=\d*", 30) or "=").split("=", 1)[1]
+        for count, (key, _) in enumerate(RDKE_PAGE_KEYS, 1):
+            viewer.ask(do="send-key", code=remote.CODES[key])
+            # The page's address after the key: "...index.html#3-ArrowDown-40".
+            marker = "tvemu-key-%d=" % count
+            for attempt in range(8):
+                with lock:
+                    del console[:]
+                typed("echo %s$(C url | sed -n 's/.*#\\([^\"]*\\)\".*/\\1/p')" % marker)
+                found = (answer(re.escape(marker) + r"[\w-]*", 15) or "=").split("=", 1)[1]
+                if found.startswith("%d-" % count):
+                    break
+                time.sleep(0.5 * slow)
+            seen["keys"][key] = found
+
+    def drive(viewer):
+        def guarded():
+            try:
+                work(viewer)
+            except Exception as error:      # reported by the check, whatever it was
+                seen["error"] = "%s: %s" % (type(error).__name__, error)
+            finally:
+                try:
+                    typed("poweroff")
+                    os.close(writer)
+                except OSError:
+                    pass
+        threading.Thread(target=guarded, daemon=True).start()
+
+    with os.fdopen(reader, "rb", buffering=0) as source:
+        outcome = launch(RunOptions(mode="vm", arch=arch, rootfs=rootfs.RDKE, window=True, echo=False,
+                                    stdin_script=source, on_line=on_line, on_viewer=drive,
+                                    options={"verbose-boot": "no"}, timeout=1200 * slow))
+    if "unavailable" in seen:
+        raise CheckUnavailable(seen["unavailable"])
+    _require("error" not in seen, seen.get("error"))
+    _require(not outcome.timed_out, "the run did not end by itself: %r" % seen)
+    _require(seen.get("drawn"), "the display does not show the page (its red corners on its dark blue): %r"
+             % seen.get("picture"))
+    wrong = ["%s arrived as %r, not %r" % (key, seen["keys"].get(key), "%d-%s" % (count, name))
+             for count, (key, name) in enumerate(RDKE_PAGE_KEYS, 1)
+             if seen["keys"].get(key) != "%d-%s" % (count, name)]
+    _require(not wrong, "remote control keys did not arrive in the page as a web page expects them: %s"
+             % "; ".join(wrong))
+    kind = "host-native" if arch == "native" else "simulated ARM64"
+    return ["the RDK-E image (%s) started in a %s guest, and RDK's browser plug-in HtmlApp (WPE WebKit) showed the "
+            "image's page on a display of RDK's window manager: %s" % (said, kind, seen["start"]),
+            "the launcher's window got the page's picture at %dx%d: its red corner blocks and its background are "
+            "where the page draws them; the plug-in reports %s frames a second"
+            % (seen["picture"]["size"] + (seen["fps"] or "no",)),
+            "%d remote control keys sent from the window arrived in the page, each with a web page's name and "
+            "code for it: %s" % (len(RDKE_PAGE_KEYS), ", ".join("%s as %s" % (key, name.rsplit("-", 1)[0])
+                                                               for key, name in RDKE_PAGE_KEYS))]
+
+
 def _command_checks():
     return {
         "rootfs-option": (check_rootfs_option, "9.4", "--rootfs chooses the Debian or the RDK-E root file system"),
+        "rdke-browser": (check_rdke_browser, "9.4", "RDK's browser shows a page in an RDK-E image and gets the "
+                                                    "remote control's keys"),
         "doctor": (check_doctor, "9.2", "the launcher shows what it finds on the host, and names what is missing"),
         "report-serve": (check_report_serve, "9.2", "the results command serves the page and all that it reads"),
         "report-page": (check_report_page, "9.2", "the results page shows every record and its sections"),

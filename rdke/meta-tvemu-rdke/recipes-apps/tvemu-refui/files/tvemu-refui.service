@@ -1,0 +1,14 @@
+[Unit]
+Description=RDK's reference user interface on the VM's display
+After=wpeframework.service lighttpd.service
+Wants=wpeframework.service lighttpd.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# The address is the one in RDK's own start script (residentApp.sh).
+ExecStart=/usr/bin/tvemu-app-start ResidentApp http://127.0.0.1:50050/lxresui/index.html#splash
+ExecStop=/usr/bin/tvemu-app-start --stop ResidentApp
+
+[Install]
+WantedBy=multi-user.target

@@ -72,6 +72,9 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     locales ca-certificates python-is-python3 && locale-gen en_US.UTF-8 && useradd -m builder
 USER builder
 WORKDIR /home/builder
+# Some of RDK's recipes name their sources with the git protocol, which
+# GitHub no longer serves (RDK's own builds fetch through a mirror).
+RUN git config --global url."https://github.com/".insteadOf git://github.com/
 EOT
 "$runtime" build -q -t tvemu-rdke-check "$work" >/dev/null
 

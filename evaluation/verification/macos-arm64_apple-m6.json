@@ -65,12 +65,12 @@
       "task": "2.2, 2.3",
       "description": "the container image starts the target OS and a prompt",
       "details": [
-        "target OS environment up in 0.1s; the prompt answered a typed command",
+        "target OS environment up in 0.2s; the prompt answered a typed command",
         "image sha256:441262b63214fd44a1d5e9183f9b5c8dc6b9eae7ffa3951edba0008b5995fdd5"
       ],
-      "checked_at": "2026-11-20T14:11:06Z",
-      "seconds": 0.9,
-      "revision": "0d380a40c991131aaf325b79873491f6a0513dfa-dirty",
+      "checked_at": "2026-11-21T04:56:56Z",
+      "seconds": 1.1,
+      "revision": "a47b80c8bc3da57c87d3f9895738b7b7d61e08b9-dirty",
       "image_definition_sha256": "7f22e737c9570eb58ee6145755a42dae19214a6c46c1093d7082a0eb30b9b0ee"
     },
     "prompt-vm": {
@@ -80,9 +80,9 @@
       "details": [
         "booted on hvf (aarch64, cpu host) in 0.4s; the prompt answered a typed command"
       ],
-      "checked_at": "2026-11-20T17:49:04Z",
+      "checked_at": "2026-11-21T04:56:55Z",
       "seconds": 1.0,
-      "revision": "9bbc3d19e3f653a9fbac4be319750f76f0f5d5b4-dirty",
+      "revision": "a47b80c8bc3da57c87d3f9895738b7b7d61e08b9-dirty",
       "image_definition_sha256": "7f22e737c9570eb58ee6145755a42dae19214a6c46c1093d7082a0eb30b9b0ee"
     },
     "bench-container": {
@@ -129,11 +129,11 @@
       "task": "3.1",
       "description": "ARM32 VM guest mode starts the target OS workload",
       "details": [
-        "armv7l guest on tcg simulating cortex-a15 (CPU part 0xc0f) booted in 18.6s and ran the prompt workload"
+        "armv7l guest on tcg simulating cortex-a15 (CPU part 0xc0f) booted in 17.4s and ran the prompt workload"
       ],
-      "checked_at": "2026-11-20T14:11:32Z",
-      "seconds": 19.4,
-      "revision": "0d380a40c991131aaf325b79873491f6a0513dfa-dirty",
+      "checked_at": "2026-11-21T04:57:20Z",
+      "seconds": 18.2,
+      "revision": "a47b80c8bc3da57c87d3f9895738b7b7d61e08b9-dirty",
       "image_definition_sha256": "7f22e737c9570eb58ee6145755a42dae19214a6c46c1093d7082a0eb30b9b0ee"
     },
     "vm-arm64": {
@@ -141,11 +141,11 @@
       "task": "3.1",
       "description": "ARM64 VM guest mode starts the target OS workload",
       "details": [
-        "aarch64 guest on tcg simulating cortex-a53 (CPU part 0xd03) booted in 4.7s and ran the prompt workload"
+        "aarch64 guest on tcg simulating cortex-a53 (CPU part 0xd03) booted in 4.8s and ran the prompt workload"
       ],
-      "checked_at": "2026-11-20T14:11:13Z",
-      "seconds": 5.4,
-      "revision": "0d380a40c991131aaf325b79873491f6a0513dfa-dirty",
+      "checked_at": "2026-11-21T04:57:01Z",
+      "seconds": 5.5,
+      "revision": "a47b80c8bc3da57c87d3f9895738b7b7d61e08b9-dirty",
       "image_definition_sha256": "7f22e737c9570eb58ee6145755a42dae19214a6c46c1093d7082a0eb30b9b0ee"
     },
     "drivers-container": {
@@ -1923,9 +1923,9 @@
         "the results command served the page, and over one connection that it kept open: the list of 312 records and each record, 4 verification records, the known issues, what is stated about the machines, and the disk space and time values",
         "the server does not answer on the host's own network address: the page is served to this host only"
       ],
-      "checked_at": "2026-11-20T14:12:22Z",
-      "seconds": 0.2,
-      "revision": "0d380a40c991131aaf325b79873491f6a0513dfa-dirty",
+      "checked_at": "2026-11-21T04:58:01Z",
+      "seconds": 0.1,
+      "revision": "a47b80c8bc3da57c87d3f9895738b7b7d61e08b9-dirty",
       "image_definition_sha256": "7f22e737c9570eb58ee6145755a42dae19214a6c46c1093d7082a0eb30b9b0ee"
     },
     "report-page": {
@@ -1937,9 +1937,9 @@
         "it has the hosts, the support matrix with the list of known issues, 47 charts, and 3 tables of disk space and times",
         "not checked: choosing the hosts, relative values, and what pointing at a row or a cell shows"
       ],
-      "checked_at": "2026-11-20T14:12:23Z",
-      "seconds": 1.0,
-      "revision": "0d380a40c991131aaf325b79873491f6a0513dfa-dirty",
+      "checked_at": "2026-11-21T04:58:01Z",
+      "seconds": 1.3,
+      "revision": "a47b80c8bc3da57c87d3f9895738b7b7d61e08b9-dirty",
       "image_definition_sha256": "7f22e737c9570eb58ee6145755a42dae19214a6c46c1093d7082a0eb30b9b0ee"
     },
     "setup-check": {
@@ -2166,9 +2166,23 @@
         "a stand-in (the ARM64 Debian VM image, started with --rootfs rdke as an RDK-E image would be) booted its kernel and its own init in 1s, in a host-native guest",
         "the image built for the machine tvemu-arm64-rdke (Image and rootfs.ext4 in build/rdke/arm64) booted its kernel and its own init in 2s, in a host-native guest: a minimal image on RDK-E's base layers, without its middleware"
       ],
-      "checked_at": "2026-11-20T22:19:14Z",
-      "seconds": 2.5,
-      "revision": "8b1352f408e77e86da0e9da20e7cdaa27d2cb04c",
+      "checked_at": "2026-11-21T04:56:54Z",
+      "seconds": 2.4,
+      "revision": "a47b80c8bc3da57c87d3f9895738b7b7d61e08b9-dirty",
+      "image_definition_sha256": "7f22e737c9570eb58ee6145755a42dae19214a6c46c1093d7082a0eb30b9b0ee"
+    },
+    "rdke-browser": {
+      "status": "pass",
+      "task": "9.4",
+      "description": "RDK's browser shows a page in an RDK-E image and gets the remote control's keys",
+      "details": [
+        "the RDK-E image (Image and rootfs.ext4 in build/rdke/arm64) started in a host-native guest, and RDK's browser plug-in HtmlApp (WPE WebKit) showed the image's page on a display of RDK's window manager: tvemu-app-start: HtmlApp shows file:///usr/share/tvemu/page/index.html on wst-htmlapp (1920x1080)",
+        "the launcher's window got the page's picture at 1920x1080: its red corner blocks and its background are where the page draws them; the plug-in reports 31 frames a second",
+        "8 remote control keys sent from the window arrived in the page, each with a web page's name and code for it: ok as Enter, up as ArrowUp, down as ArrowDown, left as ArrowLeft, right as ArrowRight, back as Backspace, 1 as 1, play as MediaPlay"
+      ],
+      "checked_at": "2026-11-21T04:53:13Z",
+      "seconds": 27.7,
+      "revision": "a47b80c8bc3da57c87d3f9895738b7b7d61e08b9-dirty",
       "image_definition_sha256": "7f22e737c9570eb58ee6145755a42dae19214a6c46c1093d7082a0eb30b9b0ee"
     }
   }

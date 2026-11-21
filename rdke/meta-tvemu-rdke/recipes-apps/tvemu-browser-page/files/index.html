@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>tv-emu test page</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #10243c; color: #f2f2f2; font-family: sans-serif; }
+  h1 { margin: 0; padding: 40px 60px 10px; font-size: 56px; }
+  p { margin: 0; padding: 8px 60px; font-size: 32px; }
+  #key { color: #ffd24a; }
+  #bar { position: absolute; left: 60px; bottom: 60px; height: 30px; width: 30px; background: #4ac1ff; }
+  .corner { position: absolute; width: 40px; height: 40px; background: #e0483a; }
+</style>
+</head>
+<body>
+<div class="corner" style="left:0;top:0"></div><div class="corner" style="right:0;top:0"></div>
+<div class="corner" style="left:0;bottom:0"></div><div class="corner" style="right:0;bottom:0"></div>
+<h1>tv-emu: RDK-E browser</h1>
+<p id="size"></p>
+<p id="agent"></p>
+<p>Last key: <span id="key">none yet</span></p>
+<p>Keys received: <span id="count">0</span></p>
+<p>Frames drawn: <span id="frames">0</span></p>
+<div id="bar"></div>
+<script>
+  // What the page is given, for a person at the display. The last key also
+  // goes into the page's address ("#3-ArrowDown-40"), which a check can read
+  // through the browser's Thunder interface (the "url" property).
+  var keys = 0, frames = 0;
+  document.getElementById("size").textContent =
+      "Window: " + window.innerWidth + " x " + window.innerHeight;
+  document.getElementById("agent").textContent = navigator.userAgent;
+  document.addEventListener("keydown", function (event) {
+    keys += 1;
+    var text = event.key + " (code " + event.keyCode + ")";
+    document.getElementById("key").textContent = text;
+    document.getElementById("count").textContent = keys;
+    window.location.hash = keys + "-" + event.key + "-" + event.keyCode;
+  });
+  function draw() {
+    frames += 1;
+    document.getElementById("frames").textContent = frames;
+    document.getElementById("bar").style.width = (30 + (frames * 4) % 600) + "px";
+    window.requestAnimationFrame(draw);
+  }
+  window.requestAnimationFrame(draw);
+</script>
+</body>
+</html>

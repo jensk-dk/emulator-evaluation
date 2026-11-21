@@ -177,8 +177,6 @@ def _require_rdke(opts):
     elif opts.rebuild:
         refused = ("the launcher does not build the RDK-E root file system", "%s says how it is built"
                    % rootfs.RDKE_README)
-    elif opts.stdin_script is not None:
-        refused = ("a scripted prompt needs the Debian root file system", None)
     if refused:
         raise EmuError(refused[0], hint=refused[1])
 
@@ -240,8 +238,10 @@ def launch(opts):
     attached = interactive and opts.stdin_script is None and host.stdin_is_tty() and sys.stdout.isatty()
     on_terminal = attached
     # The RDK-E target reports nothing to the launcher: its console is the
-    # launcher's own output, on a terminal or not.
-    attached = attached or rdke
+    # launcher's own output, on a terminal or not. A run that is given what
+    # to type (a check) has the console captured as any other, and reads it
+    # line by line (on_line).
+    attached = attached or (rdke and opts.stdin_script is None)
     plan = None
     screens = None
     capturer = None
@@ -585,6 +585,8 @@ def _capture(command, opts, outcome, interactive, screens=None, console=None, st
     if started:
         started(process)
     ready = threading.Event()
+    if opts.rootfs == rootfs.RDKE:
+        ready.set()     # this target never reports that it is ready: its console takes input from the start
     lock = threading.Lock()
 
     def take(stream):
