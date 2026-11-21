@@ -503,6 +503,17 @@ It is started by a unit of its own (`wpeframework-rdkshell.service`), as
 RDK-E starts Thunder's plug-ins, and the user interface's unit waits for it.
 RDKShell's other events (first frame, inactivity, focus) are not sent.
 
+**The first-run steps are marked as done.** The user interface shows its
+first-run steps (pair a remote control, with a countdown of 30 s; choose a
+language; set up the network) until it has once reached its Home screen,
+which it notes in the browser's storage. The emulator discards what a
+target wrote when it ends, so every start was a first run. The image's copy
+of the user interface loads a script before it (`tvemu-first-run.js`) that
+sets that note, and the interface goes from its splash picture to Home. To
+see the first-run steps:
+
+    tvemu-app-start ResidentApp 'http://127.0.0.1:50050/lxresui/index.html?firstrun#splash'
+
 **The EXIT key ends an application.** The user interface asks for the keys
 Home and Escape wherever the focus is, and takes either as the way back to
 its Home screen. The emulator's remote control has EXIT, whose Linux key
@@ -536,12 +547,15 @@ of swap added to the engine's VM for the time of the build.
 
 **What was seen**, on macOS (ARM64), host-native, on 2026-11-21:
 
-- **The image starts RDK's user interface by itself.** About 50 s after the
-  kernel starts, the display shows the reference user interface's first-run
-  steps. With the remote control's keys from the launcher's window it was
-  taken through them (pairing a remote control skipped, a language chosen,
-  the network step skipped) to its Home screen, with the RDK logo, its side
-  menu and its rows of applications. Some of those tiles stay plain colours:
+- **The image starts RDK's user interface by itself.** At first the display
+  showed the reference user interface's first-run steps about 50 s after
+  the kernel started, and it was taken through them with the remote
+  control's keys (pairing a remote control skipped, a language chosen, the
+  network step skipped) to its Home screen, with the RDK logo, its side
+  menu and its rows of applications. With the first-run steps marked as
+  done, the image's log has the interface at its Home screen 10 s after
+  systemd starts, and a capture 45 s after the launcher was started shows
+  it. Some of those tiles stay plain colours:
   their pictures are fetched from the internet and did not all arrive.
 - **The page in `HtmlApp`** (`browser-page.png`, taken from QEMU), after
   `systemctl stop tvemu-refui` and
@@ -588,8 +602,6 @@ of swap added to the engine's VM for the time of the build.
   logs "Critical memory usage" for it (about 260 MB of 250 MB) at the Home
   screen. Nothing was seen to follow from it.
 - *No video was played* from the Home screen.
-- *The pairing step waits for a Bluetooth remote control*; there is none,
-  and it is skipped by hand (OK) or by its own countdown.
 - *Not tried:* video and sound in the browser, the other call signs
   (`WebKitBrowser`, `LightningApp`), the web inspector, a simulated CPU
   (`--arch arm64` on a host that is not ARM64), and any host but the Mac.

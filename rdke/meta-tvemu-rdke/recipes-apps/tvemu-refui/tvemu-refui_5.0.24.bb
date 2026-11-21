@@ -11,6 +11,7 @@ LIC_FILES_CHKSUM = "file://${S}/LICENSE;md5=387be95ea3370b9ae768c395d4eeaeea"
 SRC_URI = "https://github.com/rdkcentral/rdke-refui/releases/download/${PV}/refui-${PV}.tar.gz;subdir=refui-${PV} \
            file://tvemu-refui.service \
            file://tvemu-refui-docroot.conf \
+           file://tvemu-first-run.js \
            "
 SRC_URI[sha256sum] = "b19c9092316cf908d16afa348a0346b3e349bbe8fa6b1ec688231bcc2d0a62b7"
 
@@ -26,6 +27,13 @@ do_compile[noexec] = "1"
 do_install() {
     install -d ${D}/home/root/lxresui
     cp -r ${S}/* ${D}/home/root/lxresui/
+    # The first-run steps are marked as done before the user interface starts
+    # (tvemu-first-run.js says why, and how to see them).
+    install -m 0644 ${WORKDIR}/tvemu-first-run.js ${D}/home/root/lxresui/
+    sed -i 's|^\( *\)<script src="./js/lightning.min.js"></script>|\1<script src="./tvemu-first-run.js"></script>\n&|' \
+        ${D}/home/root/lxresui/index.html
+    grep -q tvemu-first-run.js ${D}/home/root/lxresui/index.html || \
+        bbfatal "the user interface's page has no place for tvemu-first-run.js"
     install -d ${D}${systemd_system_unitdir} ${D}${sysconfdir}/lighttpd.d
     install -m 0644 ${WORKDIR}/tvemu-refui.service ${D}${systemd_system_unitdir}/
     install -m 0644 ${WORKDIR}/tvemu-refui-docroot.conf ${D}${sysconfdir}/lighttpd.d/

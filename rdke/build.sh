@@ -54,9 +54,11 @@ EOC
 [ -f /work/rdk/local-extra.conf ] && cat /work/rdk/local-extra.conf >> conf/local.conf
 bitbake "$@" || exit 1
 deploy=tmp/deploy/images/tvemu-arm64-rdke
-cp -L $deploy/Image /out/Image
+# Each as a new file that takes the old one's name: a VM that is running
+# keeps the image it started from.
+cp -L $deploy/Image /out/Image.new && mv -f /out/Image.new /out/Image
 image=$(ls -t $deploy/*.ext4 | head -1)
-cp -L "$image" /out/rootfs.ext4
+cp -L "$image" /out/rootfs.ext4.new && mv -f /out/rootfs.ext4.new /out/rootfs.ext4
 echo "copied Image and $(basename "$image") (as rootfs.ext4)"
 EOT
 chmod +x "$work/build-in-container.sh"

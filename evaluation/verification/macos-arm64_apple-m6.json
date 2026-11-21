@@ -2177,12 +2177,12 @@
       "description": "RDK's browser shows a page in an RDK-E image and gets the remote control's keys",
       "details": [
         "the RDK-E image (Image and rootfs.ext4 in build/rdke/arm64) started in a host-native guest, and RDK's browser plug-in HtmlApp (WPE WebKit) showed the image's page on a display of RDK's window manager: tvemu-app-start: HtmlApp shows file:///usr/share/tvemu/page/index.html on wst-htmlapp (1920x1080)",
-        "the launcher's window got the page's picture at 1920x1080: its red corner blocks and its background are where the page draws them; the plug-in reports 32 frames a second",
+        "the launcher's window got the page's picture at 1920x1080: its red corner blocks and its background are where the page draws them; the plug-in reports 33 frames a second",
         "13 remote control keys sent from the window arrived in the page, each with a web page's name and code for it: ok as Enter, up as ArrowUp, down as ArrowDown, left as ArrowLeft, right as ArrowRight, back as Backspace, 1 as 1, play as MediaPlay, red as ColorF0Red, green as ColorF1Green, yellow as ColorF2Yellow, blue as ColorF3Blue, exit as Escape"
       ],
-      "checked_at": "2026-11-21T10:30:01Z",
-      "seconds": 28.1,
-      "revision": "e2c9b3326fb4f8e31509d3cdbad4d44a920148fe-dirty",
+      "checked_at": "2026-11-21T11:18:56Z",
+      "seconds": 27.7,
+      "revision": "51548187d16d441c9abca2fa0649c564dd3e6295",
       "image_definition_sha256": "7f22e737c9570eb58ee6145755a42dae19214a6c46c1093d7082a0eb30b9b0ee"
     },
     "rdke-launcher": {
@@ -2194,9 +2194,9 @@
         "the image's stand-in answered the call (RDK-E's middleware has org.rdk.RDKWindowManager in its place) and names the application as resumed; the OK key arrived in the application",
         "the EXIT key went to the user interface, which ended the application: it is no longer in org.rdk.RDKShell's getState, its page is off the display, and the user interface has its display"
       ],
-      "checked_at": "2026-11-21T10:30:29Z",
-      "seconds": 27.8,
-      "revision": "e2c9b3326fb4f8e31509d3cdbad4d44a920148fe-dirty",
+      "checked_at": "2026-11-21T11:19:43Z",
+      "seconds": 47.2,
+      "revision": "51548187d16d441c9abca2fa0649c564dd3e6295",
       "image_definition_sha256": "7f22e737c9570eb58ee6145755a42dae19214a6c46c1093d7082a0eb30b9b0ee"
     }
   }
